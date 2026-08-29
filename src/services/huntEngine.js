@@ -23,7 +23,7 @@ var DEFAULTS = {
 
 function cfgFor(type, settings) {
   var key = CAT1_TYPES[type] ? "cat1" : "cat2";
-  return pickCfg(settings[key], DEFAULTS[key]);
+  return pickCfg(settings[key === "cat1" ? "huntCat1" : "huntCat2"], DEFAULTS[key]);
 }
 
 function nameFor(type, row) {
@@ -40,10 +40,10 @@ function nameFor(type, row) {
   return row.name || "";
 }
 
-// computed: خروجی computeAll از calcEngine.js
-// settings: سند Settings از دیتابیس (شامل huntCat1, huntCat2, huntOnlyBuyable, dteFilterMin/Max)
+// توجه: این تابع دیگر فیلتر "قابل‌خرید" را اعمال نمی‌کند؛ آن فیلتر در cycleRunner
+// جداگانه (و فقط در لحظه‌ی تصمیم برای اطلاع‌رسانی) اعمال می‌شود تا فرانت بتواند
+// همان لیست کامل را با فیلتر لحظه‌ای/محلی نمایش دهد.
 function buildHuntRows(computed, settings) {
-  var onlyBuyable = !!settings.huntOnlyBuyable;
   var dteMin = settings.dteFilterMin;
   var dteMax = settings.dteFilterMax;
   var out = [];
@@ -57,7 +57,6 @@ function buildHuntRows(computed, settings) {
       var dte = r.dte || 0;
       if (dteMin !== "" && dteMin != null && dte < parseFloat(dteMin)) return;
       if (dteMax !== "" && dteMax != null && dte > parseFloat(dteMax)) return;
-      if (onlyBuyable && r.basis_buyable === false) return;
 
       var cfg = cfgFor(type, settings);
       var reqShock = Math.max(cfg.shockFloor, dte * cfg.shockRate);

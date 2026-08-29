@@ -15,7 +15,6 @@ function buildSteps(step) {
   return a;
 }
 
-// ---------- کاوردکال ----------
 function calcCC(calls, steps) {
   var results = [];
   calls.forEach(function (c) {
@@ -36,6 +35,7 @@ function calcCC(calls, steps) {
       scenariosAdjusted: steps.map(function (p) { return adjustRoi(payoff(p), c.dte); }),
       scenariosRaw: steps.map(function (p) { return payoff(p); }),
       basis_buyable: c.basis_buyable,
+      spot_overridden: c.spot_overridden, spot_original: c.spot_original,
       _payoff: payoff
     });
   });
@@ -43,7 +43,6 @@ function calcCC(calls, steps) {
   return results;
 }
 
-// ---------- مریدپوت ----------
 function calcMP(puts, steps) {
   var results = [];
   puts.forEach(function (c) {
@@ -65,6 +64,7 @@ function calcMP(puts, steps) {
       scenariosAdjusted: steps.map(function (p) { return adjustRoi(payoff(p), c.dte); }),
       scenariosRaw: steps.map(function (p) { return payoff(p); }),
       basis_buyable: c.basis_buyable,
+      spot_overridden: c.spot_overridden, spot_original: c.spot_original,
       _payoff: payoff
     });
   });
@@ -72,7 +72,6 @@ function calcMP(puts, steps) {
   return results;
 }
 
-// ---------- کلار ----------
 function calcCollar(calls, puts, steps) {
   var byGroup = {};
   calls.forEach(function (c) {
@@ -112,6 +111,7 @@ function calcCollar(calls, puts, steps) {
         scenariosRaw: steps.map(function (p) { return payoff(p); }),
         basis_buyable: (call.basis_buyable !== false) && (put.basis_buyable !== false),
         collar_type: call.strike > put.strike ? "استاندارد" : "معکوس",
+        spot_overridden: call.spot_overridden, spot_original: call.spot_original,
         _payoff: payoff
       });
     });
@@ -120,7 +120,6 @@ function calcCollar(calls, puts, steps) {
   return results;
 }
 
-// ---------- کانورژن ----------
 function calcConversion(calls, puts) {
   var byGroup = {};
   calls.forEach(function (c) {
@@ -152,6 +151,7 @@ function calcConversion(calls, puts) {
         scenariosAdjusted: [adjustRoi(roi, call.dte)],
         scenariosRaw: [roi],
         basis_buyable: (call.basis_buyable !== false) && (put.basis_buyable !== false),
+        spot_overridden: call.spot_overridden, spot_original: call.spot_original,
         _payoff: payoff
       });
     });
@@ -160,7 +160,6 @@ function calcConversion(calls, puts) {
   return results;
 }
 
-// ---------- استرانگل خرید ----------
 function calcStrangleBuy(calls, puts, steps) {
   var byGroup = {};
   calls.forEach(function (c) {
@@ -197,6 +196,7 @@ function calcStrangleBuy(calls, puts, steps) {
         scenariosRaw: steps.map(function (p) { return payoff(p); }),
         strangle_type: type,
         basis_buyable: (put.basis_buyable !== false) && (call.basis_buyable !== false),
+        spot_overridden: call.spot_overridden, spot_original: call.spot_original,
         _payoff: payoff
       });
     });
@@ -205,7 +205,6 @@ function calcStrangleBuy(calls, puts, steps) {
   return results;
 }
 
-// ---------- استرانگل فروش ----------
 function calcStrangleSell(calls, puts, steps) {
   var byGroup = {};
   calls.forEach(function (c) {
@@ -246,6 +245,7 @@ function calcStrangleSell(calls, puts, steps) {
         scenariosRaw: steps.map(function (p) { return payoff(p); }),
         strangle_type: type,
         basis_buyable: (put.basis_buyable !== false) && (call.basis_buyable !== false),
+        spot_overridden: call.spot_overridden, spot_original: call.spot_original,
         _payoff: payoff
       });
     });
@@ -254,7 +254,6 @@ function calcStrangleSell(calls, puts, steps) {
   return results;
 }
 
-// ---------- کال اسپرد (صعودی/نزولی) ----------
 function calcCallSpread(calls, steps, bull) {
   var byGroup = {};
   calls.forEach(function (c) {
@@ -294,6 +293,7 @@ function calcCallSpread(calls, steps, bull) {
             scenariosAdjusted: steps.map(function (p) { return adjustRoi(payoff(p), buy.dte); }),
             scenariosRaw: steps.map(function (p) { return payoff(p); }),
             basis_buyable: (buy.basis_buyable !== false) && (sell.basis_buyable !== false),
+            spot_overridden: buy.spot_overridden, spot_original: buy.spot_original,
             _payoff: payoff
           });
         })(buy, sell, sz, netCost, base);
@@ -304,7 +304,6 @@ function calcCallSpread(calls, steps, bull) {
   return results;
 }
 
-// ---------- پوت اسپرد (نزولی/صعودی) ----------
 function calcPutSpread(puts, steps, bull) {
   var byGroup = {};
   puts.forEach(function (c) {
@@ -344,6 +343,7 @@ function calcPutSpread(puts, steps, bull) {
             scenariosAdjusted: steps.map(function (p) { return adjustRoi(payoff(p), buy.dte); }),
             scenariosRaw: steps.map(function (p) { return payoff(p); }),
             basis_buyable: (buy.basis_buyable !== false) && (sell.basis_buyable !== false),
+            spot_overridden: buy.spot_overridden, spot_original: buy.spot_original,
             _payoff: payoff
           });
         })(buy, sell, sz, netCost, base);
@@ -354,7 +354,6 @@ function calcPutSpread(puts, steps, bull) {
   return results;
 }
 
-// ---------- باکس ----------
 function calcBox(calls, puts) {
   var callMap = {}, putMap = {}, groupStrikes = {};
   calls.forEach(function (c) {
@@ -400,6 +399,7 @@ function calcBox(calls, puts) {
           scenariosAdjusted: [adjRoi], scenariosRaw: [roi],
           basis_buyable: (callBuy.basis_buyable !== false) && (callSell.basis_buyable !== false) &&
             (putBuy.basis_buyable !== false) && (putSell.basis_buyable !== false),
+          spot_overridden: callBuy.spot_overridden, spot_original: callBuy.spot_original,
           _payoff: (function (v) { return function () { return v; }; })(roi)
         });
       }
@@ -409,7 +409,6 @@ function calcBox(calls, puts) {
   return results;
 }
 
-// ---------- محاسبه‌ی همه‌چیز یک‌جا (برای استفاده در API و شکار) ----------
 function computeAll(calls, puts, steps) {
   return {
     cc: calcCC(calls, steps),

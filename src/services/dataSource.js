@@ -55,8 +55,42 @@ function parseContracts(raw) {
       if (spot <= 0 || strike <= 0 || dte <= 0) continue;
 
       var isCall = type === 1;
+      var lastPrice = sf(row.close || 0);
+      var lastPct = sf(row.close_c || 0);
+      var finalPct = sf(row.final_c || 0);
+      var high = sf(row.highest_price || 0);
+      var low = sf(row.lowest_price || 0);
+      var volume = sf(row.Tvolume || 0);
       var tvalue = sf(row.Tvalue || 0);
+      var oi = sf(row.op || 0);
+      var opChange = sf(row.op_change || 0);
+
+      var tradingDays = si(firstNumber(row, [
+        "dey_left_actual", "day_left_actual", "days_left_actual",
+        "trading_days_left", "trading_day_left", "business_days_left",
+        "dey_left", "day_left_trade"
+      ], 0), 0);
+
       if (tvalue < 100000) continue;
+
+      var intrinsic = sf(row.value || 0);
+      var priceForTimeVal = lastPrice > 0 ? lastPrice : finalPrice;
+      var timeVal = Math.max(0, priceForTimeVal - intrinsic);
+      var priceForBe = lastPrice > 0 ? lastPrice : finalPrice;
+      var be = isCall ? strike + priceForBe : strike - priceForBe;
+      var beDiff = spot > 0 ? (be - spot) / spot * 100 : 0;
+      var strikeDiff = strike > 0 ? (spot - strike) / strike * 100 : 0;
+      var bs = sf(row.black_sholes || 0);
+      var bsDiff = sf(row.bs_d || 0);
+      var iv = sf(row.imp || 0);
+      var histVol = sf(row.sigma || 0);
+      var delta = sf(row.delta || 0);
+      var theta = sf(row.theta || 0) / 365;
+      var gamma = sf(row.gamma || 0);
+      var vega = sf(row.vega || 0) / 100;
+      var rho = sf(row.rho || 0) / 100;
+      var levBase = lastPrice > 0 ? lastPrice : finalPrice;
+      var leverage = levBase > 0 && delta !== 0 ? Math.abs(delta * spot / levBase) : 0;
 
       var bPrices = parsePriceVol(row.b_price);
       var bVolumes = parsePriceVol(row.b_volume);
@@ -66,30 +100,26 @@ function parseContracts(raw) {
       var bidVol = bVolumes[0] || 0;
       var askPrice = sPrices[0] || 0;
       var askVol = sVolumes[0] || 0;
+      var spread = askPrice > 0 && bidPrice > 0 ? askPrice - bidPrice : 0;
 
+      var rawStatus = String(row.status_text || "") || (isCall ? (spot > strike ? "ITM" : spot < strike ? "OTM" : "ATM") : (spot < strike ? "ITM" : spot > strike ? "OTM" : "ATM"));
+      var status = rawStatus.indexOf("سود") !== -1 ? "ITM" : rawStatus.indexOf("ضرر") !== -1 ? "OTM" : rawStatus.indexOf("تفاوت") !== -1 ? "ATM" : rawStatus;
       var basisLastPercent = firstNumber(row, ["basis_c_percent", "basis_percent", "basis_last_percent"], 0);
       var basisClosePercent = firstNumber(row, ["basis_pc_percent", "basis_final_percent", "basis_close_percent"], 0);
 
       out.push({
-        name: String(row.name || ""),
-        basis_name: String(row.basis_name || ""),
-        type: isCall ? "call" : "put",
-        strike: strike,
-        spot: spot,
-        price: finalPrice,
+        name: String(row.name || ""), basis_name: String(row.basis_name || ""),
+        type: isCall ? "call" : "put", strike: strike, spot: spot, price: finalPrice,
         buy_price: askPrice > 0 && askVol > 0 ? askPrice : finalPrice,
         sell_price: bidPrice > 0 && bidVol > 0 ? bidPrice : finalPrice,
-        dte: dte,
-        size: size,
-        expiry: String(row.to_date || ""),
-        bid_price: bidPrice,
-        bid_vol: bidVol,
-        ask_price: askPrice,
-        ask_vol: askVol,
-        tvalue: tvalue,
-        margin: sf(row.tazmin_3 || row.tazmin3 || row.tazmin || 0),
-        basis_last_percent: basisLastPercent,
-        basis_close_percent: basisClosePercent
+        end_price: lastPrice, end_pct: lastPct, final_pct: finalPct, low: low, high: high,
+        intrinsic: intrinsic, time_val: timeVal, be: be, be_diff: beDiff, strike_diff: strikeDiff,
+        bs: bs, bs_diff: bsDiff, volume: volume, tvalue: tvalue, oi: oi, op_change: opChange,
+        trading_days: tradingDays, dte: dte, size: size, expiry: String(row.to_date || ""),
+        iv: iv, hist_vol: histVol, delta: delta, theta: theta, gamma: gamma, vega: vega, rho: rho,
+        leverage: leverage, bid_price: bidPrice, bid_vol: bidVol, ask_price: askPrice, ask_vol: askVol,
+        spread: spread, margin: sf(row.tazmin_3 || row.tazmin3 || row.tazmin || 0), status: status,
+        basis_last_percent: basisLastPercent, basis_close_percent: basisClosePercent
       });
     } catch (e) { /* رد شدن از ردیف خراب */ }
   }

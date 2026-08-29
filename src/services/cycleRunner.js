@@ -8,10 +8,13 @@ var { filterFreshRows } = require("./notifyGate");
 var { sendLongMessage } = require("./telegram");
 var { formatBatch } = require("./messageFormat");
 
+var HUNT_CACHE_CAP = 300;
+
 var cache = {
   updatedAt: null,
   watch: [],
   strategies: {},
+  steps: [],
   huntLatest: { at: null, rows: [] },
   lastError: null,
   isRunning: false
@@ -51,14 +54,13 @@ async function runCycle(opts) {
     var data = await loadContracts();
     var calls = applyOverrides(data.calls, overrides);
     var puts = applyOverrides(data.puts, overrides);
+    var allWithOverrides = applyOverrides(data.all, overrides);
 
     var steps = buildSteps(settings.scenStep);
     var computed = computeAll(calls, puts, steps);
 
-    // دیده‌بان: تمام قراردادهای خام (call+put) برای نمایش فرانت
-    cache.watch = data.all;
+    cache.watch = allWithOverrides;
 
-    // استراتژی‌ها: نسخه‌ی تمیزشده (بدون _payoff) برای API
     var cleanStrategies = {};
     Object.keys(computed).forEach(function (k) {
       cleanStrategies[k] = computed[k].map(stripInternal);
@@ -68,23 +70,29 @@ async function runCycle(opts) {
     cache.updatedAt = new Date();
     cache.lastError = null;
 
-    // شکار موقعیت
+    // شکار موقعیت: لیست کامل (بدون فیلتر قابل‌خرید) برای نمایش در فرانت
     var huntRows = buildHuntRows(computed, settings);
-    var topN = settings.huntTopN || 30;
-    var top = huntRows.slice(0, topN);
-    cache.huntLatest = { at: new Date(), rows: top };
+    cache.huntLatest = { at: new Date(), rows: huntRows.slice(0, HUNT_CACHE_CAP) };
 
-    if (notify && top.length > 0) {
-      var fresh = await filterFreshRows(top, settings.huntCooldownHours, "default", huntRowKey);
-      if (fresh.length > 0) {
-        var token = process.env.TELEGRAM_BOT_TOKEN;
-        var chatId = process.env.TELEGRAM_CHAT_ID;
-        if (token && chatId) {
-          try {
-            await sendLongMessage(token, chatId, formatBatch(fresh));
-            console.log("[cycle] " + fresh.length + " موقعیت جدید اطلاع‌رسانی شد.");
-          } catch (e) {
-            console.error("[cycle] خطا در ارسال تلگرام:", e.message);
+    if (notify) {
+      var forNotify = settings.huntOnlyBuyable
+        ? huntRows.filter(function (r) { return r.basis_buyable !== false; })
+        : huntRows;
+      var topN = settings.huntTopN || 30;
+      var top = forNotify.slice(0, topN);
+
+      if (top.length > 0) {
+        var fresh = await filterFreshRows(top, settings.huntCooldownHours, "default", huntRowKey);
+        if (fresh.length > 0) {
+          var token = process.env.TELEGRAM_BOT_TOKEN;
+          var chatId = process.env.TELEGRAM_CHAT_ID;
+          if (token && chatId) {
+            try {
+              await sendLongMessage(token, chatId, formatBatch(fresh));
+              console.log("[cycle] " + fresh.length + " موقعیت جدید اطلاع‌رسانی شد.");
+            } catch (e) {
+              console.error("[cycle] خطا در ارسال تلگرام:", e.message);
+            }
           }
         }
       }
