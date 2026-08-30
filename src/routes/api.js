@@ -61,6 +61,15 @@ router.post("/hunt/run", requireApiKey, function (req, res) {
   });
 });
 
+// اجرای فوری بدون ارسال تلگرام (برای اعمال آنی تنظیمات/Override از فرانت)
+router.post("/refresh", requireApiKey, function (req, res) {
+  runCycle({ notify: false }).then(function () {
+    res.json({ ok: true });
+  }).catch(function (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  });
+});
+
 // ---------- تنظیمات ----------
 router.get("/settings", async function (req, res) {
   var settings = await Settings.findOne({ ownerId: "default" });
