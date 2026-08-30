@@ -49,7 +49,7 @@ router.get("/strategy/:kind", function (req, res) {
 // ---------- شکار موقعیت ----------
 router.get("/hunt/latest", function (req, res) {
   var c = getCache();
-  res.json({ at: c.huntLatest.at, rows: c.huntLatest.rows });
+  res.json({ at: c.huntLatest.at, steps: c.steps || [], rows: c.huntLatest.rows });
 });
 
 // اجرای فوری (همینی که cron-job.org صداش می‌زنه)

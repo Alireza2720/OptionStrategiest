@@ -64,13 +64,6 @@ function parseContracts(raw) {
       var tvalue = sf(row.Tvalue || 0);
       var oi = sf(row.op || 0);
       var opChange = sf(row.op_change || 0);
-
-      var tradingDays = si(firstNumber(row, [
-        "dey_left_actual", "day_left_actual", "days_left_actual",
-        "trading_days_left", "trading_day_left", "business_days_left",
-        "dey_left", "day_left_trade"
-      ], 0), 0);
-
       if (tvalue < 100000) continue;
 
       var intrinsic = sf(row.value || 0);
@@ -102,8 +95,15 @@ function parseContracts(raw) {
       var askVol = sVolumes[0] || 0;
       var spread = askPrice > 0 && bidPrice > 0 ? askPrice - bidPrice : 0;
 
+      var tradingDays = si(firstNumber(row, [
+        "dey_left_actual", "day_left_actual", "days_left_actual",
+        "trading_days_left", "trading_day_left", "business_days_left",
+        "dey_left", "day_left_trade"
+      ], 0), 0);
+
       var rawStatus = String(row.status_text || "") || (isCall ? (spot > strike ? "ITM" : spot < strike ? "OTM" : "ATM") : (spot < strike ? "ITM" : spot > strike ? "OTM" : "ATM"));
       var status = rawStatus.indexOf("سود") !== -1 ? "ITM" : rawStatus.indexOf("ضرر") !== -1 ? "OTM" : rawStatus.indexOf("تفاوت") !== -1 ? "ATM" : rawStatus;
+
       var basisLastPercent = firstNumber(row, ["basis_c_percent", "basis_percent", "basis_last_percent"], 0);
       var basisClosePercent = firstNumber(row, ["basis_pc_percent", "basis_final_percent", "basis_close_percent"], 0);
 

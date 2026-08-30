@@ -71,7 +71,7 @@ async function runCycle(opts) {
     cache.lastError = null;
 
     // شکار موقعیت: لیست کامل (بدون فیلتر قابل‌خرید) برای نمایش در فرانت
-    var huntRows = buildHuntRows(computed, settings);
+    var huntRows = buildHuntRows(computed, settings, steps);
     cache.huntLatest = { at: new Date(), rows: huntRows.slice(0, HUNT_CACHE_CAP) };
 
     if (notify) {
