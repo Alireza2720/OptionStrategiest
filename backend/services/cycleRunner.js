@@ -37,6 +37,13 @@ function applyOverrides(contracts, overrides) {
   });
 }
 
+function huntNotifyMapOf(settings) {
+  var raw = settings.huntNotifyEnabled;
+  if (!raw) return {};
+  if (typeof raw.toObject === "function") return raw.toObject();
+  return raw;
+}
+
 async function runCycle(opts) {
   opts = opts || {};
   var notify = opts.notify !== false;
@@ -70,25 +77,30 @@ async function runCycle(opts) {
     cache.updatedAt = new Date();
     cache.lastError = null;
 
-    // شکار موقعیت: لیست کامل (بدون فیلتر قابل‌خرید) برای نمایش در فرانت
+    // شکار موقعیت: لیست کامل (بدون فیلتر قابل‌خرید در صورت غیرفعال بودن آن) برای نمایش در فرانت
     var huntRows = buildHuntRows(computed, settings, steps);
     cache.huntLatest = { at: new Date(), rows: huntRows.slice(0, HUNT_CACHE_CAP) };
 
     if (notify) {
-      var forNotify = settings.huntOnlyBuyable
-        ? huntRows.filter(function (r) { return r.basis_buyable !== false; })
-        : huntRows;
-      var topN = settings.huntTopN || 30;
-      var top = forNotify.slice(0, topN);
+      var notifyMap = huntNotifyMapOf(settings);
+      var forNotify = huntRows.filter(function (r) {
+        if (settings.huntOnlyBuyable && r.basis_buyable === false) return false;
+        if (notifyMap[r.strategy_type] === false) return false;
+        return true;
+      });
+      var top = settings.huntTopNUnlimited ? forNotify : forNotify.slice(0, settings.huntTopN || 30);
 
       if (top.length > 0) {
-        var fresh = await filterFreshRows(top, settings.huntCooldownHours, "default", huntRowKey);
+        var fresh = await filterFreshRows(top, {
+          cooldownForever: !!settings.huntCooldownForever,
+          cooldownHours: settings.huntCooldownHours
+        }, "default", huntRowKey);
         if (fresh.length > 0) {
           var token = process.env.TELEGRAM_BOT_TOKEN;
           var chatId = process.env.TELEGRAM_CHAT_ID;
           if (token && chatId) {
             try {
-              await sendLongMessage(token, chatId, formatBatch(fresh));
+              await sendLongMessage(token, chatId, formatBatch(fresh, steps));
               console.log("[cycle] " + fresh.length + " موقعیت جدید اطلاع‌رسانی شد.");
             } catch (e) {
               console.error("[cycle] خطا در ارسال تلگرام:", e.message);
