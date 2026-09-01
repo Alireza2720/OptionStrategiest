@@ -77,21 +77,12 @@ router.get("/settings", async function (req, res) {
   res.json(settings);
 });
 
-// فیلدهای مجاز برای بروزرسانی از فرانت. توجه: huntStrategies یک آبجکت است که
-// هر کلید آن (cc, mp, co, cv, strangle, strangleSell, callspread, callspreadbear,
-// putspread, putspreadbull, box) شامل {shockRate, profitRate, telegramEnabled} است.
-var ALLOWED_SETTINGS_KEYS = [
-  "scenStep", "dteFilterMin", "dteFilterMax", "checkIntervalSec",
-  "huntOnlyBuyable",
-  "huntTopN", "huntTopNUnlimited",
-  "huntCooldownHours", "huntCooldownMinutes", "huntCooldownForever",
-  "huntStrategies"
-];
-
 router.post("/settings", requireApiKey, async function (req, res) {
   var body = req.body || {};
+  var allowed = ["scenStep", "dteFilterMin", "dteFilterMax", "checkIntervalSec",
+    "huntOnlyBuyable", "huntTopN", "huntCooldownHours", "huntCat1", "huntCat2"];
   var update = {};
-  ALLOWED_SETTINGS_KEYS.forEach(function (k) {
+  allowed.forEach(function (k) {
     if (Object.prototype.hasOwnProperty.call(body, k)) update[k] = body[k];
   });
   var settings = await Settings.findOneAndUpdate(

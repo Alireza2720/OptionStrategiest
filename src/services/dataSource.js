@@ -16,17 +16,11 @@ function parsePriceVol(str) {
   return String(str).split("/").map(function (v) { return parseFloat(v) || 0; });
 }
 
-/* قوانین دقیق صف خرید سهم پایه:
-   الف) اگر آخرین قیمت (درصد) بین 2.77 تا 3 یا بین 3.77 تا 4 باشد -> در صف خرید (غیرقابل‌خرید)
-   ب) اگر بین 2.66 تا 2.76 یا بین 3.66 تا 3.76 باشد و آخرین قیمت == قیمت پایانی -> در صف خرید (غیرقابل‌خرید)
-   ج) در غیر این صورت -> قابل‌خرید */
 function isStockInBuyQueue(lastPct, closePct) {
-  if (lastPct == null || isNaN(lastPct)) return false;
-  if ((lastPct >= 2.77 && lastPct <= 3) || (lastPct >= 3.77 && lastPct <= 4)) return true;
-  if ((lastPct >= 2.66 && lastPct <= 2.76) || (lastPct >= 3.66 && lastPct <= 3.76)) {
-    return closePct != null && !isNaN(closePct) && lastPct === closePct;
-  }
-  return false;
+  if (lastPct == null || isNaN(lastPct) || lastPct < 2.66) return false;
+  if (lastPct > 3.01 && lastPct < 3.74) return false;
+  if (lastPct >= 2.89) return true;
+  return lastPct >= 2.66 && closePct != null && !isNaN(closePct) && lastPct === closePct;
 }
 
 var TARGET_URL = "https://s3.optionschool24.com/last?type=3";
@@ -161,4 +155,4 @@ async function loadContracts() {
   return { calls: calls, puts: puts, all: deduped };
 }
 
-module.exports = { loadContracts: loadContracts, isStockInBuyQueue: isStockInBuyQueue };
+module.exports = { loadContracts: loadContracts };

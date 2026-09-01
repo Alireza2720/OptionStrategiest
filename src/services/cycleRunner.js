@@ -70,21 +70,19 @@ async function runCycle(opts) {
     cache.updatedAt = new Date();
     cache.lastError = null;
 
-    // شکار موقعیت: لیست کامل برای نمایش در فرانت (رعایت huntOnlyBuyable و فیلتر DTE از قبل انجام می‌شود)
+    // شکار موقعیت: لیست کامل (بدون فیلتر قابل‌خرید) برای نمایش در فرانت
     var huntRows = buildHuntRows(computed, settings, steps);
     cache.huntLatest = { at: new Date(), rows: huntRows.slice(0, HUNT_CACHE_CAP) };
 
     if (notify) {
-      // فقط استراتژی‌هایی که تلگرامشان فعال است وارد اعلان می‌شوند
-      var forNotify = huntRows.filter(function (r) { return r.telegram_enabled !== false; });
-
-      var unlimited = !!settings.huntTopNUnlimited;
+      var forNotify = settings.huntOnlyBuyable
+        ? huntRows.filter(function (r) { return r.basis_buyable !== false; })
+        : huntRows;
       var topN = settings.huntTopN || 30;
-      var top = unlimited ? forNotify : forNotify.slice(0, topN);
+      var top = forNotify.slice(0, topN);
 
       if (top.length > 0) {
-        var cooldownMs = ((settings.huntCooldownHours || 0) * 3600 + (settings.huntCooldownMinutes || 0) * 60) * 1000;
-        var fresh = await filterFreshRows(top, { cooldownMs: cooldownMs, forever: !!settings.huntCooldownForever }, "default", huntRowKey);
+        var fresh = await filterFreshRows(top, settings.huntCooldownHours, "default", huntRowKey);
         if (fresh.length > 0) {
           var token = process.env.TELEGRAM_BOT_TOKEN;
           var chatId = process.env.TELEGRAM_CHAT_ID;
