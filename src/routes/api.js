@@ -80,7 +80,8 @@ router.get("/settings", async function (req, res) {
 router.post("/settings", requireApiKey, async function (req, res) {
   var body = req.body || {};
   var allowed = ["scenStep", "dteFilterMin", "dteFilterMax", "checkIntervalSec",
-    "huntOnlyBuyable", "huntTopN", "huntCooldownHours", "huntCat1", "huntCat2"];
+    "huntOnlyBuyable", "huntTopN", "huntTopNUnlimited",
+    "huntCooldownMinutes", "huntCooldownForever", "huntStrategies"];
   var update = {};
   allowed.forEach(function (k) {
     if (Object.prototype.hasOwnProperty.call(body, k)) update[k] = body[k];

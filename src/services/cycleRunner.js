@@ -77,12 +77,14 @@ async function runCycle(opts) {
     if (notify) {
       var forNotify = settings.huntOnlyBuyable
         ? huntRows.filter(function (r) { return r.basis_buyable !== false; })
-        : huntRows;
-      var topN = settings.huntTopN || 30;
-      var top = forNotify.slice(0, topN);
+        : huntRows.slice();
+      forNotify = forNotify.filter(function (r) { return r.telegram_enabled !== false; });
+
+      var top = settings.huntTopNUnlimited ? forNotify : forNotify.slice(0, settings.huntTopN || 30);
 
       if (top.length > 0) {
-        var fresh = await filterFreshRows(top, settings.huntCooldownHours, "default", huntRowKey);
+        var cooldownMs = settings.huntCooldownForever ? Infinity : (settings.huntCooldownMinutes || 720) * 60 * 1000;
+        var fresh = await filterFreshRows(top, cooldownMs, "default", huntRowKey);
         if (fresh.length > 0) {
           var token = process.env.TELEGRAM_BOT_TOKEN;
           var chatId = process.env.TELEGRAM_CHAT_ID;

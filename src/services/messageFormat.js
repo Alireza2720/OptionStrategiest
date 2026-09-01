@@ -2,24 +2,38 @@
 
 var LABELS = {
   cc: "کاوردکال", mp: "مریدپوت", co: "کلار", cv: "کانورژن",
-  strangle: "استرانگل خرید", callspread: "کال اسپرد صعودی",
-  putspread: "پوت اسپرد نزولی", box: "باکس"
+  strangle: "استرانگل خرید", strangleSell: "استرانگل فروش",
+  callspread: "کال اسپرد صعودی", callspreadbear: "کال اسپرد نزولی",
+  putspread: "پوت اسپرد نزولی", putspreadbull: "پوت اسپرد صعودی",
+  box: "باکس"
 };
+var NO_SHOCK_TYPES = { cv: true, box: true };
 
 function fmt(v, d) {
   if (v == null || isNaN(v)) return "—";
+  if (v >= 99999) return "∞";
   if (d === undefined) d = 1;
   return Number(v).toFixed(d);
 }
 
 function formatRow(r) {
-  return "🎯 <b>" + (LABELS[r.strategy_type] || r.strategy_type) + "</b>\n" +
-    "موقعیت: <code>" + r.primary_name + "</code>\n" +
-    "سهم پایه: " + r.basis_name + "  |  سررسید: " + r.expiry + " (" + r.dte + " روز)\n" +
-    "بازده بدون تغییر قیمت: " + fmt(r.roi_zero) + "٪\n" +
-    "شوک لازم: ±" + fmt(r.required_shock) + "٪  |  آستانه سود لازم: " + fmt(r.required_profit) + "٪\n" +
-    "بدترین حالت: " + fmt(r.worst_case_roi) + "٪  |  حاشیه اطمینان: " + fmt(r.safety_margin) + "٪\n" +
-    (r.basis_buyable === false ? "⚠️ سهم پایه در صف خرید است" : "✅ سهم پایه قابل خرید است");
+  var lines = [];
+  lines.push("🎯 <b>" + (LABELS[r.strategy_type] || r.strategy_type) + "</b>");
+  lines.push("موقعیت: <code>" + r.primary_name + "</code>");
+  lines.push("سهم پایه: " + r.basis_name + "  |  سررسید: " + r.expiry + " (" + r.dte + " روز)");
+
+  var scenRaw = r.scenariosRaw || [];
+  if (NO_SHOCK_TYPES[r.strategy_type]) {
+    var val = scenRaw.find(function (v) { return v != null; });
+    lines.push("بازده (ثابت): " + fmt(val) + "٪");
+  } else {
+    var parts = scenRaw.map(function (v) { return v == null ? null : fmt(v) + "٪"; }).filter(Boolean);
+    lines.push("سناریوهای واقعی: " + parts.join(" | "));
+    lines.push("حداکثر شوک مثبت مجاز: " + fmt(r.actual_shock_up) + "٪  |  حداکثر شوک منفی مجاز: " + fmt(r.actual_shock_down) + "٪");
+  }
+
+  lines.push(r.basis_buyable === false ? "⚠️ سهم پایه در صف خرید است" : "✅ سهم پایه قابل خرید است");
+  return lines.join("\n");
 }
 
 function formatBatch(rows) {

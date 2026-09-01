@@ -1,12 +1,30 @@
 "use strict";
 var mongoose = require("mongoose");
 
-var CatSchema = new mongoose.Schema({
+var HUNT_STRATEGY_TYPES = ["cc", "mp", "co", "cv", "strangle", "strangleSell",
+  "callspread", "callspreadbear", "putspread", "putspreadbull", "box"];
+
+var HuntStrategyCfgSchema = new mongoose.Schema({
   shockRate: { type: Number, default: 0.5 },
-  shockFloor: { type: Number, default: 25 },
   profitRate: { type: Number, default: 0.35 },
-  profitFloor: { type: Number, default: 10 }
+  telegramEnabled: { type: Boolean, default: true }
 }, { _id: false });
+
+function defaultHuntStrategies() {
+  var obj = {};
+  HUNT_STRATEGY_TYPES.forEach(function (t) {
+    obj[t] = { shockRate: 0.5, profitRate: 0.35, telegramEnabled: true };
+  });
+  return obj;
+}
+
+var HuntStrategiesSchema = new mongoose.Schema(
+  HUNT_STRATEGY_TYPES.reduce(function (acc, t) {
+    acc[t] = { type: HuntStrategyCfgSchema, default: function () { return { shockRate: 0.5, profitRate: 0.35, telegramEnabled: true }; } };
+    return acc;
+  }, {}),
+  { _id: false }
+);
 
 var SettingsSchema = new mongoose.Schema({
   ownerId: { type: String, default: "default", unique: true, index: true },
@@ -14,17 +32,18 @@ var SettingsSchema = new mongoose.Schema({
   dteFilterMin: { type: String, default: "" },
   dteFilterMax: { type: String, default: "" },
   checkIntervalSec: { type: Number, default: 60 },
+
   huntOnlyBuyable: { type: Boolean, default: true },
   huntTopN: { type: Number, default: 30 },
-  huntCooldownHours: { type: Number, default: 12 },
-  huntCat1: {
-    type: CatSchema,
-    default: function () { return { shockRate: 0.5, shockFloor: 25, profitRate: 0.35, profitFloor: 10 }; }
-  },
-  huntCat2: {
-    type: CatSchema,
-    default: function () { return { shockRate: 0.5, shockFloor: 30, profitRate: 0.7, profitFloor: 25 }; }
+  huntTopNUnlimited: { type: Boolean, default: false },
+  huntCooldownMinutes: { type: Number, default: 720 },
+  huntCooldownForever: { type: Boolean, default: false },
+
+  huntStrategies: {
+    type: HuntStrategiesSchema,
+    default: defaultHuntStrategies
   }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Settings", SettingsSchema);
+module.exports.HUNT_STRATEGY_TYPES = HUNT_STRATEGY_TYPES;
