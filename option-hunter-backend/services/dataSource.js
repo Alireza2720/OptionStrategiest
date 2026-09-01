@@ -16,18 +16,16 @@ function parsePriceVol(str) {
   return String(str).split("/").map(function (v) { return parseFloat(v) || 0; });
 }
 
-/*
-  قانون جدید تشخیص «صف خرید» سهم پایه (نتیجه = true یعنی در صف خرید و غیرقابل‌خرید است):
-  الف) اگر آخرین درصد قیمت بین ۲.۷۷ تا ۳ یا بین ۳.۷۷ تا ۴ باشد → غیرقابل‌خرید
-  ب) اگر بین ۲.۶۶ تا ۲.۷۶ یا بین ۳.۶۶ تا ۳.۷۶ باشد و آخرین درصد == درصد پایانی → غیرقابل‌خرید
-  ج) در غیر این صورت → قابل‌خرید
-*/
+/* قوانین دقیق صف خرید سهم پایه:
+   الف) اگر آخرین قیمت (درصد) بین 2.77 تا 3 یا بین 3.77 تا 4 باشد -> در صف خرید (غیرقابل‌خرید)
+   ب) اگر بین 2.66 تا 2.76 یا بین 3.66 تا 3.76 باشد و آخرین قیمت == قیمت پایانی -> در صف خرید (غیرقابل‌خرید)
+   ج) در غیر این صورت -> قابل‌خرید */
 function isStockInBuyQueue(lastPct, closePct) {
   if (lastPct == null || isNaN(lastPct)) return false;
-  var inHighBand = (lastPct >= 2.77 && lastPct <= 3) || (lastPct >= 3.77 && lastPct <= 4);
-  if (inHighBand) return true;
-  var inLowBand = (lastPct >= 2.66 && lastPct <= 2.76) || (lastPct >= 3.66 && lastPct <= 3.76);
-  if (inLowBand && closePct != null && !isNaN(closePct) && lastPct === closePct) return true;
+  if ((lastPct >= 2.77 && lastPct <= 3) || (lastPct >= 3.77 && lastPct <= 4)) return true;
+  if ((lastPct >= 2.66 && lastPct <= 2.76) || (lastPct >= 3.66 && lastPct <= 3.76)) {
+    return closePct != null && !isNaN(closePct) && lastPct === closePct;
+  }
   return false;
 }
 
@@ -163,4 +161,4 @@ async function loadContracts() {
   return { calls: calls, puts: puts, all: deduped };
 }
 
-module.exports = { loadContracts: loadContracts };
+module.exports = { loadContracts: loadContracts, isStockInBuyQueue: isStockInBuyQueue };

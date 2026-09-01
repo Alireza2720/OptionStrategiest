@@ -16,22 +16,6 @@ export default async function HomePage() {
         <p className="mt-4 text-base text-slate-700">
           Server-rendered with Next.js after a successful PostgreSQL query through Drizzle.
         </p>
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
-          <p className="m-0 text-sm font-semibold text-slate-900">دیده‌بان اختیار معامله</p>
-          <p className="mt-2 text-sm text-slate-600">
-            فرانت‌اند تک‌فایلی (HTML/React) و کد بک‌اند Express + MongoDB (برای استقرار جداگانه روی
-            Render) در این پروژه آماده شده‌اند.
-          </p>
-          <a
-            href="/option-hunter.html"
-            className="mt-4 inline-block rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white hover:bg-slate-700"
-          >
-            باز کردن دیده‌بان اختیار معامله
-          </a>
-          <p className="mt-3 text-xs text-slate-500">
-            کد بک‌اند به‌روزشده در پوشه‌ی <code>backend/</code> پروژه قرار دارد.
-          </p>
-        </div>
       </section>
     </main>
   );

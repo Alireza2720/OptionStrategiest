@@ -77,7 +77,6 @@ body.bg-hidden .dot:not(.sp):not(.er){animation:none}
 .tab{height:38px;padding:0 14px;border:none;border-bottom:2px solid transparent;background:none;color:var(--mut);cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0}
 .tab:hover{color:var(--txt)}.tab.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
 .cnt{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;position:relative}
-.tab-panel{flex:1;display:flex;flex-direction:column;min-height:0}
 .strategy-scroll{flex:1;overflow:auto;min-height:0;padding:4px 0 24px}
 .watch-view{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .ibar{min-height:28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:4px;padding:5px 14px;background:var(--sur2);border-bottom:1px solid var(--bor);font-size:11px;color:var(--mut);flex-shrink:0}
@@ -88,7 +87,7 @@ body.bg-hidden .dot:not(.sp):not(.er){animation:none}
 .cbtn-acc{border:1px solid var(--acc);background:var(--acc-t);color:var(--acc)}
 .tw{width:100%;min-width:0;overflow:auto;-webkit-overflow-scrolling:touch}
 .tw-strat{max-height:65vh}
-.tw-wrap{position:relative;overflow:hidden}
+.tw-wrap{position:relative}
 thead{position:sticky;top:0;z-index:20}
 thead tr{position:sticky;top:0;z-index:21;background:var(--sur)}
 thead tr.fr{top:38px;z-index:20;background:var(--sur3)}
@@ -141,10 +140,12 @@ tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
 .msub-tabs{display:flex;border-bottom:1px solid var(--bor);flex-shrink:0}
 .msub-tab{flex:1;padding:9px 0;border:none;background:none;color:var(--mut);font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
 .msub-tab.on{color:var(--acc);border-bottom-color:var(--acc)}
-.mbody{flex:1;overflow-y:auto;padding:12px 14px}.msec{margin-bottom:18px}.msec-t{margin-bottom:8px;color:var(--mut);font-size:10px;font-weight:700;letter-spacing:.08em;display:flex;align-items:center;gap:6px}
+.mbody{flex:1;overflow-y:auto;padding:12px 14px}.msec{margin-bottom:16px}
+.msec-t{margin-bottom:6px;color:var(--mut);font-size:10px;font-weight:700;letter-spacing:.08em;display:flex;align-items:center;gap:6px}
 .mdiv{height:1px;margin:6px 0;background:var(--bor)}
 .step-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .step-input{width:70px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:13px;text-align:center}
+.step-input.sm{width:56px;padding:4px 5px;font-size:11.5px}
 .step-hint{color:var(--mut);font-size:11.5px}
 .ov-add-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .ov-input-name{flex:1;min-width:90px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px}
@@ -164,7 +165,7 @@ tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
 .ov-remove{border:none;background:none;color:var(--loss);cursor:pointer;font-size:14px;padding:2px 5px;border-radius:4px;flex-shrink:0}
 .ov-remove:hover{background:var(--loss-t)}
 .ov-indicator{position:absolute;top:2px;left:2px;width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--sur)}
-.floating-export{position:absolute;bottom:10px;left:10px;z-index:15;display:flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid var(--acc);border-radius:20px;background:var(--sur);color:var(--acc);font-size:11px;font-weight:700;cursor:pointer;box-shadow:var(--sh-md);opacity:.9}
+.floating-export{position:sticky;bottom:10px;left:10px;z-index:15;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;margin:8px 0 0 10px;border:1px solid var(--acc);border-radius:20px;background:var(--sur);color:var(--acc);font-size:11px;font-weight:700;cursor:pointer;box-shadow:var(--sh-md);opacity:.92}
 .floating-export:hover{opacity:1;background:var(--acc-t)}
 .header-clear-btn{margin-right:8px;padding:1px 9px;border:1px solid var(--loss);border-radius:12px;background:var(--loss-t);color:var(--loss);font-size:10px;font-weight:600;cursor:pointer}
 .info-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--sur3);color:var(--mut);font-size:9px;cursor:help;margin-left:3px;flex-shrink:0}
@@ -172,31 +173,40 @@ tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
 .best-field{display:flex;align-items:center;gap:6px}
 .best-field label{font-size:11px;color:var(--mut);font-weight:600;white-space:nowrap}
 .toggle-switch{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:var(--txt2);white-space:nowrap}
-.toggle-switch.small{font-size:11px;gap:5px}
+.toggle-switch.sm{font-size:0}
+.toggle-switch input{flex-shrink:0}
 .mini-num{width:60px;padding:5px 7px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px;text-align:center}
 .tab-spin-dot{display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid var(--mut);border-top-color:transparent;margin-left:5px;animation:spin .7s linear infinite;vertical-align:middle}
-.hunt-card{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--acc);border-radius:var(--rs);background:var(--acc-t);color:var(--acc);font-size:13px;font-weight:700;cursor:pointer}
-.hunt-card:hover{background:var(--acc);color:#fff}
 .fs-overlay{position:fixed;inset:0;z-index:95;background:var(--bg);display:flex;flex-direction:column}
 .fs-head{height:46px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0}
 .fs-head b{font-size:14px}
 .fs-body{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-
-/* ---- مودال ساده‌ی نمودار سود/زیان (بدون درگ/ریسایز/داک) ---- */
-.modal-overlay{position:fixed;inset:0;z-index:150;background:rgba(10,14,22,.45);display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-box{width:100%;max-height:90vh;background:var(--bg);border:1px solid var(--bor);border-radius:var(--r);box-shadow:var(--sh-win);display:flex;flex-direction:column;overflow:hidden}
-.modal-head{height:46px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0}
-.modal-title{font-weight:700;font-size:14px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.modal-body{flex:1;overflow:auto;min-height:0}
-
-.hint-btn{width:16px;height:16px;border-radius:50%;border:1px solid var(--bor2);background:var(--sur2);color:var(--mut);font-size:10px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
-.hint-btn:hover{border-color:var(--acc);color:var(--acc)}
-.theme-dots{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.theme-dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--bor2);cursor:pointer;padding:0}
+.hunt-card{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--acc);border-radius:var(--rs) var(--rs) 0 0;background:var(--acc-t);color:var(--acc);font-size:13px;font-weight:700;cursor:pointer}
+.hunt-card:hover{background:var(--acc);color:#fff}
+.hunt-settings-toggle{width:100%;display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--bor);border-top:none;border-radius:0 0 var(--rs) var(--rs);background:var(--sur2);color:var(--txt2);font-size:11.5px;font-weight:600;cursor:pointer}
+.hunt-settings-toggle:hover{background:var(--sur3)}
+.hunt-settings-body{border:1px solid var(--bor);border-top:none;border-radius:0 0 var(--rs) var(--rs);padding:12px 14px;background:var(--sur)}
+.hunt-strat-grid{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.hunt-strat-head,.hunt-strat-row{display:grid;grid-template-columns:1fr 62px 62px 48px;gap:6px;align-items:center}
+.hunt-strat-head{font-size:10px;color:var(--mut);font-weight:700;text-align:center}
+.hunt-strat-head span:first-child{text-align:right}
+.hunt-strat-row{font-size:11.5px;padding:3px 0}
+.hunt-strat-name{color:var(--txt);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hunt-strat-field{display:flex;align-items:center;justify-content:center}
+.theme-row{display:flex;align-items:center;gap:10px}
+.theme-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--bor);cursor:pointer;padding:0;flex-shrink:0}
 .theme-dot.on{box-shadow:0 0 0 2px var(--sur),0 0 0 4px var(--acc)}
-.inline-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.notify-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:6px 0 10px}
-
+.info-toggle-wrap{position:relative;display:inline-flex}
+.info-toggle-btn{width:16px;height:16px;border-radius:50%;border:1px solid var(--bor2);background:var(--sur2);color:var(--mut);font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0}
+.info-toggle-btn:hover{background:var(--acc-t);color:var(--acc);border-color:var(--acc)}
+.info-toggle-text{margin:6px 0 4px;padding:8px 10px;border:1px dashed var(--bor2);border-radius:6px;background:var(--sur2);color:var(--txt2);font-size:11.5px;line-height:1.8}
+.refresh-inline{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.center{height:100%}
+.modal-overlay{position:fixed;inset:0;z-index:120;background:rgba(10,14,25,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{width:min(920px,96vw);max-height:92vh;display:flex;flex-direction:column;background:var(--bg);border:1px solid var(--bor);border-radius:var(--r);box-shadow:var(--sh-win);overflow:hidden}
+.modal-head{height:46px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0}
+.modal-title{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.modal-body{flex:1;overflow:auto;min-height:0}
 .payoff-body{padding:10px 14px}
 .payoff-info-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .pinfo{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rs);padding:6px 12px;display:flex;flex-direction:column;gap:2px;min-width:90px}
@@ -248,9 +258,10 @@ var useRef=React.useRef;
    ========================================================= */
 var CONFIG={
   API_BASE:"https://option-hunter-backend.onrender.com",
-  /* مقدار API_KEY که در متغیرهای محیطی بک‌اند (Render) تنظیم کرده‌اید را دقیقاً همینجا
-     paste کنید. اگر خالی بماند، درخواست‌های ذخیره‌ی تنظیمات/Override/اجرای فوری با خطای
-     401 (Unauthorized) مواجه می‌شوند چون بک‌اند بدون هدر x-api-key آن‌ها را رد می‌کند. */
+  /* همان مقدار API_KEY که در متغیرهای محیطی سرویس Render (.env بک‌اند) ست کرده‌اید
+     را دقیقاً همین‌جا وارد کنید. اگر این مقدار خالی بماند یا با مقدار سرور یکی
+     نباشد، تمام درخواست‌های POST/DELETE (ذخیره‌ی تنظیمات، Override و ...) با
+     خطای 401 رد می‌شوند. */
   API_KEY:""
 };
 
@@ -287,28 +298,24 @@ var L={
   addOverride:"افزودن",noOverrides:"هنوز سهمی اضافه نشده است.",realPriceShort:"واقعی",manualBadge:"دستی",
   overridePlaceholderName:"نام سهم پایه",overridePlaceholderPrice:"قیمت",
   refreshIntervalLbl:"بروزرسانی خودکار",
-  refreshIntervalHint:"هر چند ثانیه یک‌بار داده‌ها به‌صورت خودکار از سرور خوانده شوند (فقط خواندن؛ محاسبه جدید انجام نمی‌شود). فقط تب فعلی (و شکار موقعیت‌ها در صورت باز بودن) بروزرسانی می‌شود.",
+  refreshIntervalHint:"در این حالت فقط تب فعلی هر چند ثانیه یک‌بار به‌صورت خودکار از سرور دوباره خوانده می‌شود (فقط خواندن؛ محاسبه‌ی جدید روی سرور انجام نمی‌شود).",
   showAllColumns:"نمایش کامل ستون‌ها",hideExtraColumns:"نمایش ساده",
   huntPositions:"شکار موقعیت‌ها",
-  autoRefreshLbl:"فعال",
-  autoRefreshHint:"در حالت پیش‌فرض بروزرسانی خودکار غیرفعال است. برای بروزرسانی کامل (اجرای مجدد محاسبات روی سرور) از دکمهٔ ↻ استفاده کنید.",
   huntSettingsTitle:"تنظیمات شکار موقعیت‌ها",
-  huntFormulaHint:"آستانه‌ی هر ردیف = روزِ مانده تا سررسید × نرخ روزانه (بدون کف ثابت). شرط قبولی سود: بازده واقعی در قیمت فعلی ≥ «آستانه سود لازم». شرط قبولی شوک (به‌جز کانورژن و باکس که بازده ثابت و بدون شوک دارند): با اسکن دقیق تابع سود/زیان، کمترین شوک واقعی (صعودی یا نزولی) که باعث زیان می‌شود باید ≥ «شوک لازم» باشد. (این فرمول ممکن است در آینده تغییر کند)",
-  huntCat1Title:"دسته ۱ — کاوردکال، مریدپوت، کلار، کانورژن",
-  huntCat2Title:"دسته ۲ — استرانگل، کال‌اسپرد، پوت‌اسپرد، باکس",
-  huntShockRateLbl:"نرخ روزانهٔ شوک (٪/روز)",
-  huntProfitRateLbl:"نرخ روزانهٔ سود (٪/روز)",
+  huntFormulaHint:"برای هر استراتژی: آستانهٔ سود لازم = روزِ مانده تا سررسید × نرخ سود روزانه، و آستانهٔ شوک لازم = روزِ مانده × نرخ شوک روزانه (کانورژن و باکس بازده ثابت دارند و شوک ندارند؛ فقط شرط سود روی آن‌ها بررسی می‌شود). سپس با اسکن پیوستهٔ نمودار سود/زیان هر موقعیت، نزدیک‌ترین درصد تغییر قیمت سهم پایه در هر دو جهت (صعود/نزول) که باعث منفی‌شدن بازده می‌شود پیدا می‌شود («شوک واقعی»). موقعیت قبول می‌شود اگر بازده بدون تغییر قیمت ≥ آستانهٔ سود لازم و کمترین شوک واقعی (صعود یا نزول) ≥ شوک لازم باشد.",
+  huntStrategySettingsTitle:"تنظیمات هر استراتژی",
+  huntStratNameCol:"استراتژی",huntStratShockCol:"شوک روزانه",huntStratProfitCol:"سود روزانه",huntStratTelegramCol:"تلگرام",
   requiredShockCol:"شوک لازم",
   requiredProfitCol:"آستانهٔ سود لازم",
-  actualShockUpCol:"حداکثر شوک صعودی",
-  actualShockDownCol:"حداکثر شوک نزولی",
+  actualShockUpCol:"شوک واقعی (صعود)",
+  actualShockDownCol:"شوک واقعی (نزول)",
   minActualShockCol:"حداقل شوک واقعی",
   huntTopNLbl:"تعداد ارسال به تلگرام",
   huntTopNUnlimitedLbl:"بدون محدودیت (ارسال همه)",
   huntOnlyBuyableLbl:"فقط سهم‌های قابل‌خرید (تلگرام و نمایش)",
-  huntCooldownLbl:"فاصلهٔ یادآوری تلگرام (ساعت)",
+  huntCooldownLbl:"فاصلهٔ یادآوری تلگرام",
   huntCooldownForeverLbl:"فقط یک‌بار برای همیشه اطلاع بده",
-  huntNotifyPerStrategyTitle:"فعال/غیرفعال کردن اطلاع‌رسانی تلگرام هر استراتژی",
+  huntCooldownForeverHint:"با فعال‌بودن این گزینه، هر موقعیت فقط یک‌بار در کل عمر برنامه اعلان داده می‌شود و حتی بعد از گذشت هر مدت زمانی دیگر تکرار نخواهد شد.",
   checkIntervalLbl:"فاصلهٔ اجرای خودکار سرور (ثانیه)",
   checkIntervalHint:"این مقدار تعیین می‌کند سرور هر چند ثانیه یک‌بار به‌صورت داخلی چرخهٔ محاسبه/اعلان تلگرام را اجرا کند (جدا از cron-job.org).",
   applying:"در حال اعمال تغییرات روی سرور...",
@@ -317,7 +324,7 @@ var L={
 
 var THEMES=["light","midnight","solarized","slate"];
 var THEME_NAMES={light:"روشن",midnight:"نیمه‌شب",solarized:"سولار",slate:"سنگی"};
-var THEME_DOT_COLORS={light:"#3b82f6",midnight:"#7c3aed",solarized:"#268bd2",slate:"#f59e0b"};
+var THEME_ACCENTS={light:"#3b82f6",midnight:"#7c3aed",solarized:"#268bd2",slate:"#f59e0b"};
 var IS_TOUCH=(function(){try{return window.matchMedia("(pointer:coarse)").matches}catch(e){return false}})();
 var DEFAULT_REFRESH_SEC=30;
 var MIN_REFRESH_SEC=10;
@@ -329,19 +336,16 @@ var HEADER_H_WATCH=70;
 var VIRTUALIZE_THRESHOLD=IS_TOUCH?14:30;
 var VIRT_OVERSCAN=IS_TOUCH?6:12;
 var EMPTY_ARR=[];
-var HUNT_SHOCK_INF=999999;
-var HUNT_DEFAULTS={
-  cat1:{shockRate:0.5,profitRate:0.35},
-  cat2:{shockRate:0.5,profitRate:0.7}
+
+var HUNT_STRATEGY_TYPES=["cc","mp","co","cv","strangle","strangleSell","callspread","callspreadbear","putspread","putspreadbull","box"];
+var SHOCKLESS_TYPES_FE={cv:true,box:true};
+var HUNT_STRATEGY_DEFAULTS={
+  cc:{shockRate:0.5,profitRate:0.35},mp:{shockRate:0.5,profitRate:0.35},co:{shockRate:0.5,profitRate:0.35},cv:{shockRate:0,profitRate:0.35},
+  strangle:{shockRate:0.5,profitRate:0.7},strangleSell:{shockRate:0.5,profitRate:0.7},
+  callspread:{shockRate:0.5,profitRate:0.7},callspreadbear:{shockRate:0.5,profitRate:0.7},
+  putspread:{shockRate:0.5,profitRate:0.7},putspreadbull:{shockRate:0.5,profitRate:0.7},
+  box:{shockRate:0,profitRate:0.7}
 };
-var HUNT_TYPES_FOR_TOGGLE=[
-  {id:"cc",label:function(){return L.cc}},{id:"mp",label:function(){return L.mp}},
-  {id:"co",label:function(){return L.co}},{id:"cv",label:function(){return L.cv}},
-  {id:"strangle",label:function(){return L.strangleBuy}},{id:"strangleSell",label:function(){return L.strangleSell}},
-  {id:"callspread",label:function(){return L.callSpread}},{id:"callspreadbear",label:function(){return L.callSpreadBear}},
-  {id:"putspread",label:function(){return L.putSpread}},{id:"putspreadbull",label:function(){return L.putSpreadBull}},
-  {id:"box",label:function(){return L.box}}
-];
 
 /* =========================================================
    لایه ارتباط با API بک‌اند
@@ -396,11 +400,6 @@ function n2(v){
 function plainPct(v){
   if(v==null||isNaN(v))return "—";
   return (v>0?"+":"")+n(v,1)+"٪";
-}
-function fmtShockVal(v){
-  if(v==null)return "—";
-  if(v>=HUNT_SHOCK_INF)return "نامحدود";
-  return n(v,1)+"٪";
 }
 function scenClass(v){return v>0?"tc-pos":v<0?"tc-neg":"tc0"}
 function roiCalc(pnl,base){return base>0?(pnl/base)*100:0}
@@ -461,7 +460,8 @@ function splitBuyable(data){
   return {buyable:buy,notBuyable:notBuy};
 }
 
-/* بازسازی تابع سود/زیان پیوسته از روی خروجی نهایی هر ردیف (برای نمودار) */
+/* بازسازی تابع سود/زیان پیوسته از روی خروجی نهایی هر ردیف (برای نمودار)؛
+   این فرمول‌ها دقیقاً منطبق با services/calcEngine.js سمت سرور هستند. */
 function computePayoffFn(kind,row){
   var size=row.size||0;
   if(kind==="cc"){
@@ -585,6 +585,28 @@ function NumberField(props){
   );
 }
 
+function InfoToggle(props){
+  var st=useState(false);var open=st[0],setOpen=st[1];
+  return (
+    <span className="info-toggle-wrap">
+      <button type="button" className="info-toggle-btn" onClick={function(){setOpen(!open)}}
+        aria-label="نمایش توضیحات" title="توضیحات">ℹ</button>
+      {open?<div className="info-toggle-text" style={props.blockStyle}>{props.children}</div>:null}
+    </span>
+  );
+}
+
+/* برای اینکه InfoToggle بتواند به‌صورت یک بلوک کامل زیر عنوان قرار بگیرد
+   (نه فقط کنار آن)، این نسخه هم متن عنوان و هم توضیح جمع‌شونده را با هم می‌سازد. */
+function SectionTitle(props){
+  return (
+    <div className="msec-t">
+      <span>{props.title}</span>
+      {props.hint?<InfoToggle>{props.hint}</InfoToggle>:null}
+    </div>
+  );
+}
+
 function useVirtualWindow(scrollRef,count,rowHeight,headerHeight,overscan){
   var st=useState({start:0,end:count});
   useEffect(function(){
@@ -593,12 +615,12 @@ function useVirtualWindow(scrollRef,count,rowHeight,headerHeight,overscan){
     var ticking=false;
     function compute(){
       if(count<=VIRTUALIZE_THRESHOLD){st[1]({start:0,end:count});return}
+      var maxScrollTop=Math.max(0,el.scrollHeight-el.clientHeight);
+      if(el.scrollTop>maxScrollTop)el.scrollTop=maxScrollTop; // جلوگیری از فضای خالی اضافه بعد از کوچک‌شدن محتوا
       var scrollTop=Math.max(0,el.scrollTop-headerHeight);
       var viewH=el.clientHeight;
-      var start=Math.floor(scrollTop/rowHeight)-overscan;
-      start=Math.max(0,Math.min(start,count));
-      var end=Math.ceil((scrollTop+viewH)/rowHeight)+overscan;
-      end=Math.max(start,Math.min(count,end));
+      var start=Math.max(0,Math.floor(scrollTop/rowHeight)-overscan);
+      var end=Math.min(count,Math.ceil((scrollTop+viewH)/rowHeight)+overscan);
       st[1]({start:start,end:end});
     }
     function onScroll(){
@@ -1164,6 +1186,11 @@ var NEW_STRATEGY_TITLE={
   putspread:L.putSpread,putspreadbull:L.putSpreadBull,
   box:L.box
 };
+var ALL_STRATEGY_LABELS={
+  cc:L.cc,mp:L.mp,co:L.co,cv:L.cv,strangle:L.strangleBuy,strangleSell:L.strangleSell,
+  callspread:L.callSpread,callspreadbear:L.callSpreadBear,
+  putspread:L.putSpread,putspreadbull:L.putSpreadBull,box:L.box
+};
 var MARGIN_APPROX_NOTE="به دلیل تفاوت در نحوهٔ محاسبهٔ وجه تضمین میان کارگزاری‌های مختلف، بازده‌های نمایش‌داده‌شده در این جدول تقریبی هستند؛ برای سود و زیان دقیق این استراتژی حتماً به سامانهٔ معاملاتی کارگزاری خود مراجعه کنید.";
 var MARGIN_NOTE_KINDS={strangleSell:true};
 
@@ -1181,10 +1208,10 @@ class ErrorBoundary extends React.Component{
 }
 
 /* =========================================================
-   مودال ساده‌ی نمودار سود/زیان (بدون درگ/ریسایز/داک)
+   مودال ساده‌ی وسط صفحه (جایگزین پنجره‌ی شناور/قابل‌درگ قبلی)
    ========================================================= */
 function Modal(props){
-  var title=props.title,onClose=props.onClose,children=props.children,width=props.width||860;
+  var onClose=props.onClose;
   useEffect(function(){
     function onKey(e){if(e.key==="Escape")onClose()}
     window.addEventListener("keydown",onKey);
@@ -1192,36 +1219,31 @@ function Modal(props){
   },[onClose]);
   return (
     <div className="modal-overlay" onMouseDown={function(e){if(e.target===e.currentTarget)onClose()}}>
-      <div className="modal-box" style={{maxWidth:width}} role="dialog" aria-label={typeof title==="string"?title:"پنجره"}>
+      <div className="modal-box" role="dialog" aria-label={typeof props.title==="string"?props.title:"پنجره"}>
         <div className="modal-head">
-          <div className="modal-title">{title}</div>
+          <div className="modal-title">{props.title}</div>
           <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
         </div>
-        <div className="modal-body">{children}</div>
+        <div className="modal-body">{props.children}</div>
       </div>
     </div>
   );
 }
 
-function ModalFallback(props2){
+function ModalErrorFallback(props2){
   return (
     <div className="modal-overlay">
-      <div className="modal-box" style={{maxWidth:380}}>
-        <div className="modal-head">
-          <div className="modal-title">خطا در نمایش نمودار</div>
-          <button className="ib" onClick={props2.onClose} aria-label="بستن">✕</button>
-        </div>
-        <div className="modal-body" style={{padding:20,textAlign:"center"}}>
-          <div className="desc" style={{marginBottom:10}}>لطفاً پنجره را ببندید و دوباره تلاش کنید.</div>
-          <button className="cbtn" onClick={props2.onClose}>{L.close}</button>
-        </div>
+      <div className="error-box">
+        <div className="title">خطا در نمایش نمودار</div>
+        <div className="desc">لطفاً پنجره را ببندید و دوباره تلاش کنید.</div>
+        <button className="cbtn" style={{marginTop:10}} onClick={props2.onClose}>{L.close}</button>
       </div>
     </div>
   );
 }
 
 /* =========================================================
-   نمودار سود/زیان تکی (PayoffPanel) — داخل Modal ساده
+   نمودار سود/زیان تکی (PayoffPanel) — داخل مودال ساده
    ========================================================= */
 function PayoffPanel(props){
   var row=props.row,kind=props.kind,onClose=props.onClose;
@@ -1319,7 +1341,7 @@ function PayoffPanel(props){
   var isFixedRoi=(kind==="cv"||kind==="box");
 
   return (
-    <Modal title={headTitle} onClose={onClose} width={900}>
+    <Modal title={headTitle} onClose={onClose}>
       {isFixedRoi?(
         <div className="ibar">
           <span className="rlbl">این استراتژی بازده ثابت و بدون وابستگی به قیمت سهم پایه دارد؛ نمودار به‌صورت خط افقی نمایش داده می‌شود.</span>
@@ -1396,7 +1418,7 @@ function PayoffPanel(props){
               <span className={"ro-val "+(hoverRoi>=0?"gain":"loss")}>{(hoverRoi>=0?"+":"")+n(Math.round(hoverRoi*100)/100,2)+"%"}</span>
             </React.Fragment>
           ):(
-            <span className="ro-hint">برای بستن این پنجره از دکمه‌ی ضربدر، کلید Esc یا کلیک بیرون از پنجره استفاده کنید.</span>
+            <span className="ro-hint">با نگه‌داشتن نشانگر روی نمودار، بازده در هر درصد تغییر قیمت نمایش داده می‌شود. برای بستن، Esc را بزنید یا روی پس‌زمینه کلیک کنید.</span>
           )}
         </div>
       </div>
@@ -1404,16 +1426,9 @@ function PayoffPanel(props){
   );
 }
 
-/* اصلاح رندرر ستون spot/basis_name در دیده‌بان: چون بک‌اند override را حتی
-   روی دیده‌بان هم اعمال می‌کند (cache.watch از overrides عبور می‌کند)،
-   باید نشانگر ✎ و برچسب «دستی» اینجا هم دیده شود. */
-(function(){
-  var spotCol=WATCH_COLS.find(function(c){return c.k==="spot"});
-  if(spotCol)spotCol.r=SpotR;
-  var basisCol=WATCH_COLS.find(function(c){return c.k==="basis_name"});
-  if(basisCol)basisCol.r=BasisNameR;
-})();
-
+/* =========================================================
+   بخش‌های استراتژی
+   ========================================================= */
 var ISSINGLE_SCENARIO_KINDS={cv:true,box:true};
 var SINGLE_SCEN_LABEL_ADJ="بازده تعدیل‌شده (۳۰ روزه)";
 var SINGLE_SCEN_LABEL_RAW="بازده واقعی تا سررسید";
@@ -1443,37 +1458,45 @@ function buildWatchAoa(rows,cols){
   return [headers].concat(lines);
 }
 function buildBestAoa(rows,steps){
-  var typeLbl=BEST_STRATEGY_LABELS;
+  var typeLbl=ALL_STRATEGY_LABELS;
   var headers=["استراتژی","موقعیت","سهم پایه","سررسید","روز"];
   steps.forEach(function(v){headers.push("تعدیل "+(v>0?"+":"")+n(v,1)+"%")});
   steps.forEach(function(v){headers.push("واقعی "+(v>0?"+":"")+n(v,1)+"%")});
-  headers.push("شوک لازم (٪)","حداکثر شوک صعودی (٪)","حداکثر شوک نزولی (٪)","حداقل شوک واقعی (٪)","آستانهٔ سود لازم (٪)");
+  headers.push("شوک لازم (٪)","آستانهٔ سود لازم (٪)","شوک واقعی صعود (٪)","شوک واقعی نزول (٪)","حداقل شوک واقعی (٪)");
   var lines=rows.map(function(r){
     var vals=[typeLbl[r.strategy_type]||r.strategy_type,r.primary_name,r.basis_name,r.expiry,r.dte];
     (r.scenariosAdjusted||[]).forEach(function(v){vals.push(v==null?"":Math.round(v*100)/100)});
     (r.scenariosRaw||[]).forEach(function(v){vals.push(v==null?"":Math.round(v*100)/100)});
-    vals.push(r.required_shock==null?"":r.required_shock);
-    vals.push(r.actual_shock_up==null?"":(r.actual_shock_up>=HUNT_SHOCK_INF?"نامحدود":r.actual_shock_up));
-    vals.push(r.actual_shock_down==null?"":(r.actual_shock_down>=HUNT_SHOCK_INF?"نامحدود":r.actual_shock_down));
-    vals.push(r.min_actual_shock>=HUNT_SHOCK_INF?"نامحدود":r.min_actual_shock);
+    vals.push(r.required_shock==null?"—":r.required_shock);
     vals.push(r.required_profit==null?"":r.required_profit);
+    vals.push(r.actual_shock_up==null?"بی‌نهایت":r.actual_shock_up);
+    vals.push(r.actual_shock_down==null?"بی‌نهایت":r.actual_shock_down);
+    vals.push(r.is_shockless?"—":(r.min_actual_shock==null?"بی‌نهایت":r.min_actual_shock));
     return vals;
   });
   return [headers].concat(lines);
 }
 
-var BEST_STRATEGY_LABELS={
-  cc:L.cc,mp:L.mp,co:L.co,cv:L.cv,
-  strangle:L.strangleBuy,strangleSell:L.strangleSell,
-  callspread:L.callSpread,callspreadbear:L.callSpreadBear,
-  putspread:L.putSpread,putspreadbull:L.putSpreadBull,
-  box:L.box
-};
-var BEST_CAT1={cc:1,mp:1,co:1,cv:1};
+function CollapsibleWrap(props){
+  var stOpen=useState(props.isOpen);
+  var open=stOpen[0],setOpen=stOpen[1];
+  return (
+    <div className="collapsible-section">
+      <div className="collapsible-header" role="button" tabIndex={0}
+        onClick={function(){setOpen(!open)}}
+        onKeyDown={function(e){if(e.key==="Enter"||e.key===" ")setOpen(!open)}}>
+        <span className={"arrow"+(open?" open":"")}>▶</span>
+        <span>{props.title}</span>
+        <span className="section-badge">{props.count} {props.countLabel}</span>
+      </div>
+      <div className={"collapsible-content "+(open?"open":"closed")}>
+        {open?props.children:null}
+      </div>
+    </div>
+  );
+}
 
-/* =========================================================
-   هستهٔ مشترک جدول استراتژی (بدون تفکیک قابل‌خرید/غیرقابل‌خرید)
-   ========================================================= */
+/* هستهٔ مشترک جدول استراتژی */
 function StrategyTable(props){
   var kind=props.kind,data=props.data||EMPTY_ARR,allCols=props.allCols,steps=props.steps||EMPTY_ARR,
     dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
@@ -1626,28 +1649,6 @@ function StrategyTable(props){
   );
 }
 StrategyTable=React.memo(StrategyTable);
-
-/* =========================================================
-   بخش‌های استراتژی (با تفکیک قابل‌خرید/غیرقابل‌خرید)
-   ========================================================= */
-function CollapsibleWrap(props){
-  var stOpen=useState(props.isOpen);
-  var open=stOpen[0],setOpen=stOpen[1];
-  return (
-    <div className="collapsible-section">
-      <div className="collapsible-header" role="button" tabIndex={0}
-        onClick={function(){setOpen(!open)}}
-        onKeyDown={function(e){if(e.key==="Enter"||e.key===" ")setOpen(!open)}}>
-        <span className={"arrow"+(open?" open":"")}>▶</span>
-        <span>{props.title}</span>
-        <span className="section-badge">{props.count} {props.countLabel}</span>
-      </div>
-      <div className={"collapsible-content "+(open?"open":"closed")}>
-        {open?props.children:null}
-      </div>
-    </div>
-  );
-}
 
 function StrategySection(props){
   var kind=props.kind,data=props.data,steps=props.steps,dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
@@ -1842,8 +1843,7 @@ function BasisOverridesEditor(props){
 
   return (
     <div className="msec">
-      <div className="msec-t">{L.customBasisPrice}</div>
-      <div className="step-hint" style={{marginBottom:10,display:"block"}}>{L.customBasisHint}</div>
+      <SectionTitle title={L.customBasisPrice} hint={L.customBasisHint} />
       <div className="ov-add-row">
         <input type="text" list="basisNamesDatalist" className="ov-input-name"
           placeholder={L.overridePlaceholderName} value={newName}
@@ -1883,22 +1883,48 @@ function BasisOverridesEditor(props){
 }
 
 /* =========================================================
-   عنوان بخش تنظیمات با آیکون کوچک باز/بسته‌کردن توضیحات (accordion)
+   تنظیمات هر استراتژی برای شکار موقعیت‌ها
    ========================================================= */
-function SecTitle(props){
-  var stOpen=useState(false);
-  var open=stOpen[0],setOpen=stOpen[1];
+function HuntStrategySettingsGrid(props){
+  var strategies=props.strategies||{},onChange=props.onChange;
   return (
-    <React.Fragment>
-      <div className="msec-t">
-        <span>{props.title}</span>
-        {props.hint?(
-          <button type="button" className="hint-btn" onClick={function(){setOpen(!open)}}
-            aria-expanded={open} aria-label="نمایش توضیحات">{open?"−":"؟"}</button>
-        ):null}
+    <div>
+      <div className="hunt-strat-head">
+        <span>{L.huntStratNameCol}</span>
+        <span>{L.huntStratShockCol}</span>
+        <span>{L.huntStratProfitCol}</span>
+        <span>{L.huntStratTelegramCol}</span>
       </div>
-      {open&&props.hint?<div className="step-hint" style={{marginBottom:8,display:"block"}}>{props.hint}</div>:null}
-    </React.Fragment>
+      <div className="hunt-strat-grid">
+        {HUNT_STRATEGY_TYPES.map(function(type){
+          var d=HUNT_STRATEGY_DEFAULTS[type];
+          var cfg=strategies[type]||{shockRate:d.shockRate,profitRate:d.profitRate,telegramEnabled:true};
+          var shockless=!!SHOCKLESS_TYPES_FE[type];
+          return (
+            <div className="hunt-strat-row" key={type}>
+              <div className="hunt-strat-name">{ALL_STRATEGY_LABELS[type]}</div>
+              <div className="hunt-strat-field">
+                {shockless?(
+                  <span className="mut" title="این استراتژی بازده ثابت دارد و شوک ندارد">—</span>
+                ):(
+                  <NumberField className="step-input sm" value={cfg.shockRate} min={0} max={5}
+                    onCommit={function(v){onChange(type,{shockRate:v})}} ariaLabel={"نرخ شوک "+ALL_STRATEGY_LABELS[type]} />
+                )}
+              </div>
+              <div className="hunt-strat-field">
+                <NumberField className="step-input sm" value={cfg.profitRate} min={0} max={5}
+                  onCommit={function(v){onChange(type,{profitRate:v})}} ariaLabel={"نرخ سود "+ALL_STRATEGY_LABELS[type]} />
+              </div>
+              <div className="hunt-strat-field">
+                <input type="checkbox" checked={cfg.telegramEnabled!==false}
+                  onChange={function(e){onChange(type,{telegramEnabled:e.target.checked})}}
+                  aria-label={"تلگرام "+ALL_STRATEGY_LABELS[type]} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -1907,7 +1933,7 @@ function SecTitle(props){
    ========================================================= */
 function HamMenu(props){
   var open=props.open,onClose=props.onClose,theme=props.theme,setTheme=props.setTheme,
-    settings=props.settings,updateSettings=props.updateSettings,
+    settings=props.settings,updateSettings=props.updateSettings,updateHuntStrategyField=props.updateHuntStrategyField,
     dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
     overrides=props.overrides,onAddOverride=props.onAddOverride,onToggleOverride=props.onToggleOverride,
     onUpdateOverridePrice=props.onUpdateOverridePrice,onRemoveOverride=props.onRemoveOverride,
@@ -1918,43 +1944,12 @@ function HamMenu(props){
 
   var stTab=useState("settings");
   var mtab=stTab[0],setMtab=stTab[1];
+  var stHuntOpen=useState(false);
+  var huntSettingsOpen=stHuntOpen[0],setHuntSettingsOpen=stHuntOpen[1];
 
   if(!settings)return null;
   var scenStep=settings.scenStep;
-  var huntCat1=settings.huntCat1||HUNT_DEFAULTS.cat1;
-  var huntCat2=settings.huntCat2||HUNT_DEFAULTS.cat2;
-  var huntNotifyEnabled=settings.huntNotifyEnabled||{};
-
   var exampleSteps=[-3,-2,-1,0,1,2,3].map(function(m){return (m>0?"+":"")+n(m*scenStep,1)}).join("٪، ")+"٪";
-
-  function huntCatField(cat,key,val){
-    var obj=cat==="cat1"?Object.assign({},huntCat1):Object.assign({},huntCat2);
-    obj[key]=val;
-    var partial={};
-    partial[cat==="cat1"?"huntCat1":"huntCat2"]=obj;
-    updateSettings(partial,true);
-  }
-  function HuntCatFields(cat,cfg){
-    return (
-      <React.Fragment>
-        <div className="step-row" style={{marginBottom:8}}>
-          <NumberField className="step-input" value={cfg.shockRate} min={0.05} max={5}
-            onCommit={function(v){huntCatField(cat,"shockRate",v)}} ariaLabel={L.huntShockRateLbl} />
-          <span className="step-hint">{L.huntShockRateLbl}</span>
-        </div>
-        <div className="step-row">
-          <NumberField className="step-input" value={cfg.profitRate} min={0} max={5}
-            onCommit={function(v){huntCatField(cat,"profitRate",v)}} ariaLabel={L.huntProfitRateLbl} />
-          <span className="step-hint">{L.huntProfitRateLbl}</span>
-        </div>
-      </React.Fragment>
-    );
-  }
-  function toggleNotify(id,checked){
-    var obj=Object.assign({},huntNotifyEnabled);
-    obj[id]=checked;
-    updateSettings({huntNotifyEnabled:obj},false);
-  }
 
   return (
     <React.Fragment>
@@ -1976,65 +1971,61 @@ function HamMenu(props){
                 onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenHunt()}}}>
                 <span>{L.huntPositions}</span><span>›</span>
               </div>
-
-              <div className="mdiv" />
-              <div className="msec">
-                <SecTitle title={L.huntSettingsTitle} hint={L.huntFormulaHint} />
-                <label className="toggle-switch" style={{marginBottom:8}}>
-                  <input type="checkbox" checked={!!settings.huntOnlyBuyable}
-                    onChange={function(e){updateSettings({huntOnlyBuyable:e.target.checked},true)}} />
-                  {L.huntOnlyBuyableLbl}
-                </label>
-                <div className="step-row" style={{marginBottom:8}}>
-                  <NumberField className="step-input" value={settings.huntTopN} min={1} max={500}
-                    onCommit={function(v){updateSettings({huntTopN:v},false)}} ariaLabel={L.huntTopNLbl}
-                    disabled={!!settings.huntTopNUnlimited} />
-                  <span className="step-hint">{L.huntTopNLbl}</span>
-                  <label className="toggle-switch small" style={{marginRight:10}}>
-                    <input type="checkbox" checked={!!settings.huntTopNUnlimited}
-                      onChange={function(e){updateSettings({huntTopNUnlimited:e.target.checked},false)}} />
-                    {L.huntTopNUnlimitedLbl}
+              <button type="button" className="hunt-settings-toggle" onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}>
+                <span className={"arrow"+(huntSettingsOpen?" open":"")}>▶</span>
+                <span>{L.huntSettingsTitle}</span>
+              </button>
+              {huntSettingsOpen?(
+                <div className="hunt-settings-body">
+                  <InfoToggle>{L.huntFormulaHint}</InfoToggle>
+                  <label className="toggle-switch" style={{margin:"8px 0"}}>
+                    <input type="checkbox" checked={!!settings.huntOnlyBuyable}
+                      onChange={function(e){updateSettings({huntOnlyBuyable:e.target.checked},true)}} />
+                    {L.huntOnlyBuyableLbl}
                   </label>
-                </div>
-                <div className="step-row" style={{marginBottom:8}}>
-                  <NumberField className="step-input" value={settings.huntCooldownHours} min={1} max={168}
-                    onCommit={function(v){updateSettings({huntCooldownHours:v},false)}} ariaLabel={L.huntCooldownLbl}
-                    disabled={!!settings.huntCooldownForever} />
-                  <span className="step-hint">{L.huntCooldownLbl}</span>
-                  <label className="toggle-switch small" style={{marginRight:10}}>
+
+                  <div className="step-row" style={{marginBottom:8}}>
+                    <NumberField className="step-input" value={settings.huntTopN} min={1} max={500}
+                      disabled={!!settings.huntTopNUnlimited}
+                      onCommit={function(v){updateSettings({huntTopN:v},false)}} ariaLabel={L.huntTopNLbl} />
+                    <span className="step-hint">{L.huntTopNLbl}</span>
+                    <label className="toggle-switch" style={{marginRight:8}}>
+                      <input type="checkbox" checked={!!settings.huntTopNUnlimited}
+                        onChange={function(e){updateSettings({huntTopNUnlimited:e.target.checked},false)}} />
+                      {L.huntTopNUnlimitedLbl}
+                    </label>
+                  </div>
+
+                  <div className="step-row" style={{marginBottom:6}}>
+                    <NumberField className="step-input" value={settings.huntCooldownHours} min={0} max={720}
+                      disabled={!!settings.huntCooldownForever}
+                      onCommit={function(v){updateSettings({huntCooldownHours:v},false)}} ariaLabel="ساعت" />
+                    <span className="step-hint">ساعت</span>
+                    <NumberField className="step-input" value={settings.huntCooldownMinutes} min={0} max={59}
+                      disabled={!!settings.huntCooldownForever}
+                      onCommit={function(v){updateSettings({huntCooldownMinutes:v},false)}} ariaLabel="دقیقه" />
+                    <span className="step-hint">دقیقه — {L.huntCooldownLbl}</span>
+                  </div>
+                  <label className="toggle-switch" style={{marginBottom:10}}>
                     <input type="checkbox" checked={!!settings.huntCooldownForever}
                       onChange={function(e){updateSettings({huntCooldownForever:e.target.checked},false)}} />
                     {L.huntCooldownForeverLbl}
+                    <InfoToggle>{L.huntCooldownForeverHint}</InfoToggle>
                   </label>
-                </div>
 
-                <div className="msec-t" style={{marginTop:10}}>{L.huntNotifyPerStrategyTitle}</div>
-                <div className="notify-grid">
-                  {HUNT_TYPES_FOR_TOGGLE.map(function(t){
-                    var enabled=huntNotifyEnabled[t.id]!==false;
-                    return (
-                      <label key={t.id} className="toggle-switch small">
-                        <input type="checkbox" checked={enabled} onChange={function(e){toggleNotify(t.id,e.target.checked)}} />
-                        {t.label()}
-                      </label>
-                    );
-                  })}
+                  <SectionTitle title={L.huntStrategySettingsTitle} />
+                  <HuntStrategySettingsGrid strategies={settings.huntStrategies||{}} onChange={updateHuntStrategyField} />
                 </div>
-
-                <div className="msec-t" style={{marginTop:4}}>{L.huntCat1Title}</div>
-                {HuntCatFields("cat1",huntCat1)}
-                <div className="msec-t" style={{marginTop:10}}>{L.huntCat2Title}</div>
-                {HuntCatFields("cat2",huntCat2)}
-              </div>
+              ):null}
 
               <div className="mdiv" />
               <div className="msec">
-                <div className="msec-t">{L.theme}</div>
-                <div className="theme-dots">
+                <SectionTitle title={L.theme} />
+                <div className="theme-row">
                   {THEMES.map(function(t){
                     return (
                       <button key={t} type="button" className={"theme-dot"+(theme===t?" on":"")}
-                        style={{background:THEME_DOT_COLORS[t]}} title={THEME_NAMES[t]} aria-label={THEME_NAMES[t]}
+                        style={{background:THEME_ACCENTS[t]}} title={THEME_NAMES[t]} aria-label={THEME_NAMES[t]}
                         onClick={function(){setTheme(t)}} />
                     );
                   })}
@@ -2043,11 +2034,10 @@ function HamMenu(props){
 
               <div className="mdiv" />
               <div className="msec">
-                <SecTitle title={L.refreshIntervalLbl} hint={L.refreshIntervalHint} />
-                <div className="inline-row">
+                <SectionTitle title={L.refreshIntervalLbl} hint={L.refreshIntervalHint} />
+                <div className="refresh-inline">
                   <label className="toggle-switch">
                     <input type="checkbox" checked={autoRefreshEnabled} onChange={function(e){setAutoRefreshEnabled(e.target.checked)}} />
-                    {L.autoRefreshLbl}
                   </label>
                   <NumberField className="step-input" value={refreshSec} min={MIN_REFRESH_SEC} max={MAX_REFRESH_SEC}
                     onCommit={function(v){setRefreshSec(v)}} ariaLabel={L.refreshIntervalLbl} disabled={!autoRefreshEnabled} />
@@ -2062,17 +2052,16 @@ function HamMenu(props){
 
               <div className="mdiv" />
               <div className="msec">
-                <SecTitle title={L.scenStepLbl} hint={L.scenarioStepHint+" — مقادیر ستون‌ها: "+exampleSteps} />
+                <SectionTitle title={L.scenStepLbl} hint={L.scenarioStepHint+"؛ مقادیر ستون‌ها: "+exampleSteps} />
                 <div className="step-row">
                   <NumberField className="step-input" value={scenStep} min={0.5} max={50}
                     onCommit={function(v){updateSettings({scenStep:v},true)}} ariaLabel={L.scenStepLbl} />
-                  <span className="step-hint">درصد فاصله بین ستون‌های سناریو</span>
                 </div>
               </div>
 
               <div className="mdiv" />
               <div className="msec">
-                <SecTitle title={L.dteSettingsTitle} hint={L.dteSettingsHint} />
+                <SectionTitle title={L.dteSettingsTitle} hint={L.dteSettingsHint} />
                 <div className="step-row">
                   <NumberField className="step-input" value={dteFilterMin} min={0} allowEmpty={true}
                     placeholder="حداقل" onCommit={function(v){updateSettings({dteFilterMin:v===""?"":String(v)},true)}} ariaLabel="حداقل روز تا سررسید" />
@@ -2084,7 +2073,7 @@ function HamMenu(props){
 
               <div className="mdiv" />
               <div className="msec">
-                <SecTitle title={L.checkIntervalLbl} hint={L.checkIntervalHint} />
+                <SectionTitle title={L.checkIntervalLbl} hint={L.checkIntervalHint} />
                 <div className="step-row">
                   <NumberField className="step-input" value={settings.checkIntervalSec} min={20} max={3600}
                     onCommit={function(v){updateSettings({checkIntervalSec:v},false)}} ariaLabel={L.checkIntervalLbl} />
@@ -2102,7 +2091,7 @@ function HamMenu(props){
               </div>
               <div className="gcard">
                 <div className="gcard-t">بروزرسانی خودکار در این صفحه</div>
-                <div className="gcard-p">در این حالت، فقط تب فعلی (و «شکار موقعیت‌ها» در صورت باز بودن) دوباره از سرور خوانده می‌شود؛ محاسبه‌ی جدیدی روی سرور اجرا نمی‌شود. برای اجرای فوری محاسبات روی سرور (مثلاً بعد از تغییر تنظیمات) از دکمهٔ ↻ در نوار بالا استفاده کنید؛ ممکن است اگر سرویس مدتی بی‌کار بوده باشد، چند ثانیه طول بکشد تا بیدار شود.</div>
+                <div className="gcard-p">در این حالت، فقط تب فعلی (و پنجرهٔ شکار موقعیت‌ها در صورت باز بودن) دوباره از سرور خوانده می‌شود، نه همه‌ی تب‌ها؛ این کار سرعت برنامه را به‌طور محسوسی بهتر می‌کند. برای اجرای فوری محاسبات روی سرور (مثلاً بعد از تغییر تنظیمات) از دکمهٔ ↻ در نوار بالا استفاده کنید؛ ممکن است اگر سرویس مدتی بی‌کار بوده باشد، چند ثانیه طول بکشد تا بیدار شود.</div>
               </div>
               <div className="gcard">
                 <div className="gcard-t">تب‌های اصلی</div>
@@ -2117,7 +2106,7 @@ function HamMenu(props){
               </div>
               <div className="gcard">
                 <div className="gcard-t">شکار موقعیت‌ها</div>
-                <div className="gcard-p">این بخش به‌صورت خودکار موقعیت‌هایی را که نسبت به ریسک و بازده در آستانه‌های تعریف‌شده در تنظیمات قرار دارند فهرست می‌کند و برای موقعیت‌های جدید در تلگرام اعلان می‌فرستد (مگر آنکه اطلاع‌رسانی آن استراتژی به‌طور جداگانه غیرفعال شده باشد). فرمول این بخش ممکن است در نسخه‌های بعدی برنامه تغییر کند.</div>
+                <div className="gcard-p">این بخش به‌صورت خودکار موقعیت‌هایی را که هم بازده کافی دارند و هم در برابر شوک قیمتی سهم پایه (در هر دو جهت) مقاوم هستند فهرست می‌کند و برای موقعیت‌های جدید در تلگرام اعلان می‌فرستد. هر استراتژی تنظیمات مستقل خودش (نرخ شوک، نرخ سود، فعال/غیرفعال بودن تلگرام) را دارد.</div>
               </div>
               <div className="gcard">
                 <div className="gcard-t">فرمول تعدیل بازده به ۳۰ روز</div>
@@ -2134,11 +2123,11 @@ function HamMenu(props){
               </div>
               <div className="gcard">
                 <div className="gcard-t">نمودار سود/زیان</div>
-                <div className="gcard-p">روی هر سطر از جدول کلیک کنید تا یک پنجره‌ی نمودار سود/زیان همان موقعیت وسط صفحه باز شود؛ برای بستن آن از دکمه‌ی ضربدر، کلید Esc یا کلیک روی پس‌زمینه استفاده کنید.</div>
+                <div className="gcard-p">روی هر سطر از جدول کلیک کنید تا نمودار سود/زیان آن موقعیت در یک پنجره‌ی وسط‌صفحه باز شود؛ برای بستن، دکمهٔ ✕، کلید Esc یا کلیک روی پس‌زمینه را استفاده کنید.</div>
               </div>
               <div className="gcard">
                 <div className="gcard-t">فیلتر، مرتب‌سازی و ستون‌ها</div>
-                <div className="gcard-p">روی هر سرستون کلیک کنید تا مرتب شود؛ زیر ستون‌ها فیلتر عددی یا متنی وجود دارد. با کشیدن لبهٔ هر ستون می‌توان عرض آن را تغییر داد (ذخیره می‌شود). جعبهٔ جستجوی بالای صفحه هم‌زمان روی تب فعلی فیلتر می‌کند.</div>
+                <div className="gcard-p">روی هر سرستون کلیک کنید تا مرتب شود؛ زیر ستون‌ها فیلتر عددی یا متنی وجود دارد. با کشیدن لبهٔ هر ستون می‌توان عرض آن را تغییر داد (ذخیره می‌شود). جعبهٔ جستجوی بالای صفحه هم‌زمان روی همهٔ تب‌ها فیلتر می‌کند.</div>
               </div>
               <div className="gcard">
                 <div className="gcard-t">خروجی Excel</div>
@@ -2201,6 +2190,12 @@ function BestPositionsOverlay(props){
     );
   }
 
+  function shockCell(v,isShockless){
+    if(isShockless)return <span className="mut">—</span>;
+    if(v==null)return <span className="gain">بی‌نهایت</span>;
+    return n(v,1)+"٪";
+  }
+
   return (
     <div className="fs-overlay" role="dialog" aria-label={L.huntPositions}>
       <div className="fs-head">
@@ -2239,10 +2234,10 @@ function BestPositionsOverlay(props){
                   {steps.map(function(_,i){return <col key={"hcsc"+i} style={{width:54}} />})}
                   {steps.map(function(_,i){return <col key={"hcraw"+i} style={{width:54}} />})}
                   <col style={{width:85}} />
-                  <col style={{width:95}} />
-                  <col style={{width:95}} />
                   <col style={{width:100}} />
                   <col style={{width:100}} />
+                  <col style={{width:100}} />
+                  <col style={{width:105}} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -2275,10 +2270,10 @@ function BestPositionsOverlay(props){
                       );
                     })}
                     <ThB col="required_shock">{L.requiredShockCol}</ThB>
+                    <ThB col="required_profit">{L.requiredProfitCol}</ThB>
                     <ThB col="actual_shock_up">{L.actualShockUpCol}</ThB>
                     <ThB col="actual_shock_down">{L.actualShockDownCol}</ThB>
                     <ThB col="min_actual_shock">{L.minActualShockCol}</ThB>
-                    <ThB col="required_profit">{L.requiredProfitCol}</ThB>
                   </tr>
                 </thead>
                 <tbody>
@@ -2286,11 +2281,11 @@ function BestPositionsOverlay(props){
                     <tr><td colSpan={totalCols} style={{textAlign:"center",padding:20,color:"var(--mut)"}}>{L.noData}</td></tr>
                   ):null}
                   {limited.map(function(row){
-                    var badgeCls=BEST_CAT1[row.strategy_type]?"bdg-itm":"bdg-rev";
+                    var badgeCls=SHOCKLESS_TYPES_FE[row.strategy_type]?"bdg-rev":"bdg-itm";
                     return (
                       <ErrorBoundary key={bestRowKey(row)} fallback={function(){return <tr><td colSpan={totalCols}>خطا</td></tr>}}>
                         <tr>
-                          <td><span className={"bdg "+badgeCls}>{BEST_STRATEGY_LABELS[row.strategy_type]||row.strategy_type}</span></td>
+                          <td><span className={"bdg "+badgeCls}>{ALL_STRATEGY_LABELS[row.strategy_type]||row.strategy_type}</span></td>
                           <td className="tn">{BasisNameR(row.primary_name,row)}</td>
                           <td className="tb">{BasisNameR(row.basis_name,row)}</td>
                           <td className="mut">{row.expiry}</td>
@@ -2302,10 +2297,10 @@ function BestPositionsOverlay(props){
                             return <td key={"raw"+j} className={"sv "+scenClass(v)+(j===0?" raw-divider":"")}>{plainPct(v)}</td>;
                           })}
                           <td className="sv">{row.required_shock==null?"—":n(row.required_shock,1)+"٪"}</td>
-                          <td className="sv">{fmtShockVal(row.actual_shock_up)}</td>
-                          <td className="sv">{fmtShockVal(row.actual_shock_down)}</td>
-                          <td className="sv tc-pos">{fmtShockVal(row.min_actual_shock)}</td>
                           <td className="sv">{n(row.required_profit,1)}٪</td>
+                          <td className="sv">{shockCell(row.actual_shock_up,row.is_shockless)}</td>
+                          <td className="sv">{shockCell(row.actual_shock_down,row.is_shockless)}</td>
+                          <td className="sv" style={{fontWeight:700}}>{shockCell(row.min_actual_shock,row.is_shockless)}</td>
                         </tr>
                       </ErrorBoundary>
                     );
@@ -2360,11 +2355,11 @@ function App(){
 
   var sectionStoreRef=useRef({});
   var watchStoreRef=useRef({});
-  var tabRef=useRef(tab);
-  useEffect(function(){tabRef.current=tab},[tab]);
+
+  var tabRef=useRef(tab);useEffect(function(){tabRef.current=tab},[tab]);
   var huntOpenRef=useRef(false);useEffect(function(){huntOpenRef.current=huntOpen},[huntOpen]);
 
-  /* ---------- بارگذاری داده از سرور ---------- */
+  /* ---------- بارگذاری داده از سرور (فقط تب درخواست‌شده، بدون پیش‌بارگذاری پس‌زمینه) ---------- */
   function loadTabData(kind){
     setTabLoading(function(prev){return Object.assign({},prev,{[kind]:true})});
     var p=kind==="watch"
@@ -2380,6 +2375,13 @@ function App(){
     }).finally(function(){
       setTabLoading(function(prev){return Object.assign({},prev,{[kind]:false})});
     });
+  }
+  // فقط تب فعلی (و اورلی شکار موقعیت‌ها اگر باز باشد) دوباره خوانده می‌شود؛
+  // نه همه‌ی تب‌هایی که قبلاً لود شده‌اند (بهینه‌سازی عملکرد).
+  function reloadActiveViews(){
+    var p=loadTabData(tabRef.current).catch(function(){});
+    if(huntOpenRef.current)p=p.then(function(){return loadHunt()});
+    return p;
   }
 
   function loadHunt(){
@@ -2404,21 +2406,13 @@ function App(){
 
   useEffect(function(){if(huntOpen&&!huntData)loadHunt()},[huntOpen]);
 
-  // فقط تب فعلی (و شکار موقعیت‌ها در صورت باز بودن) را دوباره می‌خواند — بدون پیش‌بارگذاری بقیه تب‌ها
-  function reloadActiveTabAndHunt(){
-    var kind=tabRef.current;
-    return loadTabData(kind).catch(function(){}).then(function(){
-      if(huntOpenRef.current)return loadHunt();
-    });
-  }
-
   /* ---------- بروزرسانی دستی کامل (اجرای مجدد محاسبات روی سرور) ---------- */
   function handleManualRefresh(){
     setRefreshing(true);
     setGlobalError(null);
     var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
     Api.refresh().then(function(){
-      return reloadActiveTabAndHunt();
+      return reloadActiveViews();
     }).catch(function(e){
       setGlobalError("خطا در بروزرسانی: "+e.message);
     }).finally(function(){
@@ -2428,15 +2422,12 @@ function App(){
     });
   }
 
-  /* ---------- بروزرسانی خودکار (فقط خواندن تب فعلی، بدون اجرای مجدد محاسبات) ---------- */
+  /* ---------- بروزرسانی خودکار (فقط تب فعلی، بدون اجرای مجدد محاسبات) ---------- */
   useEffect(function(){
     if(!autoRefreshEnabled)return;
     var ms=Math.max(MIN_REFRESH_SEC,Math.min(MAX_REFRESH_SEC,parseFloat(refreshSec)||DEFAULT_REFRESH_SEC))*1000;
     var interval=null;
-    function tick(){
-      loadTabData(tabRef.current).catch(function(){});
-      if(huntOpenRef.current)loadHunt();
-    }
+    function tick(){reloadActiveViews()}
     function start(){if(!interval)interval=setInterval(tick,ms)}
     function stop(){if(interval){clearInterval(interval);interval=null}}
     function onVis(){
@@ -2457,12 +2448,18 @@ function App(){
       setSettings(saved);
       if(needsRefresh){
         var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
-        return Api.refresh().then(reloadActiveTabAndHunt).finally(function(){clearTimeout(wakeTimer);setWakeHint(false)});
+        return Api.refresh().then(reloadActiveViews).finally(function(){clearTimeout(wakeTimer);setWakeHint(false)});
       }
     }).catch(function(e){
       setGlobalError("خطا در ذخیره تنظیمات: "+e.message);
       loadSettings();
     }).finally(function(){setApplying(false)});
+  }
+  function updateHuntStrategyField(type,patch){
+    var current=(settings&&settings.huntStrategies&&settings.huntStrategies[type])||{};
+    var updated=Object.assign({},(settings&&settings.huntStrategies)||{});
+    updated[type]=Object.assign({},current,patch);
+    updateSettings({huntStrategies:updated},true);
   }
 
   /* ---------- قیمت دلخواه سهم پایه ---------- */
@@ -2471,7 +2468,7 @@ function App(){
     var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
     return loadOverrides().then(function(){
       return Api.refresh();
-    }).then(reloadActiveTabAndHunt).catch(function(e){
+    }).then(reloadActiveViews).catch(function(e){
       setGlobalError("خطا در اعمال تغییرات: "+e.message);
     }).finally(function(){clearTimeout(wakeTimer);setWakeHint(false);setApplying(false)});
   }
@@ -2530,15 +2527,14 @@ function App(){
   },[]);
 
   var watchTabData=tabsData.watch;
-  var currentData=tabsData[tab];
-  var isCat1Group=["cc","mp","co","cv"].indexOf(tab)!==-1;
-  var isSimpleGroup=["strangle","strangleSell","callspread","callspreadbear","putspread","putspreadbull","box"].indexOf(tab)!==-1;
+  var activeTabData=tabsData[tab];
+  var isBaseStrategyKind=["cc","mp","co","cv"].indexOf(tab)!==-1;
 
   return (
     <div className="app">
       <HamMenu
         open={menuOpen} onClose={function(){setMenuOpen(false)}} theme={theme} setTheme={setTheme}
-        settings={settings} updateSettings={updateSettings}
+        settings={settings} updateSettings={updateSettings} updateHuntStrategyField={updateHuntStrategyField}
         dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
         overrides={overrides} onAddOverride={handleAddOverride} onToggleOverride={handleToggleOverride}
         onUpdateOverridePrice={handleUpdateOverridePrice} onRemoveOverride={handleRemoveOverride}
@@ -2553,7 +2549,7 @@ function App(){
         onRetry={loadHunt} globalSearch={globalSearch} />
 
       {chartCtx?(
-        <ErrorBoundary fallback={function(){return <ModalFallback onClose={closeChart} />}}>
+        <ErrorBoundary fallback={function(){return <ModalErrorFallback onClose={closeChart} />}}>
           <PayoffPanel row={chartCtx.row} kind={chartCtx.kind} onClose={closeChart} />
         </ErrorBoundary>
       ):null}
@@ -2584,7 +2580,7 @@ function App(){
 
       <div className="tabs" role="tablist">
         {BASE_TABS.map(function(t){
-          var pending=t.id==="watch"?!watchTabData:(!tabsData[t.id]&&tabLoading[t.id]);
+          var pending=!!tabLoading[t.id];
           return (
             <button key={t.id} className={"tab"+(tab===t.id?" on":"")} role="tab" aria-selected={tab===t.id} onClick={function(){handleTabClick(t.id)}}>
               {pending?<span className="tab-spin-dot" />:null}
@@ -2612,42 +2608,35 @@ function App(){
           </div>
         ):null}
 
+        {/* برای عملکرد بهتر، فقط تب فعلی mount می‌شود (نه همه‌ی تب‌های بازدیدشده)؛
+            فیلتر/سورت هر تب در ref خارج از چرخه‌ی رندر ذخیره می‌شود و با mount دوباره از دست نمی‌رود. */}
         {watchTabData&&tab==="watch"?(
-          <div className="tab-panel">
-            <ErrorBoundary fallback={function(){return <div className="error-box">خطا در نمایش دیده‌بان</div>}}>
-              <Watch rows={watchTabData.rows} store={watchStoreRef.current} storeKey="watch" globalSearch={globalSearch}
-                dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""} />
-            </ErrorBoundary>
-          </div>
+          <ErrorBoundary key="watch" fallback={function(){return <div className="error-box">خطا در نمایش دیده‌بان</div>}}>
+            <Watch rows={watchTabData.rows} store={watchStoreRef.current} storeKey="watch" globalSearch={globalSearch}
+              dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""} />
+          </ErrorBoundary>
         ):null}
 
-        {watchTabData&&isCat1Group?(
-          <div className="tab-panel">
-            {tabError[tab]?(
-              <div className="center"><div className="error-box"><div className="title">خطا</div><div className="desc">{tabError[tab]}</div>
-                <button className="rbtn" style={{width:"auto",padding:"0 16px",margin:"12px auto 0"}} onClick={function(){loadTabData(tab)}}>تلاش مجدد</button></div></div>
-            ):currentData?(
-              <StrategySection kind={tab} data={currentData.rows} steps={currentData.steps||[]}
-                dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
-                store={sectionStoreRef.current} globalSearch={globalSearch}
-                trailingCols={tab==="co"?coTrailingCols:EMPTY_ARR}
-                onOpenChart={openChart} />
-            ):(<div className="center"><div className="spinner" /></div>)}
-          </div>
-        ):null}
-
-        {watchTabData&&isSimpleGroup?(
-          <div className="tab-panel">
-            {tabError[tab]?(
-              <div className="center"><div className="error-box"><div className="title">خطا</div><div className="desc">{tabError[tab]}</div>
-                <button className="rbtn" style={{width:"auto",padding:"0 16px",margin:"12px auto 0"}} onClick={function(){loadTabData(tab)}}>تلاش مجدد</button></div></div>
-            ):currentData?(
-              <SimpleStrategySection kind={tab} data={currentData.rows} steps={currentData.steps||[]}
-                dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
-                store={sectionStoreRef.current} globalSearch={globalSearch}
-                onOpenChart={openChart} />
-            ):(<div className="center"><div className="spinner" /></div>)}
-          </div>
+        {watchTabData&&tab!=="watch"?(
+          tabError[tab]?(
+            <div className="center"><div className="error-box"><div className="title">خطا</div><div className="desc">{tabError[tab]}</div>
+              <button className="rbtn" style={{width:"auto",padding:"0 16px",margin:"12px auto 0"}} onClick={function(){loadTabData(tab)}}>تلاش مجدد</button></div></div>
+          ):activeTabData?(
+            <div key={tab} style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
+              {isBaseStrategyKind?(
+                <StrategySection kind={tab} data={activeTabData.rows} steps={activeTabData.steps||[]}
+                  dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
+                  store={sectionStoreRef.current} globalSearch={globalSearch}
+                  trailingCols={tab==="co"?coTrailingCols:EMPTY_ARR}
+                  onOpenChart={openChart} />
+              ):(
+                <SimpleStrategySection kind={tab} data={activeTabData.rows} steps={activeTabData.steps||[]}
+                  dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
+                  store={sectionStoreRef.current} globalSearch={globalSearch}
+                  onOpenChart={openChart} />
+              )}
+            </div>
+          ):(<div className="center"><div className="spinner" /></div>)
         ):null}
       </div>
     </div>
