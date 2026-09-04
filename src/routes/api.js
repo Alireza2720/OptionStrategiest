@@ -1,10 +1,12 @@
 "use strict";
 var express = require("express");
+var mongoose = require("mongoose");
+var rateLimit = require("express-rate-limit");
 var router = express.Router();
 
 var Settings = require("../models/Settings");
 var BasisOverride = require("../models/BasisOverride");
-var { runCycle, getCache } = require("../services/cycleRunner");
+var { runCycle, getCache, getHealth } = require("../services/cycleRunner");
 var { isMarketOpen, todayKeyTehran, pruneOldHolidays } = require("../services/marketHours");
 
 function requireApiKey(req, res, next) {
@@ -16,6 +18,21 @@ function requireApiKey(req, res, next) {
   next();
 }
 
+// محدودیت نرخ برای مسیرهای پرهزینه (فراخوانی دیتاسورس خارجی + احتمالاً تلگرام)
+var heavyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: "too many requests, please slow down" }
+});
+
+// ---------- سلامت سرویس (برای مانیتورینگ) ----------
+router.get("/health", function (req, res) {
+  var h = getHealth();
+  res.json(Object.assign({}, h, { mongoConnected: mongoose.connection.readyState === 1 }));
+});
+
 // ---------- وضعیت کلی ----------
 router.get("/status", function (req, res) {
   var c = getCache();
@@ -24,7 +41,8 @@ router.get("/status", function (req, res) {
     updatedAt: c.updatedAt,
     lastError: c.lastError,
     watchCount: c.watch.length,
-    huntCount: c.huntLatest.rows.length
+    huntCount: c.huntLatest.rows.length,
+    isSnapshot: !!c.isSnapshot
   });
 });
 
@@ -54,7 +72,7 @@ router.get("/hunt/latest", function (req, res) {
 });
 
 // اجرای فوری (همینی که cron-job.org صداش می‌زنه)
-router.post("/hunt/run", requireApiKey, function (req, res) {
+router.post("/hunt/run", heavyLimiter, requireApiKey, function (req, res) {
   runCycle({ notify: true }).then(function () {
     res.json({ ok: true });
   }).catch(function (err) {
@@ -63,7 +81,7 @@ router.post("/hunt/run", requireApiKey, function (req, res) {
 });
 
 // اجرای فوری بدون ارسال تلگرام (برای اعمال آنی تنظیمات/Override از فرانت)
-router.post("/refresh", requireApiKey, function (req, res) {
+router.post("/refresh", heavyLimiter, requireApiKey, function (req, res) {
   runCycle({ notify: false }).then(function () {
     res.json({ ok: true });
   }).catch(function (err) {
@@ -143,4 +161,5 @@ router.post("/market/today/toggle-holiday", requireApiKey, async function (req, 
   await settings.save();
   res.json({ ok: true, todayKey: todayKey, isHoliday: willBeHoliday, settings: settings });
 });
+
 module.exports = router;

@@ -25,7 +25,7 @@ function isStockInBuyQueue(lastPct, closePct) {
 
 var TARGET_URL = "https://s3.optionschool24.com/last?type=3";
 
-async function fetchRawData() {
+async function fetchRawDataOnce() {
   var controller = new AbortController();
   var timeout = setTimeout(function () { controller.abort(); }, 15000);
   try {
@@ -38,6 +38,24 @@ async function fetchRawData() {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+
+// در صورت خطای موقت (قطعی شبکه، تایم‌اوت و ...) حداکثر ۳ بار با فاصله‌ی افزایشی تلاش مجدد می‌شود
+async function fetchRawData() {
+  var attempts = 3;
+  var lastErr = null;
+  for (var i = 0; i < attempts; i++) {
+    try {
+      return await fetchRawDataOnce();
+    } catch (e) {
+      lastErr = e;
+      console.error("[dataSource] تلاش " + (i + 1) + " از " + attempts + " ناموفق بود: " + e.message);
+      if (i < attempts - 1) await sleep(1000 * Math.pow(2, i)); // 1s, 2s
+    }
+  }
+  throw lastErr;
 }
 
 function parseContracts(raw) {

@@ -2,18 +2,37 @@
 require("dotenv").config();
 var express = require("express");
 var cors = require("cors");
+var rateLimit = require("express-rate-limit");
 
 var { connectDB } = require("./db");
 var Settings = require("./models/Settings");
 var apiRouter = require("./routes/api");
-var { runCycle } = require("./services/cycleRunner");
+var { runCycle, restoreFromSnapshot } = require("./services/cycleRunner");
 
 var PORT = process.env.PORT || 3000;
 
 var app = express();
-app.use(cors());
+
+// روی Render سرویس پشت یک reverse proxy است؛ برای تشخیص درست IP واقعی کاربر (لازم برای rate limit)
+app.set("trust proxy", 1);
+
+// اگر ALLOWED_ORIGIN تنظیم نشده باشد (مثلاً در توسعه‌ی محلی)، همه origin ها مجاز می‌مانند
+var allowedOrigins = (process.env.ALLOWED_ORIGIN || "")
+  .split(",").map(function (s) { return s.trim(); }).filter(Boolean);
+var corsOptions = allowedOrigins.length > 0 ? { origin: allowedOrigins } : {};
+app.use(cors(corsOptions));
+
 app.use(express.json());
-app.use("/api", apiRouter);
+
+// محدودیت نرخ عمومی برای همه‌ی مسیرهای API
+var generalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: "too many requests" }
+});
+app.use("/api", generalLimiter, apiRouter);
 
 app.get("/", function (req, res) {
   res.json({ ok: true, service: "option-hunter-backend" });
@@ -44,6 +63,9 @@ async function main() {
 
   var existing = await Settings.findOne({ ownerId: "default" });
   if (!existing) await Settings.create({ ownerId: "default" });
+
+  // بازیابی آخرین کش ذخیره‌شده (اگر سرویس تازه ری‌استارت شده، فرانت فوراً داده می‌بیند)
+  await restoreFromSnapshot();
 
   app.listen(PORT, function () {
     console.log("🚀 Server listening on port " + PORT);
