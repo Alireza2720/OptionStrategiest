@@ -1,3 +1,5 @@
+var { isMarketOpen } = require("./marketHours");
+
 "use strict";
 var Settings = require("../models/Settings");
 var BasisOverride = require("../models/BasisOverride");
@@ -7,6 +9,7 @@ var { buildHuntRows, huntRowKey } = require("./huntEngine");
 var { filterFreshRows } = require("./notifyGate");
 var { sendLongMessage } = require("./telegram");
 var { formatBatch } = require("./messageFormat");
+var { isMarketOpen } = require("./marketHours");
 
 var HUNT_CACHE_CAP = 300;
 
@@ -74,7 +77,9 @@ async function runCycle(opts) {
     var huntRows = buildHuntRows(computed, settings, steps);
     cache.huntLatest = { at: new Date(), rows: huntRows.slice(0, HUNT_CACHE_CAP) };
 
-    if (notify) {
+    if (notify && !isMarketOpen(new Date(), settings.manualHolidays)) {
+      console.log("[cycle] خارج از ساعات بازار یا تعطیلی دستی است؛ اعلان تلگرام ارسال نشد.");
+    } else if (notify) {
       var forNotify = settings.huntOnlyBuyable
         ? huntRows.filter(function (r) { return r.basis_buyable !== false; })
         : huntRows.slice();

@@ -42,7 +42,10 @@ var SettingsSchema = new mongoose.Schema({
   huntStrategies: {
     type: HuntStrategiesSchema,
     default: defaultHuntStrategies
-  }
+  },
+
+  // تاریخ‌های تعطیلی دستی (فرمت "YYYY-MM-DD" بر اساس تقویم میلادی، به وقت تهران)
+  manualHolidays: { type: [String], default: [] }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Settings", SettingsSchema);

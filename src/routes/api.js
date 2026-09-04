@@ -5,6 +5,7 @@ var router = express.Router();
 var Settings = require("../models/Settings");
 var BasisOverride = require("../models/BasisOverride");
 var { runCycle, getCache } = require("../services/cycleRunner");
+var { isMarketOpen, todayKeyTehran, pruneOldHolidays } = require("../services/marketHours");
 
 function requireApiKey(req, res, next) {
   var key = process.env.API_KEY;
@@ -116,4 +117,30 @@ router.delete("/overrides/:name", requireApiKey, async function (req, res) {
   res.json({ ok: true });
 });
 
+// ---------- وضعیت بازار امروز (ساعت + تعطیلی دستی) ----------
+router.get("/market/today", async function (req, res) {
+  var settings = await Settings.findOne({ ownerId: "default" });
+  var holidays = (settings && settings.manualHolidays) || [];
+  var todayKey = todayKeyTehran();
+  res.json({
+    ok: true,
+    todayKey: todayKey,
+    isHoliday: holidays.indexOf(todayKey) !== -1,
+    isMarketOpenNow: isMarketOpen(new Date(), holidays)
+  });
+});
+
+router.post("/market/today/toggle-holiday", requireApiKey, async function (req, res) {
+  var settings = await Settings.findOne({ ownerId: "default" });
+  if (!settings) settings = await Settings.create({ ownerId: "default" });
+  var todayKey = todayKeyTehran();
+  var list = pruneOldHolidays(settings.manualHolidays || []);
+  var idx = list.indexOf(todayKey);
+  var willBeHoliday;
+  if (idx === -1) { list.push(todayKey); willBeHoliday = true; }
+  else { list.splice(idx, 1); willBeHoliday = false; }
+  settings.manualHolidays = list;
+  await settings.save();
+  res.json({ ok: true, todayKey: todayKey, isHoliday: willBeHoliday, settings: settings });
+});
 module.exports = router;
