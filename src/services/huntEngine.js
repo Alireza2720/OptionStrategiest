@@ -1,6 +1,7 @@
 "use strict";
 
 var NO_SHOCK_TYPES = { cv: true, box: true };
+var BUYABLE_CHECK_TYPES = { cc: true, mp: true, co: true, cv: true };
 var TYPES = ["cc", "mp", "co", "cv", "strangle", "strangleSell",
   "callspread", "callspreadbear", "putspread", "putspreadbull", "box"];
 
@@ -20,17 +21,22 @@ function cfgFor(type, settings) {
     profitRate: num(src.profitRate, 0.35),
     profitMode: mode(src.profitMode),
     profitFloor: num(src.profitFloor, 5),
-    telegramEnabled: src.telegramEnabled !== false
+    dteMin: (src.dteMin === undefined || src.dteMin === null) ? "" : String(src.dteMin),
+    dteMax: (src.dteMax === undefined || src.dteMax === null) ? "" : String(src.dteMax),
+    telegramEnabled: src.telegramEnabled !== false,
+    straddleMinPnl: num(src.straddleMinPnl, -10),
+    straddleReqShockDown: num(src.straddleReqShockDown, 5),
+    straddleReqShockUp: num(src.straddleReqShockUp, 5)
   };
 }
 
-// بر اساس حالت انتخابی، آستانهٔ لازم (شوک یا سود) را برمی‌گرداند
 function computeThreshold(mode, rateValue, floorValue) {
   if (mode === "floor") return floorValue;
   if (mode === "both") return Math.max(rateValue, floorValue);
-  return rateValue; // "rate"
+  return rateValue;
 }
-// اسکن خشن + تنصیف بازه برای پیدا کردن نزدیک‌ترین درصد شوک (در یک جهت) که ROI را منفی می‌کند
+
+// اسکن خشن + تنصیف بازه برای پیدا کردن نزدیک‌ترین درصد نوسان (در یک جهت) که ROI را منفی می‌کند
 var SHOCK_SENTINEL = 999999; // به‌جای Infinity، چون در JSON سریالایز نمی‌شود
 
 function findShockThreshold(payoffFn, sign) {
@@ -68,9 +74,42 @@ function nameFor(type, row) {
   return row.name || "";
 }
 
+// اطلاعات هر پایهٔ قرارداد؛ برای نمایش/کپی جداگانهٔ هرکدام در پیام تلگرام استفاده می‌شود
+function legsFor(type, row) {
+  if (type === "cc") return [{ label: "فروش", name: row.name }];
+  if (type === "mp") return [{ label: "خرید", name: row.name }];
+  if (type === "co" || type === "cv") {
+    return [{ label: "خرید پوت", name: row.put_name }, { label: "فروش کال", name: row.call_name }];
+  }
+  if (type === "strangle") {
+    return [{ label: "خرید پوت", name: row.put_name }, { label: "خرید کال", name: row.call_name }];
+  }
+  if (type === "strangleSell") {
+    return [{ label: "فروش پوت", name: row.put_name }, { label: "فروش کال", name: row.call_name }];
+  }
+  if (type === "callspread" || type === "callspreadbear" || type === "putspread" || type === "putspreadbull") {
+    return [{ label: "خرید", name: row.buy_name }, { label: "فروش", name: row.sell_name }];
+  }
+  if (type === "box") {
+    return [
+      { label: "خرید", name: row.call_buy_name },
+      { label: "فروش", name: row.call_sell_name },
+      { label: "خرید", name: row.put_buy_name },
+      { label: "فروش", name: row.put_sell_name }
+    ];
+  }
+  return [{ label: "", name: row.name || "" }];
+}
+
+function dteInRange(dte, minStr, maxStr) {
+  if (minStr !== "" && minStr != null && dte < parseFloat(minStr)) return false;
+  if (maxStr !== "" && maxStr != null && dte > parseFloat(maxStr)) return false;
+  return true;
+}
+
 function buildHuntRows(computed, settings, steps) {
   var onlyBuyable = !!settings.huntOnlyBuyable;
-  var dteMin = settings.dteFilterMin, dteMax = settings.dteFilterMax;
+  var globalDteMin = settings.dteFilterMin, globalDteMax = settings.dteFilterMax;
   var zeroIdx = steps.indexOf(0);
   if (zeroIdx === -1) zeroIdx = Math.floor(steps.length / 2);
   var out = [];
@@ -79,26 +118,40 @@ function buildHuntRows(computed, settings, steps) {
     var list = computed[type] || [];
     var cfg = cfgFor(type, settings);
     var isNoShock = !!NO_SHOCK_TYPES[type];
+    var dteMin = cfg.dteMin !== "" ? cfg.dteMin : globalDteMin;
+    var dteMax = cfg.dteMax !== "" ? cfg.dteMax : globalDteMax;
 
     list.forEach(function (r) {
       if (typeof r._payoff !== "function") return;
       var dte = r.dte || 0;
-      if (dteMin !== "" && dteMin != null && dte < parseFloat(dteMin)) return;
-      if (dteMax !== "" && dteMax != null && dte > parseFloat(dteMax)) return;
-      if (onlyBuyable && r.basis_buyable === false) return;
+      if (!dteInRange(dte, dteMin, dteMax)) return;
+      if (onlyBuyable && BUYABLE_CHECK_TYPES[type] && r.basis_buyable === false) return;
 
       var roiZero = parseFloat(r.roi_zero);
       if (isNaN(roiZero)) return;
-      var reqProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
-      if (roiZero < reqProfit) return;
 
-      var actualShockUp = null, actualShockDown = null, minShock = null, reqShock = null;
-      if (!isNoShock) {
-        reqShock = computeThreshold(cfg.shockMode, dte * cfg.shockRate, cfg.shockFloor);
+      var isStraddle = type === "strangle" && r.strangle_type === "استرادل";
+
+      var requiredShock = null, requiredProfit = null,
+        actualShockUp = null, actualShockDown = null, minShock = null;
+
+      if (isStraddle) {
         actualShockUp = findShockThreshold(r._payoff, 1);
         actualShockDown = findShockThreshold(r._payoff, -1);
         minShock = Math.min(actualShockUp, actualShockDown);
-        if (minShock < reqShock) return;
+        if (roiZero < cfg.straddleMinPnl) return;
+        if (actualShockDown < cfg.straddleReqShockDown) return;
+        if (actualShockUp < cfg.straddleReqShockUp) return;
+      } else {
+        requiredProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
+        if (roiZero < requiredProfit) return;
+        if (!isNoShock) {
+          requiredShock = computeThreshold(cfg.shockMode, dte * cfg.shockRate, cfg.shockFloor);
+          actualShockUp = findShockThreshold(r._payoff, 1);
+          actualShockDown = findShockThreshold(r._payoff, -1);
+          minShock = Math.min(actualShockUp, actualShockDown);
+          if (minShock < requiredShock) return;
+        }
       }
 
       var scenAdj, scenRaw;
@@ -112,14 +165,17 @@ function buildHuntRows(computed, settings, steps) {
 
       out.push({
         strategy_type: type, primary_name: nameFor(type, r), basis_name: r.basis_name,
+        legs: legsFor(type, r),
         expiry: r.expiry, dte: dte, roi_zero: roiZero,
-        required_shock: reqShock == null ? null : Math.round(reqShock * 100) / 100,
-        required_profit: Math.round(reqProfit * 100) / 100,
+        required_shock: requiredShock == null ? null : Math.round(requiredShock * 100) / 100,
+        required_profit: requiredProfit == null ? null : Math.round(requiredProfit * 100) / 100,
         actual_shock_up: actualShockUp == null ? null : Math.round(actualShockUp * 100) / 100,
         actual_shock_down: actualShockDown == null ? null : Math.round(actualShockDown * 100) / 100,
         min_shock: minShock == null ? null : Math.round(minShock * 100) / 100,
+        is_straddle: !!isStraddle,
         telegram_enabled: cfg.telegramEnabled,
         basis_buyable: r.basis_buyable,
+        buyable_checked: !!BUYABLE_CHECK_TYPES[type],
         scenariosAdjusted: scenAdj, scenariosRaw: scenRaw
       });
     });
@@ -128,9 +184,9 @@ function buildHuntRows(computed, settings, steps) {
   out.sort(function (a, b) {
     var av = a.min_shock == null ? a.roi_zero : a.min_shock;
     var bv = b.min_shock == null ? b.roi_zero : b.min_shock;
-    if (av === Infinity && bv === Infinity) return b.roi_zero - a.roi_zero;
-    if (av === Infinity) return -1;
-    if (bv === Infinity) return 1;
+    if (av === SHOCK_SENTINEL && bv === SHOCK_SENTINEL) return b.roi_zero - a.roi_zero;
+    if (av === SHOCK_SENTINEL) return -1;
+    if (bv === SHOCK_SENTINEL) return 1;
     return bv - av;
   });
   return out;
@@ -138,4 +194,7 @@ function buildHuntRows(computed, settings, steps) {
 
 function huntRowKey(row) { return row.strategy_type + "|" + row.primary_name + "|" + row.expiry; }
 
-module.exports = { buildHuntRows: buildHuntRows, huntRowKey: huntRowKey, TYPES: TYPES, NO_SHOCK_TYPES: NO_SHOCK_TYPES };
+module.exports = {
+  buildHuntRows: buildHuntRows, huntRowKey: huntRowKey, TYPES: TYPES,
+  NO_SHOCK_TYPES: NO_SHOCK_TYPES, BUYABLE_CHECK_TYPES: BUYABLE_CHECK_TYPES
+};

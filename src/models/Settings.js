@@ -11,14 +11,23 @@ var HuntStrategyCfgSchema = new mongoose.Schema({
   profitRate: { type: Number, default: 0.35 },
   profitMode: { type: String, enum: ["rate", "floor", "both"], default: "rate" },
   profitFloor: { type: Number, default: 5 },
-  telegramEnabled: { type: Boolean, default: true }
+  // بازهٔ روز تا سررسید مخصوص همین استراتژی؛ اگر خالی باشد از فیلتر عمومی استفاده می‌شود
+  dteMin: { type: String, default: "" },
+  dteMax: { type: String, default: "" },
+  telegramEnabled: { type: Boolean, default: true },
+  // فقط برای «استرادل خرید» (وقتی در نوع strangle، قیمت اعمال کال و پوت برابر باشد) استفاده می‌شود
+  straddleMinPnl: { type: Number, default: -10 },
+  straddleReqShockDown: { type: Number, default: 5 },
+  straddleReqShockUp: { type: Number, default: 5 }
 }, { _id: false });
 
 function defaultHuntStrategyCfg() {
   return {
     shockRate: 0.5, shockMode: "rate", shockFloor: 5,
     profitRate: 0.35, profitMode: "rate", profitFloor: 5,
-    telegramEnabled: true
+    dteMin: "", dteMax: "",
+    telegramEnabled: true,
+    straddleMinPnl: -10, straddleReqShockDown: 5, straddleReqShockUp: 5
   };
 }
 

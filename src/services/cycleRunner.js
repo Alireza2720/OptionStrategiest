@@ -4,7 +4,7 @@ var BasisOverride = require("../models/BasisOverride");
 var CacheSnapshot = require("../models/CacheSnapshot");
 var { loadContracts } = require("./dataSource");
 var { computeAll, buildSteps, stripInternal } = require("./calcEngine");
-var { buildHuntRows, huntRowKey } = require("./huntEngine");
+var { buildHuntRows, huntRowKey, BUYABLE_CHECK_TYPES } = require("./huntEngine");
 var { getFreshRows, markNotified } = require("./notifyGate");
 var { sendLongMessage } = require("./telegram");
 var { formatBatch } = require("./messageFormat");
@@ -154,7 +154,7 @@ async function runCycle(opts) {
       console.log("[cycle] خارج از ساعات بازار یا تعطیلی دستی است؛ اعلان تلگرام ارسال نشد.");
     } else if (notify) {
       var forNotify = settings.huntOnlyBuyable
-        ? huntRows.filter(function (r) { return r.basis_buyable !== false; })
+        ? huntRows.filter(function (r) { return !BUYABLE_CHECK_TYPES[r.strategy_type] || r.basis_buyable !== false; })
         : huntRows.slice();
       forNotify = forNotify.filter(function (r) { return r.telegram_enabled !== false; });
 
@@ -168,7 +168,7 @@ async function runCycle(opts) {
           var chatId = process.env.TELEGRAM_CHAT_ID;
           if (token && chatId) {
             try {
-              await sendLongMessage(token, chatId, formatBatch(fresh));
+              await sendLongMessage(token, chatId, formatBatch(fresh, steps));
               // فقط بعد از ارسال موفق، به‌عنوان "اطلاع‌رسانی‌شده" ثبت می‌شود
               await markNotified(fresh, "default", huntRowKey);
               console.log("[cycle] " + fresh.length + " موقعیت جدید اطلاع‌رسانی شد.");
