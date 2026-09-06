@@ -6,21 +6,33 @@ var HUNT_STRATEGY_TYPES = ["cc", "mp", "co", "cv", "strangle", "strangleSell",
 
 var HuntStrategyCfgSchema = new mongoose.Schema({
   shockRate: { type: Number, default: 0.5 },
+  shockMode: { type: String, enum: ["rate", "floor", "both"], default: "rate" },
+  shockFloor: { type: Number, default: 5 },
   profitRate: { type: Number, default: 0.35 },
+  profitMode: { type: String, enum: ["rate", "floor", "both"], default: "rate" },
+  profitFloor: { type: Number, default: 5 },
   telegramEnabled: { type: Boolean, default: true }
 }, { _id: false });
+
+function defaultHuntStrategyCfg() {
+  return {
+    shockRate: 0.5, shockMode: "rate", shockFloor: 5,
+    profitRate: 0.35, profitMode: "rate", profitFloor: 5,
+    telegramEnabled: true
+  };
+}
 
 function defaultHuntStrategies() {
   var obj = {};
   HUNT_STRATEGY_TYPES.forEach(function (t) {
-    obj[t] = { shockRate: 0.5, profitRate: 0.35, telegramEnabled: true };
+    obj[t] = defaultHuntStrategyCfg();
   });
   return obj;
 }
 
 var HuntStrategiesSchema = new mongoose.Schema(
   HUNT_STRATEGY_TYPES.reduce(function (acc, t) {
-    acc[t] = { type: HuntStrategyCfgSchema, default: function () { return { shockRate: 0.5, profitRate: 0.35, telegramEnabled: true }; } };
+    acc[t] = { type: HuntStrategyCfgSchema, default: defaultHuntStrategyCfg };
     return acc;
   }, {}),
   { _id: false }

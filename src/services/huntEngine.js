@@ -7,16 +7,29 @@ var TYPES = ["cc", "mp", "co", "cv", "strangle", "strangleSell",
 var SCAN_POINTS = [0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9, 10,
   12, 15, 18, 20, 25, 30, 35, 40, 50, 60, 70, 80, 90, 100, 120, 150, 200, 250, 300, 400, 500];
 
+var VALID_MODES = { rate: true, floor: true, both: true };
+
 function cfgFor(type, settings) {
   var src = (settings.huntStrategies && settings.huntStrategies[type]) || {};
   function num(v, d) { var x = parseFloat(v); return isNaN(x) ? d : x; }
+  function mode(v) { return VALID_MODES[v] ? v : "rate"; }
   return {
     shockRate: num(src.shockRate, 0.5),
+    shockMode: mode(src.shockMode),
+    shockFloor: num(src.shockFloor, 5),
     profitRate: num(src.profitRate, 0.35),
+    profitMode: mode(src.profitMode),
+    profitFloor: num(src.profitFloor, 5),
     telegramEnabled: src.telegramEnabled !== false
   };
 }
 
+// بر اساس حالت انتخابی، آستانهٔ لازم (شوک یا سود) را برمی‌گرداند
+function computeThreshold(mode, rateValue, floorValue) {
+  if (mode === "floor") return floorValue;
+  if (mode === "both") return Math.max(rateValue, floorValue);
+  return rateValue; // "rate"
+}
 // اسکن خشن + تنصیف بازه برای پیدا کردن نزدیک‌ترین درصد شوک (در یک جهت) که ROI را منفی می‌کند
 var SHOCK_SENTINEL = 999999; // به‌جای Infinity، چون در JSON سریالایز نمی‌شود
 
@@ -76,12 +89,12 @@ function buildHuntRows(computed, settings, steps) {
 
       var roiZero = parseFloat(r.roi_zero);
       if (isNaN(roiZero)) return;
-      var reqProfit = dte * cfg.profitRate;
+      var reqProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
       if (roiZero < reqProfit) return;
 
       var actualShockUp = null, actualShockDown = null, minShock = null, reqShock = null;
       if (!isNoShock) {
-        reqShock = dte * cfg.shockRate;
+        reqShock = computeThreshold(cfg.shockMode, dte * cfg.shockRate, cfg.shockFloor);
         actualShockUp = findShockThreshold(r._payoff, 1);
         actualShockDown = findShockThreshold(r._payoff, -1);
         minShock = Math.min(actualShockUp, actualShockDown);
