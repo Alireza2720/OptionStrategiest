@@ -1,0 +1,2885 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>دیده‌بان اختیار معامله</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script src="libs/react.production.min.js"></script>
+<script src="libs/react-dom.production.min.js"></script>
+<script src="libs/babel.min.js"></script>
+<script src="libs/xlsx.full.min.js"></script>
+
+<style>
+:root{
+  --r:8px;--rs:5px;--f:'Vazirmatn','Tahoma',sans-serif;--row-pad:7px 10px;
+  --bg:#f0f4f8;--sur:#fff;--sur2:#f5f7fa;--sur3:#edf0f5;--bor:#dce1ea;--bor2:#c8d0dc;
+  --txt:#1e2635;--txt2:#4a5568;--mut:#8898aa;--acc:#3b82f6;--acc-d:#2563eb;--acc-t:rgba(59,130,246,.1);
+  --gain:#16a34a;--gain-t:rgba(22,163,74,.1);--loss:#dc2626;--loss-t:rgba(220,38,38,.1);
+  --warn:#d97706;--warn-t:rgba(217,119,6,.1);--sh:0 1px 3px rgba(0,0,0,.06);--sh-md:0 4px 12px rgba(0,0,0,.08);
+  --zebra:rgba(0,0,0,.045);--fs:13px;
+}
+[data-theme=midnight]{
+  --bg:#06080f;--sur:#0e1219;--sur2:#131720;--sur3:#181d28;--bor:#1e2535;--bor2:#2a3347;
+  --txt:#c8d8f0;--txt2:#8898b8;--mut:#4a5870;--acc:#7c3aed;--acc-d:#6d28d9;--acc-t:rgba(124,58,237,.15);
+  --gain:#10b981;--gain-t:rgba(16,185,129,.12);--loss:#f43f5e;--loss-t:rgba(244,63,94,.12);
+  --warn:#f59e0b;--warn-t:rgba(245,158,11,.12);--sh:none;--sh-md:0 4px 20px rgba(0,0,0,.5);--zebra:rgba(255,255,255,.045);
+}
+[data-theme=solarized]{
+  --bg:#fdf6e3;--sur:#eee8d5;--sur2:#e8e2cf;--sur3:#ddd8c0;--bor:#ccc5af;--bor2:#b8b0a0;
+  --txt:#073642;--txt2:#2e5465;--mut:#657b83;--acc:#268bd2;--acc-d:#1a6fa8;--acc-t:rgba(38,139,210,.1);
+  --gain:#2aa198;--gain-t:rgba(42,161,152,.1);--loss:#dc322f;--loss-t:rgba(220,50,47,.1);
+  --warn:#cb4b16;--warn-t:rgba(203,75,22,.1);--sh:0 1px 3px rgba(0,0,0,.08);--sh-md:0 4px 14px rgba(0,0,0,.1);--zebra:rgba(0,0,0,.055);
+}
+[data-theme=slate]{
+  --bg:#191b1f;--sur:#212429;--sur2:#282c32;--sur3:#30343b;--bor:#3a3f47;--bor2:#4a505a;
+  --txt:#e5e7ea;--txt2:#aab0b9;--mut:#6d7480;--acc:#f59e0b;--acc-d:#d97706;--acc-t:rgba(245,158,11,.14);
+  --gain:#4ade80;--gain-t:rgba(74,222,128,.12);--loss:#f87171;--loss-t:rgba(248,113,113,.12);
+  --warn:#fbbf24;--warn-t:rgba(251,191,36,.12);--sh:none;--sh-md:0 4px 16px rgba(0,0,0,.4);--zebra:rgba(255,255,255,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden}
+body{height:100vh;overflow:hidden;overflow-x:hidden;background:var(--bg);color:var(--txt);font-family:var(--f);font-size:var(--fs);direction:rtl;transition:.2s;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+#root{width:100%;max-width:100vw;overflow-x:hidden}
+button,input{font-family:var(--f)}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:12px;table-layout:fixed}
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-track{background:var(--sur2)}
+*::-webkit-scrollbar-thumb{background:var(--bor2);border-radius:5px}
+.app{display:flex;flex-direction:column;height:100vh;width:100%;max-width:100vw;overflow-x:hidden;position:relative}
+.top{height:46px;display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--sur);border-bottom:1px solid var(--bor);position:relative;z-index:50;flex-shrink:0;box-shadow:var(--sh)}
+.brand-top{position:absolute;left:50%;transform:translateX(-50%);font-size:15px;font-weight:800;white-space:nowrap;pointer-events:none;background:linear-gradient(90deg,var(--acc),var(--gain));background-clip:text;-webkit-background-clip:text;color:transparent}
+@media (max-width:768px){.brand-top{display:none}}
+.sp1{flex:1}
+.ib,.rbtn{border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ib{width:32px;height:32px;border-radius:var(--rs);background:none;color:var(--mut);font-size:16px;position:relative}
+.ib:hover{background:var(--sur2);color:var(--txt)}
+.rbtn{width:32px;height:32px;border-radius:var(--rs);background:var(--acc);color:#fff;font-size:15px}
+.rbtn:hover{background:var(--acc-d)}
+.rbtn:disabled{opacity:.45;cursor:default}
+.status-chip{display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;background:var(--sur2);color:var(--mut);font-size:11px;white-space:nowrap}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--gain)}
+.dot.sp{background:var(--warn)}.dot.er{background:var(--loss)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.75)}}
+.dot:not(.sp):not(.er){animation:pulse 2s infinite}
+body.bg-hidden .dot:not(.sp):not(.er){animation:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:36px;height:36px;border:3px solid var(--bor);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+.search-box{position:relative;display:flex;align-items:center}
+.search-input{width:150px;padding:5px 26px 5px 10px;border:1px solid var(--bor);border-radius:20px;background:var(--sur2);color:var(--txt);font-size:12px}
+.search-input:focus{outline:none;border-color:var(--acc);background:var(--sur)}
+.search-clear{position:absolute;left:6px;border:none;background:none;color:var(--mut);cursor:pointer;font-size:11px}
+.tabs{display:flex;overflow-x:auto;background:var(--sur);border-bottom:1px solid var(--bor);flex-shrink:0}
+.tabs::-webkit-scrollbar{height:0}
+.tab{height:38px;padding:0 14px;border:none;border-bottom:2px solid transparent;background:none;color:var(--mut);cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0}
+.tab:hover{color:var(--txt)}.tab.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.cnt{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;position:relative}
+.panel-active{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.strategy-scroll{flex:1;overflow:auto;min-height:0;padding:4px 0 24px}
+.watch-view{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.ibar{min-height:28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:4px;padding:5px 14px;background:var(--sur2);border-bottom:1px solid var(--bor);font-size:11px;color:var(--mut);flex-shrink:0}
+.rlbl{font-size:11px;font-weight:600;color:var(--mut)}
+.count-badge{padding:1px 8px;border-radius:20px;background:var(--acc-t);color:var(--txt);font-size:11px;font-weight:700}
+.count-label{font-size:11px;color:var(--mut)}
+.cbtn{padding:2px 9px;border:1px solid var(--loss);border-radius:4px;background:var(--loss-t);color:var(--loss);font-family:var(--f);font-size:11px;font-weight:600;cursor:pointer}
+.cbtn-acc{border:1px solid var(--acc);background:var(--acc-t);color:var(--acc)}
+.holiday-btn{padding:6px 12px;border:1px solid var(--warn);border-radius:6px;background:var(--sur);color:var(--warn);font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer}
+.holiday-btn.on{background:var(--warn);color:#fff}
+.holiday-btn:disabled{opacity:.5;cursor:default}
+.tw{width:100%;min-width:0;overflow:auto;-webkit-overflow-scrolling:touch}
+.tw-wrap{position:relative}
+thead{position:sticky;top:0;z-index:20}
+thead tr{position:sticky;top:0;z-index:21;background:var(--sur)}
+thead tr.fr{top:38px;z-index:20;background:var(--sur3)}
+thead tr.fr td{padding:3px 4px;border-bottom:1px solid var(--bor)}
+thead tr.fr input{width:100%;padding:3px 5px;border:1px solid var(--bor);border-radius:3px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:10px;outline:none}
+thead tr.fr input:focus{border-color:var(--acc)}
+th{position:sticky;top:0;z-index:21;padding:8px 9px;text-align:right;border-bottom:2px solid var(--bor);background:var(--sur);color:var(--mut);font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--txt)}
+td{padding:var(--row-pad);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+tbody tr{border-bottom:1px solid var(--bor);transition:.08s}
+tbody tr:nth-child(even){background:var(--zebra)}
+tbody tr:hover{background:var(--acc-t)!important}
+.s2{margin-right:2px;font-size:8px;opacity:.6}
+.tn{color:var(--acc);font-weight:600}.tb,.mut{color:var(--mut)}.tb{font-size:11px}
+.gain{color:var(--gain)}.loss{color:var(--loss)}.warn{color:var(--warn)}
+.bdg{display:inline-flex;align-items:center;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.bdg-itm{background:var(--acc-t);color:var(--acc)}.bdg-otm{background:var(--sur3);color:var(--mut)}
+.bdg-q1{background:var(--loss-t);color:var(--loss)}.bdg-rev{background:var(--warn-t);color:var(--warn)}
+.sv{min-width:50px;padding:7px 3px;text-align:center;font-size:11px;font-weight:600}
+.svh{min-width:50px;padding:8px 3px;text-align:center;font-size:10px;font-weight:600;color:var(--mut)}
+.tc0{color:var(--mut)}.tc-pos{color:var(--gain);font-weight:700}.tc-neg{color:var(--loss);font-weight:700}
+.raw-divider{border-right:2px dashed var(--bor2)}
+.sticky-col{position:sticky;z-index:16;border-left:1px solid var(--bor);background:var(--sur);overflow:hidden;text-overflow:ellipsis}
+thead .sticky-col{z-index:30;background:var(--sur)}thead tr.fr .sticky-col{z-index:29;background:var(--sur3)}
+tbody td.sticky-col{z-index:6;background:var(--sur)}
+tbody tr:nth-child(even) td.sticky-col{background:var(--sur2)}
+tbody tr:hover td.sticky-col{background-color:var(--sur);background-image:linear-gradient(var(--acc-t),var(--acc-t))}
+tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
+.col-resizer{position:absolute;top:0;bottom:0;left:-4px;width:8px;cursor:col-resize;z-index:5}
+.col-resizer:hover,.col-resizer:active{background:var(--acc-t)}
+.th-tip-wrap{position:relative;display:inline-flex;align-items:center}
+.th-tooltip{position:fixed;z-index:200;width:210px;padding:6px 10px;border:1px solid var(--acc);border-radius:6px;background:var(--sur);color:var(--txt2);box-shadow:var(--sh-md);font-size:11px;font-weight:500;line-height:1.6;text-align:right;white-space:normal;pointer-events:none}
+.collapsible-section{margin:4px 14px 10px}
+.collapsible-header{display:flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--bor);border-radius:var(--rs);background:var(--sur3);color:var(--txt2);font-size:13px;font-weight:600;cursor:pointer;user-select:none}
+.collapsible-header:hover{background:var(--sur2)}
+.arrow{display:inline-block;font-size:12px;margin-left:6px;transition:.2s}.arrow.open{transform:rotate(90deg)}
+.collapsible-content{display:flex;flex-direction:column;overflow:hidden;transition:max-height .3s ease}.collapsible-content.open{max-height:70vh}.collapsible-content.closed{max-height:0}
+.section-badge{margin-right:auto;padding:0 10px;border-radius:20px;background:var(--sur2);color:var(--mut);font-size:11px;font-weight:400}
+.center{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--mut);text-align:center;padding:20px}
+.error-box{max-width:420px;margin:auto;padding:20px;border:1px solid var(--bor);border-radius:var(--r);background:var(--sur);box-shadow:var(--sh-md);text-align:center}
+.error-box .title{margin-bottom:4px;color:var(--txt);font-size:16px;font-weight:700}.error-box .desc{color:var(--txt2);font-size:13px}
+.stale-banner{padding:6px 12px;border-bottom:1px solid var(--bor);background:var(--warn-t);color:var(--warn);text-align:center;font-size:12px;flex-shrink:0}
+.override-banner{padding:5px 12px;border-bottom:1px solid var(--bor);background:var(--warn-t);color:var(--warn);text-align:center;font-size:11.5px;flex-shrink:0}
+.margin-note-banner{padding:6px 12px;border-bottom:1px solid var(--bor);background:var(--warn-t);color:var(--warn);text-align:center;font-size:11.5px;flex-shrink:0}
+.busy-banner{padding:5px 12px;border-bottom:1px solid var(--bor);background:var(--acc-t);color:var(--acc);text-align:center;font-size:11.5px;flex-shrink:0}
+.ov{position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;z-index:80;background:rgba(0,0,0,.15)}
+.mpanel{position:fixed;top:0;right:0;bottom:0;z-index:90;width:320px;max-width:92vw;max-height:100vh;display:flex;flex-direction:column;border-left:1px solid var(--bor);background:var(--sur);box-shadow:var(--sh-md);transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
+.mpanel.open{transform:translateX(0)}
+.mhead{height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--bor);font-size:14px;font-weight:700;flex-shrink:0}
+.msub-tabs{display:flex;border-bottom:1px solid var(--bor);flex-shrink:0}
+.msub-tab{flex:1;padding:9px 0;border:none;background:none;color:var(--mut);font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
+.msub-tab.on{color:var(--acc);border-bottom-color:var(--acc)}
+.mbody{flex:1;overflow-y:auto;padding:12px 14px}.msec{margin-bottom:18px}.msec-t{color:var(--mut);font-size:10px;font-weight:700;letter-spacing:.08em}
+.msec-t-row{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.mdiv{height:1px;margin:6px 0;background:var(--bor)}
+.step-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.step-input{width:70px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:13px;text-align:center}
+.step-hint{color:var(--mut);font-size:11.5px}
+.inline-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ov-add-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.ov-input-name{flex:1;min-width:90px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px}
+.ov-input-name:focus,.ov-input-price:focus{outline:none;border-color:var(--acc)}
+.ov-input-price{width:90px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px;text-align:center}
+.ov-input-price.sm{width:78px;padding:5px 6px;font-size:11px}
+.ov-add-btn{padding:6px 14px;border:none;border-radius:6px;background:var(--acc);color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
+.ov-add-btn:hover{background:var(--acc-d)}
+.ov-add-btn:disabled{opacity:.5;cursor:default}
+.ov-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
+.ov-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur2)}
+.ov-item.off{opacity:.5}
+.ov-toggle{display:flex;align-items:center;flex-shrink:0}
+.ov-toggle input{width:15px;height:15px;cursor:pointer}
+.ov-name{flex:1;font-size:12px;font-weight:700;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ov-real{font-size:10px;color:var(--mut);min-width:54px;text-align:center;white-space:nowrap;flex-shrink:0}
+.ov-remove{border:none;background:none;color:var(--loss);cursor:pointer;font-size:14px;padding:2px 5px;border-radius:4px;flex-shrink:0}
+.ov-remove:hover{background:var(--loss-t)}
+.ov-indicator{position:absolute;top:2px;left:2px;width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--sur)}
+.floating-export{position:absolute;bottom:10px;left:10px;z-index:15;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid var(--acc);border-radius:20px;background:var(--sur);color:var(--acc);font-size:11px;font-weight:700;cursor:pointer;box-shadow:var(--sh-md);opacity:.95}
+.floating-export:hover{opacity:1;background:var(--acc-t)}
+.info-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--sur3);color:var(--mut);font-size:9px;cursor:help;margin-left:3px;flex-shrink:0}
+.info-toggle-wrap{display:inline-flex;flex-direction:column}
+.info-toggle-btn{border:1px solid var(--bor);background:var(--sur2);color:var(--mut);border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.info-toggle-btn:hover{background:var(--acc-t);color:var(--acc);border-color:var(--acc)}
+.info-toggle-text{margin-top:6px;padding:8px 10px;border:1px dashed var(--bor2);border-radius:6px;background:var(--sur2);color:var(--txt2);font-size:11.5px;line-height:1.8;max-width:280px}
+.theme-dots{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.theme-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--bor);cursor:pointer;flex-shrink:0}
+.theme-dot.on{border-color:var(--sur);box-shadow:0 0 0 2px var(--txt)}
+.best-controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:8px 14px;background:var(--sur2);border-bottom:1px solid var(--bor);flex-shrink:0}
+.best-field{display:flex;align-items:center;gap:6px}
+.best-field label{font-size:11px;color:var(--mut);font-weight:600;white-space:nowrap}
+.toggle-switch{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:var(--txt2);white-space:nowrap}
+.mini-num{width:60px;padding:5px 7px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px;text-align:center}
+.tab-spin-dot{display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid var(--mut);border-top-color:transparent;margin-left:5px;animation:spin .7s linear infinite;vertical-align:middle}
+.hunt-card{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--acc);border-radius:var(--rs) var(--rs) 0 0;background:var(--acc-t);color:var(--acc);font-size:13px;font-weight:700;cursor:pointer}
+.hunt-card:hover{background:var(--acc);color:#fff}
+.hunt-settings-toggle{display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--bor);border-top:none;border-radius:0 0 var(--rs) var(--rs);background:var(--sur2);color:var(--txt2);font-size:12px;font-weight:600;cursor:pointer;user-select:none}
+.hunt-settings-toggle:hover{background:var(--sur3)}
+.hunt-settings-body{padding:10px 2px 4px}
+.hunt-strat-head{display:grid;grid-template-columns:1fr 64px 64px 60px;gap:6px;padding:4px 4px;font-size:10px;color:var(--mut);font-weight:700}
+.hunt-strat-row{display:grid;grid-template-columns:1fr 64px 64px 60px;gap:6px;align-items:center;padding:5px 4px;border-bottom:1px solid var(--bor)}
+.hunt-strat-row:last-child{border-bottom:none}
+.hunt-strat-name{font-size:11.5px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hunt-strat-input{width:100%;padding:4px 5px;border:1px solid var(--bor);border-radius:5px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:11px;text-align:center}
+.hunt-strat-dash{text-align:center;color:var(--mut);font-size:11px}
+.hunt-strat-check{display:flex;align-items:center;justify-content:center}
+.hunt-strat-check input{width:15px;height:15px;cursor:pointer}
+.hunt-strat-card{border:1px solid var(--bor);border-radius:var(--rs);padding:8px 10px;margin-bottom:8px;background:var(--sur2)}
+.hunt-strat-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.hunt-strat-tg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2);cursor:pointer}
+.hunt-strat-tg input{width:14px;height:14px;cursor:pointer}
+.hunt-metric-row{display:grid;grid-template-columns:40px 1fr 62px 62px;gap:6px;align-items:center;margin-bottom:5px}
+.hunt-metric-row:last-child{margin-bottom:0}
+.hunt-metric-lbl{font-size:10.5px;color:var(--mut);font-weight:700}
+.hunt-mode-select{width:100%;padding:4px 5px;border:1px solid var(--bor);border-radius:5px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:10.5px}
+.hunt-strat-input:disabled{opacity:.4}
+.hunt-straddle-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+.hunt-straddle-field{display:flex;flex-direction:column;gap:3px}
+.hunt-dte-row{display:grid;grid-template-columns:70px 1fr 1fr;gap:6px;align-items:center;margin-top:6px;padding-top:6px;border-top:1px dashed var(--bor)}
+.fs-overlay{position:fixed;inset:0;z-index:95;background:var(--bg);display:flex;flex-direction:column}
+.fs-head{height:46px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0}
+.fs-head b{font-size:14px}
+.fs-body{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.modal-overlay{position:fixed;inset:0;z-index:150;background:rgba(10,14,22,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-box{width:min(880px,96vw);height:min(600px,92vh);background:var(--bg);border:1px solid var(--bor);border-radius:var(--r);box-shadow:var(--sh-md);display:flex;flex-direction:column;overflow:hidden}
+.modal-head{height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0}
+.modal-head .mtitle{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.modal-body{flex:1;overflow:auto;min-height:0}
+.payoff-body{padding:10px 14px}
+.payoff-info-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.pinfo{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rs);padding:6px 12px;display:flex;flex-direction:column;gap:2px;min-width:90px}
+.pinfo span{font-size:10px;color:var(--mut)}
+.pinfo b{font-size:13px;color:var(--txt)}
+.payoff-chart-box{position:relative;background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:10px;box-shadow:var(--sh)}
+.payoff-readout{margin-top:10px;background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:20px}
+.ro-lbl{font-size:11.5px;color:var(--mut)}
+.ro-val{font-size:14px;font-weight:700;color:var(--txt)}
+.ro-hint{font-size:11.5px;color:var(--mut)}
+.preset-btn{padding:3px 10px;border-radius:20px;border:1px solid var(--acc);background:var(--acc-t);color:var(--acc);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--f)}
+.preset-btn.on{background:var(--acc);color:#fff}
+.range-input{width:64px;padding:4px 6px;background:var(--sur);border:1px solid var(--bor);border-radius:4px;color:var(--txt);font-size:12px;text-align:center;font-family:var(--f)}
+.chart-tooltip{position:absolute;pointer-events:none;background:var(--sur);border:1px solid var(--acc);border-radius:6px;padding:6px 10px;font-size:11.5px;box-shadow:var(--sh-md);white-space:nowrap;z-index:5}
+.chart-tooltip .tt-row{display:flex;justify-content:space-between;gap:10px}
+.chart-tooltip .tt-row+.tt-row{margin-top:3px}
+.chart-tooltip .tt-lbl{color:var(--mut)}
+.chart-tooltip .tt-pct{font-weight:700;color:var(--txt)}
+.chart-tooltip .tt-roi{font-weight:700}
+.cur-label{font-size:10px;font-weight:700;fill:var(--acc)}
+.gcard{background:var(--sur2);border:1px solid var(--bor);border-radius:var(--rs);padding:10px 12px;margin-bottom:10px}
+.gcard-t{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;color:var(--txt);margin-bottom:5px}
+.gcard-p{font-size:11.5px;line-height:1.85;color:var(--txt2)}
+.gcard-ul{margin:4px 0 0 0;padding-right:16px}
+.gcard-ul li{font-size:11.5px;line-height:1.85;color:var(--txt2);margin-bottom:3px}
+.formula-box{background:var(--sur);border:1px dashed var(--bor2);border-radius:6px;padding:8px 10px;font-size:11.5px;line-height:2.1;color:var(--txt2);margin-top:6px}
+.formula-box code{color:var(--acc);font-weight:700}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+window.onerror=function(msg,url,line,col){
+  var isLibError=/React|ReactDOM|Babel|XLSX/i.test(String(msg))||/cdnjs/i.test(String(url));
+  var extra=isLibError?'<div style="margin-top:10px;color:#4a5568">به نظر می‌رسد فایل‌های لازم برنامه به‌درستی از سرور بارگذاری نشده‌اند (معمولاً به‌خاطر اینترنت ضعیف یا مرورگر داخلی برخی اپلیکیشن‌ها). لطفاً این صفحه را در Chrome یا Safari باز کنید و دوباره تلاش کنید.</div><button onclick="location.reload()" style="margin-top:12px;padding:8px 20px;border:none;border-radius:6px;background:#3b82f6;color:#fff;font-family:Tahoma;cursor:pointer">تلاش مجدد</button>':'';
+  document.getElementById('root').innerHTML='<div style="padding:20px;color:#dc2626;font-family:Tahoma;direction:rtl;text-align:center"><b>خطا:</b> '+msg+' (سطر '+line+':'+col+')'+extra+'</div>';
+};
+
+(function(){
+  function missingLibs(){
+    var missing=[];
+    if(typeof React==="undefined")missing.push("React");
+    if(typeof ReactDOM==="undefined")missing.push("ReactDOM");
+    if(typeof Babel==="undefined")missing.push("Babel");
+    if(typeof XLSX==="undefined")missing.push("XLSX");
+    return missing;
+  }
+  window.addEventListener("load",function(){
+    var missing=missingLibs();
+    if(missing.length===0)return;
+    var triedKey="oh_reload_tried";
+    var tried=false;
+    try{tried=sessionStorage.getItem(triedKey)==="1"}catch(e){}
+    if(!tried){
+      try{sessionStorage.setItem(triedKey,"1")}catch(e){}
+      location.reload();
+      return;
+    }
+    try{sessionStorage.removeItem(triedKey)}catch(e){}
+    document.getElementById('root').innerHTML=
+      '<div style="padding:24px;color:#dc2626;font-family:Tahoma;direction:rtl;text-align:center">'+
+      '<b>خطا در بارگذاری فایل‌های برنامه</b>'+
+      '<div style="margin-top:8px;color:#4a5568;font-size:13px">این مشکل معمولاً به‌خاطر مرورگر داخلی برخی اپلیکیشن‌ها (مانند روبیکا، اینستاگرام، تلگرام) یا اینترنت ضعیف رخ می‌دهد.<br/>لطفاً لینک را کپی کرده و در مرورگر Chrome یا Safari باز کنید (نه داخل خود اپلیکیشن).</div>'+
+      '<button onclick="location.reload()" style="margin-top:14px;padding:8px 20px;border:none;border-radius:6px;background:#3b82f6;color:#fff;font-family:Tahoma;cursor:pointer">تلاش مجدد</button>'+
+      '</div>';
+  });
+})();
+</script>
+<script type="text/babel">
+(function(){
+"use strict";
+
+var useState=React.useState;
+var useEffect=React.useEffect;
+var useMemo=React.useMemo;
+var useCallback=React.useCallback;
+var useRef=React.useRef;
+
+/* =========================================================
+   تنظیمات اتصال به بک‌اند
+   ========================================================= */
+var CONFIG={
+  API_BASE:"https://option-hunter-backend.onrender.com",
+  API_KEY:"sk-0g6k1r5J7Z8v3Q2L1mN4T3P9R8Y5W2X1Z0A7B6C5D4E3F2G1H"  /* <<< اینجا همون مقدار API_KEY که در .env بک‌اندت هست رو بذار */
+};
+
+/* =========================================================
+   متن‌های ثابت رابط کاربری
+   ========================================================= */
+var L={
+  watch:"دیده‌بان",cc:"کاورد کال",mp:"مریدپوت",co:"کلار",cv:"کانورژن",
+  settings:"تنظیمات",guide:"راهنما",theme:"تم",clearFilters:"پاک فیلترها",
+  buyable:"قابل خرید",notBuyable:"غیرقابل خرید (صف خرید سهم پایه)",noData:"داده‌ای موجود نیست",
+  basis:"سهم پایه",putName:"خرید پوت",sellCall:"فروش کال",strike:"اعمال",
+  dte:"روز",demand:"حجم بهترین تقاضا",supply:"حجم بهترین عرضه",
+  bidPrice:"سر خط تقاضا",askPrice:"سر خط عرضه",spot:"قیمت سهم پایه",
+  be:"سر به سری ریالی",expiry:"سررسید",kCall:"قیمت اعمال کال",
+  kPut:"قیمت اعمال پوت",block:"ارزش ریالی",contractSize:"اندازه قرارداد",
+  name:"نماد",type:"نوع",status:"وضعیت",volume:"حجم معاملات",oi:"موقعیت باز",
+  iv:"نوسان ضمنی",delta:"دلتا",refresh:"بروزرسانی",menu:"منو",
+  collarType:"نوع کلار",collarStandard:"استاندارد",collarReverse:"معکوس",
+  buyCall:"خرید کال",sellPut:"فروش پوت",dteRemain:"مانده روز",
+  strangleBuy:"استرانگل خرید",strangleSell:"استرانگل فروش",
+  callSpread:"کال اسپرد صعودی",putSpread:"پوت اسپرد نزولی",
+  callSpreadBear:"کال اسپرد نزولی",putSpreadBull:"پوت اسپرد صعودی",box:"باکس",
+  maxProfit:"حداکثر سود",maxLoss:"حداکثر زیان",close:"بستن",
+  scenarioStepHint:"درصد فاصله هر ستون نسبت به ستون کناری",
+  scenarioNote:"ستون‌های قبل از خط‌چین: بازده تعدیل‌شده به ۳۰ روز | بعد از خط‌چین: بازده واقعی تا سررسید.",
+  scenStepLbl:"گام سناریوی درصدی",
+  dteSettingsTitle:"فیلتر روز تا سررسید",
+  dteSettingsHint:"این فیلتر روی دیده‌بان، شکار موقعیت‌ها و همه‌ی تب‌های استراتژی اعمال می‌شود (سمت سرور).",
+  strategyTypeLbl:"استراتژی",
+  topNLbl:"تعداد نمایش",onlyBuyableLbl:"فقط سهم‌های قابل‌خرید",
+  exportXlsxShort:"اکسل",
+  customBasisPrice:"قیمت دلخواه سهم پایه",
+  customBasisHint:"برای بررسی سود و زیان استراتژی بر اساس قیمتی فرضی برای سهم پایه، نام و قیمت را وارد و فعال کنید. این تنظیم روی سرور ذخیره می‌شود و روی محاسبات استراتژی‌ها و همچنین اعلان‌های تلگرام اثر می‌گذارد.",
+  addOverride:"افزودن",noOverrides:"هنوز سهمی اضافه نشده است.",realPriceShort:"واقعی",manualBadge:"دستی",
+  overridePlaceholderName:"نام سهم پایه",overridePlaceholderPrice:"قیمت",
+  refreshIntervalLbl:"بروزرسانی خودکار",
+  refreshIntervalHint:"هر چند ثانیه یک‌بار داده‌های تب فعلی به‌صورت خودکار از سرور خوانده شوند (فقط خواندن؛ محاسبه جدید انجام نمی‌شود).",
+  showAllColumns:"نمایش کامل ستون‌ها",hideExtraColumns:"نمایش ساده",
+  huntPositions:"شکار موقعیت‌ها",
+  autoRefreshLbl:"فعال",
+  huntSettingsTitle:"تنظیمات شکار موقعیت‌ها",
+huntFormulaHint:"برای هر معیار (نوسان و سود) یکی از سه حالت را انتخاب کنید: «فقط نرخ روزانه» (آستانه = روزِ مانده × نرخ)، «فقط کف» (آستانه = مقدار ثابتی که وارد می‌کنید، مستقل از روز مانده) یا «هر دو» (آستانه = هرکدام از این دو که بزرگ‌تر باشد). شرط قبولی: حداقل نوسان واقعی (در هر دو جهت) ≥ آستانهٔ نوسان، و بازده واقعی صفر ≥ آستانهٔ سود. برای کانورژن و باکس فقط شرط سود بررسی می‌شود (این‌ها بازده ثابت دارند).",  huntTopNLbl:"تعداد ارسال به تلگرام",
+  huntTopNUnlimitedLbl:"بدون محدودیت (ارسال همه)",
+huntOnlyBuyableLbl:"فقط سهم‌های قابل‌خرید (فقط کاوردکال/مریدپوت/کلار/کانورژن)",
+  huntCooldownLbl:"فاصلهٔ یادآوری تلگرام",
+  huntCooldownForeverLbl:"فقط یک‌بار برای همیشه اطلاع بده",
+  huntCooldownHint:"مدت زمانی که پس از اطلاع‌رسانی یک موقعیت، دوباره برایش پیام ارسال نمی‌شود؛ در صورت فعال بودن «فقط یک‌بار برای همیشه»، این موقعیت دیگر هرگز تکرار نمی‌شود.",
+  checkIntervalLbl:"فاصلهٔ اجرای خودکار سرور",
+  checkIntervalHint:"این مقدار تعیین می‌کند سرور هر چند ثانیه یک‌بار به‌صورت داخلی چرخهٔ محاسبه/اعلان تلگرام را اجرا کند (جدا از cron-job.org).",
+  applying:"در حال اعمال تغییرات روی سرور...",
+  wakingUp:"سرویس سمت سرور در حال بیدار شدن است؛ ممکن است تا ۵۰ ثانیه طول بکشد...",
+shockRateShort:"نوسان/روز",profitRateShort:"سود/روز",telegramShort:"تلگرام",  hoursShort:"ساعت",minutesShort:"دقیقه",
+actualShockUpCol:"نوسان مثبت واقعی",actualShockDownCol:"نوسان منفی واقعی",minShockCol:"حداقل نوسان واقعی",
+requiredShockCol:"نوسان لازم",requiredProfitCol:"آستانهٔ سود لازم",roiZeroCol:"بازده صفر",
+straddleMinPnlLbl:"کف سود/زیان قبل از نوسان",straddleReqDownLbl:"نوسان منفی لازم",straddleReqUpLbl:"نوسان مثبت لازم",
+huntDteLbl:"روز تا سررسید",
+  holidayOnLbl:"امروز تعطیل رسمی است (پیامی ارسال نمی‌شود)",
+  holidayOffLbl:"علامت‌گذاری امروز به‌عنوان تعطیل رسمی",
+  holidayHint:"در روزهایی که بازار بر اساس تقویم رسمی تعطیل است، این دکمه را بزنید تا امروز پیامی در تلگرام ارسال نشود. این تنظیم فقط برای تاریخ امروز (به وقت تهران) است و از فردا خودکار برداشته می‌شود.",
+  marketOpenNowLbl:"در بازه ارسال پیام",
+  marketClosedNowLbl:"خارج از بازه ارسال پیام",
+  marketWindowHint:"این نشانگر نشان می‌دهد آیا الان (با توجه به ساعت بازار و تعطیلی احتمالی) در صورت پیدا شدن موقعیت جدید، پیام تلگرام ارسال می‌شود یا نه."
+};
+
+var THEMES=["light","midnight","solarized","slate"];
+var THEME_NAMES={light:"روشن",midnight:"نیمه‌شب",solarized:"سولار",slate:"سنگی"};
+var THEME_DOT_COLORS={light:"#3b82f6",midnight:"#7c3aed",solarized:"#268bd2",slate:"#f59e0b"};
+var IS_TOUCH=(function(){try{return window.matchMedia("(pointer:coarse)").matches}catch(e){return false}})();
+var DEFAULT_REFRESH_SEC=30;
+var MIN_REFRESH_SEC=10;
+var MAX_REFRESH_SEC=300;
+var ROW_H_STRAT=36;
+var HEADER_H_STRAT=76;
+var ROW_H_WATCH=34;
+var HEADER_H_WATCH=70;
+var VIRTUALIZE_THRESHOLD=IS_TOUCH?14:30;
+var VIRT_OVERSCAN=IS_TOUCH?6:12;
+var EMPTY_ARR=[];
+var SHOCK_INF_THRESHOLD=99999;
+
+var HUNT_STRATEGY_TYPES=["cc","mp","co","cv","strangle","strangleSell","callspread","callspreadbear","putspread","putspreadbull","box"];
+var HUNT_NO_SHOCK_TYPES={cv:true,box:true};
+var BUYABLE_CHECK_TYPES={cc:true,mp:true,co:true,cv:true};
+var HUNT_STRATEGY_DEFAULT={
+  shockRate:0.5,shockMode:"rate",shockFloor:5,
+  profitRate:0.35,profitMode:"rate",profitFloor:5,
+  dteMin:"",dteMax:"",
+  telegramEnabled:true,
+  straddleMinPnl:-10,straddleReqShockDown:5,straddleReqShockUp:5
+};
+var HUNT_MODE_OPTIONS=[
+  {v:"rate",l:"فقط نرخ روزانه"},
+  {v:"floor",l:"فقط کف"},
+  {v:"both",l:"هر دو"}
+];
+/* =========================================================
+   لایه ارتباط با API بک‌اند
+   ========================================================= */
+function apiUrl(path){return CONFIG.API_BASE.replace(/\/$/,"")+path}
+function apiGet(path){
+  return fetch(apiUrl(path)).then(function(res){
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    return res.json();
+  });
+}
+function apiSend(method,path,body){
+  var headers={"Content-Type":"application/json"};
+  if(CONFIG.API_KEY)headers["x-api-key"]=CONFIG.API_KEY;
+  return fetch(apiUrl(path),{
+    method:method,headers:headers,
+    body:body!==undefined?JSON.stringify(body):undefined
+  }).then(function(res){
+    return res.json().catch(function(){return {}}).then(function(json){
+      if(!res.ok)throw new Error((json&&json.error)||("HTTP "+res.status));
+      return json;
+    });
+  });
+}
+var Api={
+  status:function(){return apiGet("/api/status")},
+  marketToday:function(){return apiGet("/api/market/today")},
+  toggleHoliday:function(){return apiSend("POST","/api/market/today/toggle-holiday")},
+  watch:function(){return apiGet("/api/watch")},
+  strategy:function(kind){return apiGet("/api/strategy/"+kind)},
+  huntLatest:function(){return apiGet("/api/hunt/latest")},
+  refresh:function(){return apiSend("POST","/api/refresh")},
+  getSettings:function(){return apiGet("/api/settings")},
+  postSettings:function(partial){return apiSend("POST","/api/settings",partial)},
+  getOverrides:function(){return apiGet("/api/overrides")},
+  postOverride:function(o){return apiSend("POST","/api/overrides",o)},
+  deleteOverride:function(name){return apiSend("DELETE","/api/overrides/"+encodeURIComponent(name))}
+};
+
+/* =========================================================
+   توابع کمکی عمومی
+   ========================================================= */
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function sf(v,d){if(d===undefined)d=0;var x=parseFloat(v);return isNaN(x)?d:x}
+function n(v,d){
+  if(d===undefined)d=0;
+  if(v==null||isNaN(v))return "—";
+  return Number(v).toLocaleString("fa-IR",{maximumFractionDigits:d});
+}
+function n2(v){
+  if(v==null||isNaN(v))return "—";
+  return Number(v).toLocaleString("fa-IR",{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function plainPct(v){
+  if(v==null||isNaN(v))return "—";
+  return (v>0?"+":"")+n(v,1)+"٪";
+}
+function fmtShock(v){
+  if(v==null)return "—";
+  if(v>=SHOCK_INF_THRESHOLD)return "∞";
+  return n(v,1)+"٪";
+}
+function scenClass(v){return v>0?"tc-pos":v<0?"tc-neg":"tc0"}
+function roiCalc(pnl,base){return base>0?(pnl/base)*100:0}
+function buildSteps(step){
+  var s=Math.abs(parseFloat(step));
+  if(!s||isNaN(s))s=5;
+  var a=[];
+  for(var i=-3;i<=3;i++)a.push(Math.round(i*s*100)/100);
+  return a;
+}
+function rowKeyFor(kind,row){
+  if(kind==="co"||kind==="cv"||kind==="strangle"||kind==="strangleSell")return row.call_name+"|"+row.put_name+"|"+row.expiry;
+  if(kind==="callspread"||kind==="putspread"||kind==="callspreadbear"||kind==="putspreadbull")return row.buy_name+"|"+row.sell_name+"|"+row.expiry;
+  if(kind==="box")return row.call_buy_name+"|"+row.call_sell_name+"|"+row.put_buy_name+"|"+row.put_sell_name+"|"+row.expiry;
+  return row.name+"|"+row.expiry;
+}
+function watchRowKey(row){return row.name+"|"+row.expiry}
+function bestRowKey(row){return row.strategy_type+"|"+row.primary_name+"|"+row.expiry}
+function labelForRow(kind,row){
+  if(kind==="cc"||kind==="mp")return row.name;
+  if(kind==="co"||kind==="cv"||kind==="strangle"||kind==="strangleSell")return row.call_name+" / "+row.put_name;
+  if(kind==="callspread"||kind==="callspreadbear"||kind==="putspread"||kind==="putspreadbull")return row.buy_name+" / "+row.sell_name;
+  if(kind==="box")return row.call_buy_name+"/"+row.call_sell_name+"/"+row.put_buy_name+"/"+row.put_sell_name;
+  return row.primary_name||row.name||"";
+}
+function matchesGlobalSearch(row,term){
+  if(!term)return true;
+  var t=String(term).toLowerCase();
+  var fields=[row.name,row.call_name,row.put_name,row.basis_name,row.buy_name,row.sell_name,
+    row.call_buy_name,row.call_sell_name,row.put_buy_name,row.put_sell_name,row.primary_name];
+  for(var i=0;i<fields.length;i++){
+    if(fields[i]&&String(fields[i]).toLowerCase().indexOf(t)!==-1)return true;
+  }
+  return false;
+}
+function sanitizeFilename(name){return String(name).replace(/[\\\/:*?"<>|]/g,"_").trim()||"خروجی"}
+function downloadXlsx(filename,aoa){
+  var ws=XLSX.utils.aoa_to_sheet(aoa);
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Sheet1");
+  XLSX.writeFile(wb,sanitizeFilename(filename)+".xlsx");
+}
+function isMobileViewport(){return IS_TOUCH}
+function limitStickyCols(cols,maxSticky){
+  var count=0;
+  return cols.map(function(c){
+    if(!c.sticky)return c;
+    count++;
+    if(count>maxSticky)return Object.assign({},c,{sticky:false});
+    return c;
+  });
+}
+function splitBuyable(data){
+  var buy=[],notBuy=[];
+  (data||[]).forEach(function(row){
+    if(row.basis_buyable===false)notBuy.push(row);else buy.push(row);
+  });
+  return {buyable:buy,notBuyable:notBuy};
+}
+
+/* بازسازی تابع سود/زیان پیوسته از روی خروجی نهایی هر ردیف (برای نمودار) */
+function computePayoffFn(kind,row){
+  var size=row.size||0;
+  if(kind==="cc"){
+    var spot=row.spot,strike=row.strike,premium=row.premium||0;
+    var block=(spot-premium)*size;
+    return function(pct){var f=spot*(1+pct/100);return roiCalc(Math.min(strike,f)*size-block,block)};
+  }
+  if(kind==="mp"){
+    var spot2=row.spot,strike2=row.strike,total=row.total_cost||0;
+    return function(pct){var f=spot2*(1+pct/100);return roiCalc(Math.max(strike2,f)*size-total,total)};
+  }
+  if(kind==="co"){
+    var spot3=row.spot,kCall=row.k_call,kPut=row.k_put;
+    var net=(row.bid_price||0)-(row.ask_price||0);
+    var block3=(spot3-net)*size;
+    return function(pct){
+      var f=spot3*(1+pct/100);
+      var posVal=f-Math.max(f-kCall,0)+Math.max(kPut-f,0);
+      return roiCalc((posVal+net-spot3)*size,block3);
+    };
+  }
+  if(kind==="cv"||kind==="box"){
+    var roiFixed=row.roi_zero;
+    return function(){return roiFixed};
+  }
+  if(kind==="strangle"){
+    var spot4=row.spot,kCall2=row.k_call,kPut2=row.k_put,totalCost=row.total_cost||0;
+    return function(pct){
+      var f=spot4*(1+pct/100);
+      var val=(Math.max(f-kCall2,0)+Math.max(kPut2-f,0))*size;
+      return roiCalc(val-totalCost,totalCost);
+    };
+  }
+  if(kind==="strangleSell"){
+    var spot5=row.spot,kCall3=row.k_call,kPut3=row.k_put,margin=row.margin||0;
+    var totalPremium=(row.call_bid_price||0)*size+(row.put_bid_price||0)*size;
+    return function(pct){
+      var f=spot5*(1+pct/100);
+      var optVal=(Math.max(f-kCall3,0)+Math.max(kPut3-f,0))*size;
+      return roiCalc(totalPremium-optVal,margin);
+    };
+  }
+  if(kind==="callspread"||kind==="callspreadbear"){
+    var spot6=row.spot,kBuy=row.k_buy,kSell=row.k_sell,base=row.base||0;
+    var netCost=(row.buy_ask_price||0)-(row.sell_bid_price||0);
+    return function(pct){
+      var f=spot6*(1+pct/100);
+      var val=(Math.max(f-kBuy,0)-Math.max(f-kSell,0))*size;
+      return roiCalc(val-netCost*size,base);
+    };
+  }
+  if(kind==="putspread"||kind==="putspreadbull"){
+    var spot7=row.spot,kBuy2=row.k_buy,kSell2=row.k_sell,base2=row.base||0;
+    var netCost2=(row.buy_ask_price||0)-(row.sell_bid_price||0);
+    return function(pct){
+      var f=spot7*(1+pct/100);
+      var val=(Math.max(kBuy2-f,0)-Math.max(kSell2-f,0))*size;
+      return roiCalc(val-netCost2*size,base2);
+    };
+  }
+  return function(){return row.roi_zero||0};
+}
+
+/* =========================================================
+   هوک‌های عمومی
+   ========================================================= */
+function useTheme(){
+  var sys=window.matchMedia("(prefers-color-scheme:dark)").matches?"midnight":"light";
+  var a=useState(function(){
+    try{var x=localStorage.getItem("theme");return x&&THEMES.indexOf(x)!==-1?x:sys}catch(e){return sys}
+  });
+  useEffect(function(){
+    document.documentElement.setAttribute("data-theme",a[0]);
+    try{localStorage.setItem("theme",a[0])}catch(e){}
+  },[a[0]]);
+  return a;
+}
+function useLocalStorage(key,def){
+  var a=useState(function(){
+    try{var x=localStorage.getItem(key);return x!==null?JSON.parse(x):def}catch(e){return def}
+  });
+  useEffect(function(){
+    try{localStorage.setItem(key,JSON.stringify(a[0]))}catch(e){}
+  },[key,a[0]]);
+  return a;
+}
+function useDebounced(value,delay){
+  var a=useState(value);
+  useEffect(function(){
+    var t=setTimeout(function(){a[1](value)},delay);
+    return function(){clearTimeout(t)};
+  },[value,delay]);
+  return a[0];
+}
+
+function NumberField(props){
+  var value=props.value,onCommit=props.onCommit,className=props.className,
+    min=props.min,max=props.max,style=props.style,placeholder=props.placeholder,
+    disabled=props.disabled,ariaLabel=props.ariaLabel,allowEmpty=props.allowEmpty;
+  var st=useState(function(){return value===""||value==null?"":String(value)});
+  var text=st[0],setText=st[1];
+  useEffect(function(){setText(value===""||value==null?"":String(value))},[value]);
+  function commit(raw){
+    if(raw===""){
+      if(allowEmpty){onCommit("");return}
+      setText(value===""||value==null?"":String(value));return;
+    }
+    var v=parseFloat(raw);
+    if(isNaN(v)){setText(value===""||value==null?"":String(value));return}
+    if(min!=null)v=Math.max(min,v);
+    if(max!=null)v=Math.min(max,v);
+    onCommit(v);setText(String(v));
+  }
+  return (
+    <input type="text" inputMode="decimal" className={className} style={style}
+      placeholder={placeholder} disabled={disabled} aria-label={ariaLabel}
+      value={text}
+      onChange={function(e){setText(e.target.value)}}
+      onBlur={function(e){commit(e.target.value)}}
+      onKeyDown={function(e){if(e.key==="Enter"){commit(e.target.value);e.target.blur()}}} />
+  );
+}
+
+function InfoToggle(props){
+  var st=useState(false);
+  var open=st[0],setOpen=st[1];
+  return (
+    <span className="info-toggle-wrap">
+      <button type="button" className="info-toggle-btn" onClick={function(){setOpen(!open)}} aria-label="توضیحات" title="توضیحات">
+        {open?"−":"ⓘ"}
+      </button>
+      {open?<div className="info-toggle-text">{props.children}</div>:null}
+    </span>
+  );
+}
+
+function useVirtualWindow(scrollRef,count,rowHeight,headerHeight,overscan){
+  var st=useState({start:0,end:count});
+  useEffect(function(){
+    var el=scrollRef.current;
+    if(!el){st[1]({start:0,end:count});return}
+    var ticking=false;
+    function compute(){
+      if(count<=VIRTUALIZE_THRESHOLD){st[1]({start:0,end:count});return}
+      var scrollTop=Math.max(0,el.scrollTop-headerHeight);
+      var viewH=el.clientHeight||400;
+      var start=Math.max(0,Math.floor(scrollTop/rowHeight)-overscan);
+      var end=Math.min(count,Math.ceil((scrollTop+viewH)/rowHeight)+overscan);
+      if(end<=start)end=Math.min(count,start+overscan*2+1);
+      st[1]({start:start,end:end});
+    }
+    function onScroll(){
+      if(ticking)return;
+      ticking=true;
+      requestAnimationFrame(function(){compute();ticking=false});
+    }
+    el.scrollTop=0;
+    compute();
+    el.addEventListener("scroll",onScroll,{passive:true});
+    window.addEventListener("resize",onScroll);
+    return function(){el.removeEventListener("scroll",onScroll);window.removeEventListener("resize",onScroll)};
+  },[scrollRef.current,count,rowHeight,headerHeight,overscan]);
+  return count<=VIRTUALIZE_THRESHOLD?{start:0,end:count}:st[0];
+}
+
+function useColWidths(tableKey,cols){
+  var storageKey="colw_"+tableKey;
+  var st=useState(function(){
+    try{var saved=localStorage.getItem(storageKey);if(saved)return JSON.parse(saved)}catch(e){}
+    var mobile=isMobileViewport(),init={};
+    cols.forEach(function(c){if(c.w)init[c.k]=Math.round(c.w*(mobile?0.82:1))});
+    return init;
+  });
+  var widths=st[0],setWidths=st[1];
+  useEffect(function(){
+    var t=setTimeout(function(){
+      try{localStorage.setItem(storageKey,JSON.stringify(widths))}catch(e){}
+    },400);
+    return function(){clearTimeout(t)};
+  },[widths,storageKey]);
+  var dragRef=useRef(null);
+  function onMove(e){
+    var d=dragRef.current;if(!d)return;
+    var deltaX=e.clientX-d.startX;
+    var newW=Math.max(d.minWidth,Math.round(d.startW-deltaX));
+    setWidths(function(prev){var c=Object.assign({},prev);c[d.colKey]=newW;return c});
+  }
+  function onUp(){dragRef.current=null;window.removeEventListener("pointermove",onMove);window.removeEventListener("pointerup",onUp)}
+  function startResize(colKey,minWidth){
+    return function(e){
+      e.preventDefault();e.stopPropagation();
+      dragRef.current={colKey:colKey,startX:e.clientX,startW:widths[colKey]||100,minWidth:minWidth||8};
+      window.addEventListener("pointermove",onMove);
+      window.addEventListener("pointerup",onUp);
+    };
+  }
+  useEffect(function(){return function(){window.removeEventListener("pointermove",onMove);window.removeEventListener("pointerup",onUp)}},[]);
+  function getWidth(colKey,fallback){return widths[colKey]||fallback||100}
+  return {widths:widths,startResize:startResize,getWidth:getWidth};
+}
+
+function getScenValue(row,key){
+  if(key.indexOf("sc")===0&&!isNaN(key.slice(2))){
+    var idx=parseInt(key.slice(2),10);
+    return row.scenariosAdjusted?row.scenariosAdjusted[idx]:null;
+  }
+  if(key.indexOf("raw")===0&&!isNaN(key.slice(3))){
+    var idx2=parseInt(key.slice(3),10);
+    return row.scenariosRaw?row.scenariosRaw[idx2]:null;
+  }
+  return row[key];
+}
+function useSort(data,defaultKey,initialDir){
+  var stK=useState(defaultKey),stD=useState(initialDir||"desc");
+  var sortKey=stK[0],dir=stD[0];
+  var sorted=useMemo(function(){
+    var arr=data.slice();
+    arr.sort(function(a,b){
+      var va=getScenValue(a,sortKey),vb=getScenValue(b,sortKey);
+      if(va==null&&vb==null)return 0;
+      if(va==null)return 1;
+      if(vb==null)return -1;
+      if(typeof va==="string")return dir==="asc"?va.localeCompare(vb,"fa"):vb.localeCompare(va,"fa");
+      return dir==="asc"?va-vb:vb-va;
+    });
+    return arr;
+  },[data,sortKey,dir]);
+  var onS=useCallback(function(key){
+    stK[1](function(prev){
+      if(prev===key)stD[1](function(d){return d==="desc"?"asc":"desc"});
+      else stD[1]("desc");
+      return key;
+    });
+  },[]);
+  return {sorted:sorted,s:sortKey,dir:dir,onS:onS};
+}
+
+function useFilters(initial){
+  var st=useState(initial||{});
+  var f=st[0];
+  var fDebounced=useDebounced(f,180);
+  var set=useCallback(function(key,val){
+    st[1](function(prev){
+      var copy=Object.assign({},prev);
+      if(val===""||val==null)delete copy[key];
+      else copy[key]=val;
+      return copy;
+    });
+  },[]);
+  var clear=useCallback(function(){st[1]({})},[]);
+  var has=Object.keys(f).length>0;
+  var applyRow=useCallback(function(row,cols){
+    for(var key in fDebounced){
+      var filterVal=fDebounced[key];
+      if(!filterVal)continue;
+      if(key.indexOf("sc")===0&&!isNaN(key.slice(2))){
+        var idx=parseInt(key.slice(2),10);
+        var scenVal=row.scenariosAdjusted?row.scenariosAdjusted[idx]:null;
+        var th=parseFloat(filterVal);
+        if(isNaN(th))continue;
+        if(scenVal==null||scenVal<th)return false;
+        continue;
+      }
+      if(key.indexOf("raw")===0&&!isNaN(key.slice(3))){
+        var idx2=parseInt(key.slice(3),10);
+        var rawVal=row.scenariosRaw?row.scenariosRaw[idx2]:null;
+        var th2=parseFloat(filterVal);
+        if(isNaN(th2))continue;
+        if(rawVal==null||rawVal<th2)return false;
+        continue;
+      }
+      var col=cols.find(function(c){return c.k===key});
+      var rowVal=row[key];
+      if(col&&col.numeric){
+        var num=parseFloat(filterVal);
+        if(isNaN(num))continue;
+        if(rowVal==null||rowVal<num)return false;
+      }else{
+        if(rowVal==null)return false;
+        if(String(rowVal).toLowerCase().indexOf(String(filterVal).toLowerCase())===-1)return false;
+      }
+    }
+    return true;
+  },[fDebounced]);
+  return {f:f,set:set,clear:clear,has:has,applyRow:applyRow};
+}
+/* =========================================================
+   ستون‌های جداول
+   ========================================================= */
+var N=function(v){return n(v,0)};
+var VO=function(v){return v>0?<span className={v>200?"gain":"mut"}>{n(v)}</span>:<span className="mut">—</span>};
+var SpotR=function(v,row){
+  if(row&&row.spot_overridden){
+    return (
+      <span className="warn" title={"قیمت واقعی بازار: "+n(row.spot_original)}>
+        {n(v)}<span style={{fontSize:9,marginRight:3}}>✎</span>
+      </span>
+    );
+  }
+  return n(v,0);
+};
+var BasisNameR=function(v,row){
+  if(row&&row.spot_overridden){
+    return (
+      <span>
+        {v}
+        <span className="bdg bdg-rev" style={{fontSize:9,padding:"0 5px",marginRight:4}} title="قیمت این سهم پایه به‌صورت دستی تنظیم شده">
+          {L.manualBadge}
+        </span>
+      </span>
+    );
+  }
+  return v;
+};
+var StrangleTypeR=function(v){
+  var cls=v==="استرادل"?"bdg-itm":v==="استرانگل"?"bdg-rev":"bdg-q1";
+  return <span className={"bdg "+cls}>{v}</span>;
+};
+
+var COL_TOOLTIPS={
+  name:"نماد قرارداد اختیار معامله",
+  call_name:"نماد قرارداد اختیار خرید (کال) درگیر در این استراتژی",
+  put_name:"نماد قرارداد اختیار فروش (پوت) درگیر در این استراتژی",
+  basis_name:"نماد سهم پایه",
+  strike:"قیمت اعمال قرارداد",k_call:"قیمت اعمال کال",k_put:"قیمت اعمال پوت",
+  expiry:"تاریخ سررسید",dte:"روزهای باقی‌مانده تا سررسید",
+  bid_vol:"حجم تقاضا در بهترین صف خرید",ask_vol:"حجم عرضه در بهترین صف فروش",
+  bid_price:"بهترین قیمت خرید (سرخط تقاضا)",ask_price:"بهترین قیمت فروش (سرخط عرضه)",
+  size:"تعداد سهم هر قرارداد",collar_type:"نوع کلار: استاندارد یا معکوس",
+  spot:"قیمت فعلی سهم پایه (در صورت فعال بودن «قیمت دلخواه» در تنظیمات، برای این ردیف جایگزین قیمت بازار می‌شود)",
+  price:"قیمت پایانی قرارداد",
+  status:"وضعیت نسبت به قیمت سهم پایه",type:"نوع قرارداد: کال یا پوت",
+  volume:"حجم معاملات امروز",oi:"تعداد موقعیت‌های باز (درصد داخل پرانتز نسبت به روز قبل)",
+  iv:"نوسان ضمنی؛ برآورد بازار از نوسانات آتی",delta:"تغییر قیمت اختیار به ازای ۱ ریال تغییر سهم پایه",
+  strike_diff:"درصد فاصله قیمت اعمال تا قیمت سهم پایه",
+  bs_diff:"اختلاف قیمت بازار قرارداد نسبت به قیمت محاسبه‌شده بلک شولز",
+  final_pct:"درصد تغییر قیمت پایانی نسبت به روز کاری قبل",
+  op_change:"درصد تغییر موقعیت‌های باز نسبت به روز کاری قبل",
+  trading_days:"تعداد روزهای معاملاتی باقی‌مانده تا سررسید",
+  hist_vol:"نوسان تاریخی قیمت سهم پایه",
+  be_diff:"درصد فاصله قیمت سربه‌سر تا قیمت فعلی سهم پایه",
+  end_price:"آخرین قیمت معامله‌شده",end_pct:"درصد آخرین قیمت نسبت به روز قبل",
+  trade_value:"ارزش ریالی معاملات این قرارداد امروز",
+  trade_value_call:"ارزش ریالی معاملات کال امروز",
+  trade_value_put:"ارزش ریالی معاملات پوت امروز",
+  put_ask_vol:"حجم عرضه در بهترین صف فروش پوت",put_ask_price:"بهترین قیمت فروش (سرخط عرضه) پوت",
+  put_tvalue:"ارزش ریالی معاملات پوت امروز",
+  call_ask_vol:"حجم عرضه در بهترین صف فروش کال",call_ask_price:"بهترین قیمت فروش (سرخط عرضه) کال",
+  call_tvalue:"ارزش ریالی معاملات کال امروز",
+  strangle_type:"نوع استراتژی بر اساس فاصله قیمت‌های اعمال پوت و کال",
+  buy_name:"نماد قرارداد خریداری‌شده در این استراتژی",sell_name:"نماد قرارداد فروخته‌شده در این استراتژی",
+  k_buy:"قیمت اعمال قرارداد خریداری‌شده",k_sell:"قیمت اعمال قرارداد فروخته‌شده",
+  buy_ask_vol:"حجم عرضه در بهترین صف فروش قرارداد خریداری‌شده",
+  buy_ask_price:"بهترین قیمت فروش (سرخط عرضه) قرارداد خریداری‌شده",
+  buy_tvalue:"ارزش ریالی معاملات قرارداد خریداری‌شده امروز",
+  sell_bid_vol:"حجم تقاضا در بهترین صف خرید قرارداد فروخته‌شده",
+  sell_bid_price:"بهترین قیمت خرید (سرخط تقاضا) قرارداد فروخته‌شده",
+  sell_tvalue:"ارزش ریالی معاملات قرارداد فروخته‌شده امروز",
+  call_buy_name:"نماد کال خریداری‌شده (اعمال پایین‌تر)",call_sell_name:"نماد کال فروخته‌شده (اعمال بالاتر)",
+  put_buy_name:"نماد پوت خریداری‌شده (اعمال بالاتر)",put_sell_name:"نماد پوت فروخته‌شده (اعمال پایین‌تر)",
+  call_buy_ask_vol:"حجم عرضه کال خریداری‌شده",call_buy_ask_price:"سرخط عرضه کال خریداری‌شده",
+  call_sell_bid_vol:"حجم تقاضا کال فروخته‌شده",call_sell_bid_price:"سرخط تقاضا کال فروخته‌شده",
+  put_buy_ask_vol:"حجم عرضه پوت خریداری‌شده",put_buy_ask_price:"سرخط عرضه پوت خریداری‌شده",
+  put_sell_bid_vol:"حجم تقاضا پوت فروخته‌شده",put_sell_bid_price:"سرخط تقاضا پوت فروخته‌شده",
+  k1:"قیمت اعمال پایین‌تر",k2:"قیمت اعمال بالاتر",base:"هزینه یا اعتبار خالص کل معامله",
+  margin:"وجه تضمین لازم برای این موقعیت",
+  put_margin:"وجه تضمین لازم برای پایه پوت فروخته‌شده",
+  call_margin:"وجه تضمین لازم برای پایه کال فروخته‌شده"
+};
+
+var NUMERIC_PLAIN_KEYS=["premium","strike","dte"];
+function renderStrategyCell(c,row){
+  var val=row[c.k];
+  if(c.r)return c.r(val,row);
+  if(c.k==="bid_vol"||c.k==="ask_vol")return val>0?<span className={val>200?"gain":"mut"}>{n(val)}</span>:<span className="mut">—</span>;
+  if(c.k==="bid_price"||c.k==="ask_price")return val>0?<span className="gain">{n(val)}</span>:<span className="mut">—</span>;
+  if(NUMERIC_PLAIN_KEYS.indexOf(c.k)!==-1)return val!=null?n(val):"—";
+  return val!=null?String(val):"—";
+}
+function renderWatchCell(c,row){
+  var val=row[c.k];
+  return c.r?c.r(val,row):(val!=null?String(val):"—");
+}
+
+var StrategyRowMemo=React.memo(function StrategyRow(props){
+  var row=props.row,cols=props.cols,stickyOffset=props.stickyOffset,trailingCols=props.trailingCols||EMPTY_ARR,
+    onOpenChart=props.onOpenChart;
+  function handleRowClick(){if(onOpenChart)onOpenChart(row)}
+  return (
+    <tr onClick={onOpenChart?handleRowClick:undefined} style={onOpenChart?{cursor:"pointer"}:undefined} title={onOpenChart?"برای مشاهده نمودار سود/زیان کلیک کنید":undefined}>
+      {cols.map(function(c){
+        return (
+          <td key={c.k} className={(c.cls||"")+(c.sticky?" sticky-col":"")} style={c.sticky?{right:(stickyOffset[c.k]||0)+"px"}:undefined}>
+            {renderStrategyCell(c,row)}
+          </td>
+        );
+      })}
+      {(row.scenariosAdjusted||[]).map(function(v,j){
+        return <td key={j} className={"sv "+scenClass(v)}>{plainPct(v)}</td>;
+      })}
+      {(row.scenariosRaw||[]).map(function(v,j){
+        return <td key={"raw"+j} className={"sv "+scenClass(v)+(j===0?" raw-divider":"")}>{plainPct(v)}</td>;
+      })}
+      {trailingCols.map(function(c){
+        var val=row[c.k];
+        return <td key={c.k} className="sv">{c.r?c.r(val):(val!=null?String(val):"—")}</td>;
+      })}
+    </tr>
+  );
+});
+
+var WatchRowMemo=React.memo(function WatchRow(props){
+  var row=props.row,cols=props.cols,stickyOffset=props.stickyOffset;
+  return (
+    <tr>
+      {cols.map(function(c){
+        return <td key={c.k} className={(c.cls||"")+(c.sticky?" sticky-col":"")} style={c.sticky?{right:(stickyOffset[c.k]||0)+"px"}:undefined}>{renderWatchCell(c,row)}</td>;
+      })}
+    </tr>
+  );
+});
+
+function HeaderTip(props){
+  var stShow=useState(false),stPos=useState(null);
+  var timerRef=useRef(null),wrapRef=useRef(null);
+  function open(){
+    var el=wrapRef.current;if(!el)return;
+    var r=el.getBoundingClientRect();
+    stPos[1]({left:r.left+r.width/2,top:r.bottom+6,vw:window.innerWidth});
+    stShow[1](true);
+  }
+  function scheduleOpen(){if(IS_TOUCH)return;clearTimeout(timerRef.current);timerRef.current=setTimeout(open,350)}
+  function close(){clearTimeout(timerRef.current);stShow[1](false)}
+  useEffect(function(){return function(){clearTimeout(timerRef.current)}},[]);
+  var ttStyle=null;
+  if(stPos[0]){
+    var TT_W=210;
+    ttStyle={left:clamp(stPos[0].left-TT_W/2,6,stPos[0].vw-TT_W-6)+"px",top:stPos[0].top+"px",width:TT_W+"px"};
+  }
+  return (
+    <span ref={wrapRef} className="th-tip-wrap" onMouseEnter={scheduleOpen} onMouseLeave={close} onFocus={scheduleOpen} onBlur={close}>
+      {props.children}
+      {stShow[0]&&props.text?<span className="th-tooltip" style={ttStyle} role="tooltip">{props.text}</span>:null}
+    </span>
+  );
+}
+
+function Th(props){
+  var col=props.col,lbl=props.lbl,s=props.s,dir=props.dir,onS=props.onS,sticky=props.sticky,
+    tip=props.tip,resizable=props.resizable,onResizeStart=props.onResizeStart,stickyRight=props.stickyRight;
+  var active=s===col;
+  var style=sticky?{right:(stickyRight||0)+"px"}:{position:"relative"};
+  return (
+    <th className={sticky?"sticky-col":undefined} style={style}
+      onClick={function(){onS(col)}} role="columnheader"
+      aria-sort={active?(dir==="asc"?"ascending":"descending"):"none"} tabIndex={0}
+      onKeyDown={function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();onS(col)}}}>
+      <HeaderTip text={tip}>
+        {lbl}
+        {active?<span className="s2">{dir==="asc"?"▲":"▼"}</span>:null}
+      </HeaderTip>
+      {resizable?<span className="col-resizer" onPointerDown={onResizeStart} onClick={function(e){e.stopPropagation()}} />:null}
+    </th>
+  );
+}
+
+var CC_COLS=[
+  {k:"name",l:function(){return L.sellCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"basis_name",l:function(l){return l.basis},cls:"tb",w:100,mw:8,r:BasisNameR},
+  {k:"strike",l:function(l){return l.strike},r:N,numeric:true,w:70,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dte},numeric:true,w:55,mw:8},
+  {k:"bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:100,mw:8},
+  {k:"bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"trade_value",l:function(l){return l.block},r:N,numeric:true,w:100,mw:8},
+  {k:"margin",l:function(){return "وجه تضمین"},r:N,numeric:true,w:90,mw:8},
+  {k:"break_even",l:function(l){return l.be},r:N,numeric:true,w:90,mw:8}
+];
+
+var MP_COLS=[
+  {k:"name",l:function(){return L.putName},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"basis_name",l:function(l){return l.basis},cls:"tb",w:100,mw:8,r:BasisNameR},
+  {k:"strike",l:function(l){return l.strike},r:N,numeric:true,w:70,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dte},numeric:true,w:55,mw:8},
+  {k:"ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:100,mw:8},
+  {k:"ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"trade_value",l:function(l){return l.block},r:N,numeric:true,w:100,mw:8},
+  {k:"total_cost",l:function(){return "هزینه کل"},r:N,numeric:true,w:100,mw:8},
+  {k:"break_even",l:function(l){return l.be},r:N,numeric:true,w:90,mw:8}
+];
+
+var CO_COLS=[
+  {k:"put_name",l:function(){return L.putName},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"call_name",l:function(){return L.sellCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"basis_name",l:function(l){return l.basis},cls:"tb",w:100,mw:8,r:BasisNameR},
+  {k:"k_put",l:function(l){return l.kPut},r:N,numeric:true,w:70,mw:8},
+  {k:"ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:100,mw:8},
+  {k:"ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"trade_value_put",l:function(){return "ارزش ریالی پوت"},r:N,numeric:true,w:90,mw:8},
+  {k:"k_call",l:function(l){return l.kCall},r:N,numeric:true,w:70,mw:8},
+  {k:"bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:100,mw:8},
+  {k:"bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"trade_value_call",l:function(){return "ارزش ریالی کال"},r:N,numeric:true,w:90,mw:8},
+  {k:"margin",l:function(){return "وجه تضمین"},r:N,numeric:true,w:90,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dte},numeric:true,w:55,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8}
+];
+
+var CV_COLS=[
+  {k:"put_name",l:function(){return L.putName},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"call_name",l:function(){return L.sellCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"basis_name",l:function(l){return l.basis},cls:"tb",w:100,mw:8,r:BasisNameR},
+  {k:"k_put",l:function(l){return l.kPut},r:N,numeric:true,w:70,mw:8},
+  {k:"ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:100,mw:8},
+  {k:"ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"trade_value_put",l:function(){return "ارزش ریالی پوت"},r:N,numeric:true,w:90,mw:8},
+  {k:"k_call",l:function(l){return l.kCall},r:N,numeric:true,w:70,mw:8},
+  {k:"bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:100,mw:8},
+  {k:"bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"trade_value_call",l:function(){return "ارزش ریالی کال"},r:N,numeric:true,w:90,mw:8},
+  {k:"margin",l:function(){return "وجه تضمین"},r:N,numeric:true,w:90,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dte},numeric:true,w:55,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8}
+];
+
+var STRANGLE_COLS=[
+  {k:"put_name",l:function(l){return l.putName},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"call_name",l:function(l){return l.buyCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"k_put",l:function(l){return l.kPut},r:N,numeric:true,w:70,mw:8},
+  {k:"put_ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:95,mw:8},
+  {k:"put_ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"put_tvalue",l:function(){return "ارزش ریالی پوت"},r:N,numeric:true,w:95,mw:8},
+  {k:"k_call",l:function(l){return l.kCall},r:N,numeric:true,w:70,mw:8},
+  {k:"call_ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:95,mw:8},
+  {k:"call_ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"call_tvalue",l:function(){return "ارزش ریالی کال"},r:N,numeric:true,w:95,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dteRemain},r:N,numeric:true,w:75,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"strangle_type",l:function(){return "نوع"},r:StrangleTypeR,w:90,mw:8}
+];
+
+var STRANGLE_SELL_COLS=[
+  {k:"put_name",l:function(l){return l.sellPut},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"call_name",l:function(l){return l.sellCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"k_put",l:function(l){return l.kPut},r:N,numeric:true,w:70,mw:8},
+  {k:"put_bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:95,mw:8},
+  {k:"put_bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"put_tvalue",l:function(){return "ارزش ریالی پوت"},r:N,numeric:true,w:95,mw:8},
+  {k:"put_margin",l:function(){return "وجه تضمین پوت"},r:N,numeric:true,w:95,mw:8},
+  {k:"k_call",l:function(l){return l.kCall},r:N,numeric:true,w:70,mw:8},
+  {k:"call_bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:95,mw:8},
+  {k:"call_bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"call_tvalue",l:function(){return "ارزش ریالی کال"},r:N,numeric:true,w:95,mw:8},
+  {k:"call_margin",l:function(){return "وجه تضمین کال"},r:N,numeric:true,w:95,mw:8},
+  {k:"margin",l:function(){return "وجه تضمین موقعیت"},r:N,numeric:true,w:115,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dteRemain},r:N,numeric:true,w:75,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"strangle_type",l:function(){return "نوع"},r:StrangleTypeR,w:90,mw:8}
+];
+
+var CALL_SPREAD_COLS=[
+  {k:"buy_name",l:function(l){return l.buyCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"sell_name",l:function(l){return l.sellCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"k_buy",l:function(){return "قیمت اعمال"},r:N,numeric:true,w:70,mw:8},
+  {k:"buy_ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:95,mw:8},
+  {k:"buy_ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"buy_tvalue",l:function(){return "ارزش ریالی خرید"},r:N,numeric:true,w:95,mw:8},
+  {k:"k_sell",l:function(){return "قیمت اعمال"},r:N,numeric:true,w:70,mw:8},
+  {k:"sell_bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:95,mw:8},
+  {k:"sell_bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"sell_tvalue",l:function(){return "ارزش ریالی فروش"},r:N,numeric:true,w:95,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dteRemain},r:N,numeric:true,w:75,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"base",l:function(){return "مبنای محاسبه بازده"},r:N,numeric:true,w:110,mw:8}
+];
+
+var PUT_SPREAD_COLS=[
+  {k:"buy_name",l:function(l){return l.putName},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"sell_name",l:function(l){return l.sellPut},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"k_buy",l:function(){return "قیمت اعمال"},r:N,numeric:true,w:70,mw:8},
+  {k:"buy_ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:95,mw:8},
+  {k:"buy_ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"buy_tvalue",l:function(){return "ارزش ریالی خرید"},r:N,numeric:true,w:95,mw:8},
+  {k:"k_sell",l:function(){return "قیمت اعمال"},r:N,numeric:true,w:70,mw:8},
+  {k:"sell_bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:95,mw:8},
+  {k:"sell_bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"sell_tvalue",l:function(){return "ارزش ریالی فروش"},r:N,numeric:true,w:95,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dteRemain},r:N,numeric:true,w:75,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"base",l:function(){return "مبنای محاسبه بازده"},r:N,numeric:true,w:110,mw:8}
+];
+
+var BOX_COLS=[
+  {k:"call_buy_name",l:function(l){return l.buyCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"call_sell_name",l:function(l){return l.sellCall},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"put_buy_name",l:function(l){return l.putName},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"put_sell_name",l:function(l){return l.sellPut},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"call_buy_ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:90,mw:8},
+  {k:"call_buy_ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"call_buy_tvalue",l:function(){return "ارزش ریالی (خرید کال)"},r:N,numeric:true,w:100,mw:8},
+  {k:"call_sell_bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:90,mw:8},
+  {k:"call_sell_bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"call_sell_tvalue",l:function(){return "ارزش ریالی (فروش کال)"},r:N,numeric:true,w:100,mw:8},
+  {k:"put_buy_ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:90,mw:8},
+  {k:"put_buy_ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"put_buy_tvalue",l:function(){return "ارزش ریالی (خرید پوت)"},r:N,numeric:true,w:100,mw:8},
+  {k:"put_sell_bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:90,mw:8},
+  {k:"put_sell_bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"put_sell_tvalue",l:function(){return "ارزش ریالی (فروش پوت)"},r:N,numeric:true,w:100,mw:8},
+  {k:"k1",l:function(){return "اعمال پایین"},r:N,numeric:true,w:80,mw:8},
+  {k:"k2",l:function(){return "اعمال بالا"},r:N,numeric:true,w:80,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(l){return l.dteRemain},r:N,numeric:true,w:75,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8}
+];
+
+var WATCH_COLS=[
+  {k:"name",l:function(){return L.name},cls:"tn",sticky:true,w:100,mw:8},
+  {k:"basis_name",l:function(l){return l.basis},cls:"tb",w:100,mw:8,r:BasisNameR},
+  {k:"type",l:function(){return L.type},r:function(v){return v==="call"?"کال":"پوت"},w:55,mw:8},
+  {k:"strike",l:function(l){return l.strike},r:N,numeric:true,w:70,mw:8},
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"strike_diff",l:function(){return "اختلاف تا اعمال"},r:function(v){return v!=null&&!isNaN(v)?n2(v)+"%":"—"},numeric:true,w:95,mw:8},
+  {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
+  {k:"dte",l:function(){return "روزهای تقویمی"},numeric:true,w:90,mw:8},
+  {k:"trading_days",l:function(){return "روزهای معاملاتی"},r:N,numeric:true,w:90,mw:8},
+  {k:"oi",l:function(){return L.oi},r:function(v,row){
+    if(v==null||isNaN(v))return "—";
+    var chg=row?row.op_change:null;
+    var chgCls=chg>0?"gain":chg<0?"loss":"mut";
+    return <span>{n(v)}{chg!=null?<span className={chgCls} style={{fontSize:10}}> ({(chg>0?"+":"")+n(chg,1)+"٪"})</span>:null}</span>;
+  },numeric:true,w:110,mw:8},
+  {k:"volume",l:function(){return L.volume},r:N,numeric:true,w:85,mw:8},
+  {k:"tvalue",l:function(){return "ارزش معاملات"},r:N,numeric:true,w:100,mw:8},
+  {k:"end_price",l:function(){return "آخرین قیمت"},r:N,numeric:true,w:85,mw:8},
+  {k:"end_pct",l:function(){return "درصد آخرین قیمت"},r:function(v){return v!=null?n2(v):"—"},numeric:true,w:90,mw:8},
+  {k:"price",l:function(){return "قیمت پایانی"},r:N,numeric:true,w:80,mw:8},
+  {k:"final_pct",l:function(){return "درصد آخرین قیمت پایانی"},r:function(v){return v!=null?n2(v):"—"},numeric:true,w:105,mw:8},
+  {k:"intrinsic",l:function(){return "ارزش ذاتی"},r:N,numeric:true,w:80,mw:8},
+  {k:"time_val",l:function(){return "ارزش زمانی"},r:N,numeric:true,w:80,mw:8},
+  {k:"be",l:function(){return "سر به سر"},r:N,numeric:true,w:80,mw:8},
+  {k:"be_diff",l:function(){return "اختلاف تا سر به سر"},r:function(v){return v!=null?n2(v)+"%":"—"},numeric:true,w:95,mw:8},
+  {k:"bs",l:function(){return "بلک شولز"},r:N,numeric:true,w:80,mw:8},
+  {k:"bs_diff",l:function(){return "اختلاف تا بلک شولز"},r:function(v){return v!=null?n2(v)+"%":"—"},numeric:true,w:100,mw:8},
+  {k:"status",l:function(){return L.status},w:78,mw:8,r:function(v){
+    var cls=v==="ITM"?"bdg-itm":v==="OTM"?"bdg-q1":"bdg-otm";
+    return <span className={"bdg "+cls}>{v}</span>;
+  }},
+  {k:"leverage",l:function(){return "اهرم"},r:N,numeric:true,w:70,mw:8},
+  {k:"iv",l:function(){return L.iv},r:function(v){return v!=null?n2(v)+"%":"—"},numeric:true,w:65,mw:8},
+  {k:"hist_vol",l:function(){return "نوسان تاریخی"},r:function(v){return v!=null?n2(v)+"%":"—"},numeric:true,w:85,mw:8},
+  {k:"size",l:function(l){return l.contractSize},r:N,numeric:true,w:75,mw:8},
+  {k:"bid_vol",l:function(l){return l.demand},r:VO,numeric:true,w:100,mw:8},
+  {k:"bid_price",l:function(l){return l.bidPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"ask_vol",l:function(l){return l.supply},r:VO,numeric:true,w:100,mw:8},
+  {k:"ask_price",l:function(l){return l.askPrice},r:N,numeric:true,w:85,mw:8},
+  {k:"low",l:function(){return "کمترین قیمت"},r:N,numeric:true,w:85,mw:8},
+  {k:"high",l:function(){return "بیشترین قیمت"},r:N,numeric:true,w:85,mw:8},
+  {k:"spread",l:function(){return "شکاف قیمتی"},r:N,numeric:true,w:75,mw:8},
+  {k:"margin",l:function(){return "وجه تضمین"},r:N,numeric:true,w:90,mw:8},
+  {k:"delta",l:function(){return L.delta},r:function(v){return v!=null?n2(v):"—"},numeric:true,w:65,mw:8},
+  {k:"theta",l:function(){return "تتا"},r:function(v){return v!=null?n2(v):"—"},numeric:true,w:65,mw:8},
+  {k:"gamma",l:function(){return "گاما"},r:function(v){return n(v,4)},numeric:true,w:65,mw:8},
+  {k:"vega",l:function(){return "وگا"},r:function(v){return v!=null?n2(v)+"%":"—"},numeric:true,w:65,mw:8},
+  {k:"rho",l:function(){return "رو"},r:function(v){return v!=null?n2(v)+"%":"—"},numeric:true,w:65,mw:8}
+];
+
+var WATCH_LOW_PRIORITY_KEYS=["trading_days","final_pct","intrinsic","time_val","bs","bs_diff","leverage","hist_vol","low","high","spread","margin","theta","gamma","vega","rho"];
+
+var BASE_TABS=[
+  {id:"watch",l:"watch"},
+  {id:"cc",l:"cc"},
+  {id:"mp",l:"mp"},
+  {id:"co",l:"co"},
+  {id:"cv",l:"cv"},
+  {id:"strangle",l:"strangleBuy"},
+  {id:"strangleSell",l:"strangleSell"},
+  {id:"callspread",l:"callSpread"},
+  {id:"callspreadbear",l:"callSpreadBear"},
+  {id:"putspread",l:"putSpread"},
+  {id:"putspreadbull",l:"putSpreadBull"},
+  {id:"box",l:"box"}
+];
+
+var STRATEGY_META={
+  cc:{cols:CC_COLS,countLabel:"موقعیت کاوردکال"},
+  mp:{cols:MP_COLS,countLabel:"موقعیت مریدپوت"},
+  co:{cols:CO_COLS,countLabel:"موقعیت کلار"},
+  cv:{cols:CV_COLS,countLabel:"موقعیت کانورژن"}
+};
+
+var NEW_STRATEGY_META={
+  strangle:{cols:STRANGLE_COLS,countLabel:"موقعیت استرانگل خرید"},
+  strangleSell:{cols:STRANGLE_SELL_COLS,countLabel:"موقعیت استرانگل فروش"},
+  callspread:{cols:CALL_SPREAD_COLS,countLabel:"موقعیت کال اسپرد صعودی"},
+  callspreadbear:{cols:CALL_SPREAD_COLS,countLabel:"موقعیت کال اسپرد نزولی"},
+  putspread:{cols:PUT_SPREAD_COLS,countLabel:"موقعیت پوت اسپرد نزولی"},
+  putspreadbull:{cols:PUT_SPREAD_COLS,countLabel:"موقعیت پوت اسپرد صعودی"},
+  box:{cols:BOX_COLS,countLabel:"موقعیت باکس"}
+};
+var NEW_STRATEGY_TITLE={
+  strangle:L.strangleBuy,strangleSell:L.strangleSell,
+  callspread:L.callSpread,callspreadbear:L.callSpreadBear,
+  putspread:L.putSpread,putspreadbull:L.putSpreadBull,
+  box:L.box
+};
+var MARGIN_APPROX_NOTE="به دلیل تفاوت در نحوهٔ محاسبهٔ وجه تضمین میان کارگزاری‌های مختلف، بازده‌های نمایش‌داده‌شده در این جدول تقریبی هستند؛ برای سود و زیان دقیق این استراتژی حتماً به سامانهٔ معاملاتی کارگزاری خود مراجعه کنید.";
+var MARGIN_NOTE_KINDS={strangleSell:true};
+
+class ErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={hasError:false}}
+  static getDerivedStateFromError(){return {hasError:true}}
+  componentDidCatch(err,info){if(this.props.onError)this.props.onError(err,info)}
+  render(){
+    if(this.state.hasError){
+      var fb=this.props.fallback;
+      return typeof fb==="function"?fb():(fb||null);
+    }
+    return this.props.children;
+  }
+}
+/* =========================================================
+   مودال ساده (جایگزین FloatWindow)
+   ========================================================= */
+function Modal(props){
+  var title=props.title,onClose=props.onClose,children=props.children,width=props.width;
+  useEffect(function(){
+    function onKey(e){if(e.key==="Escape")onClose()}
+    window.addEventListener("keydown",onKey);
+    return function(){window.removeEventListener("keydown",onKey)};
+  },[onClose]);
+  return (
+    <div className="modal-overlay" onMouseDown={function(e){if(e.target===e.currentTarget)onClose()}}>
+      <div className="modal-box" style={width?{width:width}:undefined} onMouseDown={function(e){e.stopPropagation()}} role="dialog" aria-modal="true">
+        <div className="modal-head">
+          <div className="mtitle">{title}</div>
+          <div className="sp1" />
+          <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
+        </div>
+        <div className="modal-body">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function FloatFallback(props2){
+  return (
+    <div className="modal-overlay">
+      <div className="error-box">
+        <div className="title">خطا در نمایش نمودار</div>
+        <div className="desc">لطفاً پنجره را ببندید و دوباره تلاش کنید.</div>
+        <button className="cbtn" style={{marginTop:10}} onClick={props2.onClose}>{L.close}</button>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   نمودار سود/زیان تکی (PayoffPanel) — حالا داخل Modal ساده
+   ========================================================= */
+function PayoffPanel(props){
+  var row=props.row,kind=props.kind,onClose=props.onClose;
+  var svgRef=useRef(null);
+  var chartBoxRef=useRef(null);
+
+  var stMin=useState(-30);var rangeMin=stMin[0],setRangeMin=stMin[1];
+  var stMax=useState(30);var rangeMax=stMax[0],setRangeMax=stMax[1];
+  var stHover=useState(null);var hoverPct=stHover[0],setHoverPct=stHover[1];
+  var stMouseLocal=useState(null);var mouseLocal=stMouseLocal[0],setMouseLocal=stMouseLocal[1];
+
+  var payoffFn=useMemo(function(){return computePayoffFn(kind,row)},[kind,row]);
+  if(!row)return null;
+
+  var min=rangeMin,max=rangeMax;
+  if(min>=max)max=min+1;
+  if(min<-95)min=-95;
+
+  var W=1000,H=360;
+  var padL=58,padR=20,padT=20,padB=36;
+  var plotW=W-padL-padR,plotH=H-padT-padB;
+
+  var points=useMemo(function(){
+    var SAMPLES=200,pts=[];
+    for(var i=0;i<=SAMPLES;i++){
+      var pct=min+(i/SAMPLES)*(max-min);
+      pts.push({pct:pct,roi:payoffFn(pct)});
+    }
+    return pts;
+  },[payoffFn,min,max]);
+
+  var rois=points.map(function(p){return p.roi});
+  var maxV=Math.max.apply(null,rois),minV=Math.min.apply(null,rois);
+  if(maxV===minV){maxV+=1;minV-=1}
+  var padV=(maxV-minV)*0.1;maxV+=padV;minV-=padV;
+  var span=(maxV-minV)||1;
+
+  var xAt=function(pct){return padL+((pct-min)/(max-min))*plotW};
+  var yAt=function(roi){return padT+plotH-((roi-minV)/span)*plotH};
+  var yZero=yAt(0);
+
+  var linePath=points.map(function(p,i){return (i===0?"M ":"L ")+xAt(p.pct)+","+yAt(p.roi)}).join(" ");
+  var areaPath="M "+xAt(min)+","+yZero+" L "+points.map(function(p){return xAt(p.pct)+","+yAt(p.roi)}).join(" L ")+" L "+xAt(max)+","+yZero+" Z";
+
+  var rangeSpan=max-min,step=10;
+  if(rangeSpan>300)step=50;else if(rangeSpan>150)step=25;else if(rangeSpan>80)step=20;else if(rangeSpan>40)step=10;else if(rangeSpan>15)step=5;else step=2;
+
+  var gridXs=[];
+  var startG=Math.ceil(min/step)*step;
+  for(var g=startG;g<=max;g+=step)gridXs.push(g);
+
+  var handleMove=function(evt){
+    var svg=svgRef.current,box=chartBoxRef.current;
+    if(!svg||!box)return;
+    var rect=svg.getBoundingClientRect(),boxRect=box.getBoundingClientRect();
+    var clientX=evt.touches?evt.touches[0].clientX:evt.clientX;
+    var clientY=evt.touches?evt.touches[0].clientY:evt.clientY;
+    var relX=((clientX-rect.left)/rect.width)*W;
+    var pct=min+((relX-padL)/plotW)*(max-min);
+    if(pct<min)pct=min;if(pct>max)pct=max;
+    setHoverPct(pct);
+    setMouseLocal({x:clientX-boxRect.left,y:clientY-boxRect.top,w:boxRect.width,h:boxRect.height});
+  };
+  var handleLeave=function(){setHoverPct(null);setMouseLocal(null)};
+
+  var hoverRoi=hoverPct!=null?payoffFn(hoverPct):null;
+  var hoverX=hoverPct!=null?xAt(hoverPct):null;
+  var hoverY=hoverRoi!=null?yAt(hoverRoi):null;
+
+  var TT_W=168,TT_H=58,ttStyle=null;
+  if(mouseLocal){
+    var ttLeft=mouseLocal.x+16,ttTop=mouseLocal.y-TT_H/2;
+    if(ttLeft+TT_W>mouseLocal.w)ttLeft=mouseLocal.x-TT_W-16;
+    if(ttLeft<0)ttLeft=4;
+    if(ttTop<0)ttTop=4;
+    if(ttTop+TT_H>mouseLocal.h)ttTop=mouseLocal.h-TT_H-4;
+    ttStyle={left:ttLeft+"px",top:ttTop+"px"};
+  }
+
+  var showCurrent=(0>=min&&0<=max);
+  var curY=showCurrent?yAt(payoffFn(0)):null;
+  var curX=showCurrent?xAt(0):null;
+
+  var title=labelForRow(kind,row);
+  var basisTitle=row.basis_name||"";
+  var presets=[10,20,30,50,100];
+
+  var headTitle=(
+    <span>
+      {title}
+      <span className="tb" style={{marginRight:6}}>{basisTitle}</span>
+    </span>
+  );
+
+  var isFixedRoi=(kind==="cv"||kind==="box");
+
+  return (
+    <Modal title={headTitle} onClose={onClose} width="min(880px,96vw)">
+      {isFixedRoi?(
+        <div className="ibar">
+          <span className="rlbl">این استراتژی بازده ثابت و بدون وابستگی به قیمت سهم پایه دارد؛ نمودار به‌صورت خط افقی نمایش داده می‌شود.</span>
+        </div>
+      ):(
+        <div className="ibar">
+          <span className="rlbl">محدوده نمودار:</span>
+          {presets.map(function(p){
+            var on=(rangeMin===-p&&rangeMax===p);
+            return (
+              <button key={p} className={"preset-btn"+(on?" on":"")} onClick={function(){setRangeMin(-p);setRangeMax(p)}}>
+                ±{p}%
+              </button>
+            );
+          })}
+          <span style={{display:"flex",alignItems:"center",gap:4,marginRight:10}}>
+            از
+            <input type="number" className="range-input" value={rangeMin} onChange={function(e){var v=parseFloat(e.target.value);setRangeMin(isNaN(v)?0:v)}} />
+            تا
+            <input type="number" className="range-input" value={rangeMax} onChange={function(e){var v=parseFloat(e.target.value);setRangeMax(isNaN(v)?0:v)}} />
+            درصد
+          </span>
+        </div>
+      )}
+
+      <div className="payoff-body">
+        <div className="payoff-info-grid">
+          {row.dte!=null?<div className="pinfo"><span>روز تا سررسید</span><b>{n(row.dte)} روز</b></div>:null}
+          {row.spot!=null?<div className="pinfo"><span>{L.spot}</span><b>{n(row.spot)}</b></div>:null}
+          {row.break_even!=null?<div className="pinfo"><span>{L.be}</span><b>{n(row.break_even)}</b></div>:null}
+          {row.max_profit!=null?<div className="pinfo"><span>{L.maxProfit}</span><b className="gain">{n(row.max_profit)}</b></div>:null}
+          {row.max_loss!=null?<div className="pinfo"><span>{L.maxLoss}</span><b className="loss">{n(row.max_loss)}</b></div>:null}
+        </div>
+
+        <div className="payoff-chart-box" ref={chartBoxRef}>
+          <svg ref={svgRef} viewBox={"0 0 "+W+" "+H} preserveAspectRatio="none" width="100%" height={H}
+            style={{display:"block",touchAction:"none",cursor:"crosshair"}}
+            onMouseMove={handleMove} onMouseLeave={handleLeave} onTouchMove={handleMove} onTouchEnd={handleLeave}>
+            {gridXs.map(function(gv,i){return <line key={i} x1={xAt(gv)} x2={xAt(gv)} y1={padT} y2={H-padB} stroke="var(--bor)" strokeWidth="1" />})}
+            <line x1={padL} x2={W-padR} y1={yZero} y2={yZero} stroke="var(--mut)" strokeWidth="1.5" />
+            <path d={areaPath} fill={rois[rois.length-1]>=0?"var(--gain)":"var(--loss)"} opacity="0.08" />
+            <path d={linePath} fill="none" stroke="var(--acc)" strokeWidth="2.4" />
+            {gridXs.map(function(gv,i){return <text key={"t"+i} x={xAt(gv)} y={H-padB+18} fontSize="12" textAnchor="middle" fill="var(--mut)">{(gv>0?"+":"")+n(gv,0)+"%"}</text>})}
+            <text x={6} y={padT+12} fontSize="11" fill="var(--mut)">{n(Math.round(maxV),0)}٪</text>
+            <text x={6} y={H-padB-4} fontSize="11" fill="var(--mut)">{n(Math.round(minV),0)}٪</text>
+            {showCurrent?(
+              <g>
+                <line x1={curX} x2={curX} y1={padT} y2={H-padB} stroke="var(--mut)" strokeWidth="1" strokeDasharray="3,3" opacity="0.6" />
+                <circle cx={curX} cy={curY} r="6.5" fill="var(--acc)" stroke="var(--sur)" strokeWidth="2.4" />
+                <text x={curX+9} y={curY-9} className="cur-label">قیمت فعلی</text>
+              </g>
+            ):null}
+            {hoverPct!=null?(
+              <g>
+                <line x1={hoverX} x2={hoverX} y1={padT} y2={H-padB} stroke="var(--acc)" strokeWidth="1" strokeDasharray="4,3" />
+                <circle cx={hoverX} cy={hoverY} r="5.5" fill={hoverRoi>=0?"var(--gain)":"var(--loss)"} stroke="var(--sur)" strokeWidth="2" />
+              </g>
+            ):null}
+          </svg>
+          {hoverPct!=null&&mouseLocal?(
+            <div className="chart-tooltip" style={ttStyle}>
+              <div className="tt-row"><span className="tt-lbl">تغییر سهم:</span><span className="tt-pct">{(hoverPct>0?"+":"")+n(Math.round(hoverPct*100)/100,2)+"%"}</span></div>
+              <div className="tt-row"><span className="tt-lbl">بازده:</span><span className={"tt-roi "+(hoverRoi>=0?"gain":"loss")}>{(hoverRoi>=0?"+":"")+n(Math.round(hoverRoi*100)/100,2)+"%"}</span></div>
+            </div>
+          ):null}
+        </div>
+
+        <div className="payoff-readout">
+          {hoverPct!=null?(
+            <React.Fragment>
+              <span className="ro-lbl">تغییر قیمت سهم پایه:</span>
+              <span className="ro-val">{(hoverPct>0?"+":"")+n(Math.round(hoverPct*100)/100,2)+"%"}</span>
+              <span className="ro-lbl">بازده در سررسید واقعی{row.dte!=null?(" ("+n(row.dte)+" روز)"):""}:</span>
+              <span className={"ro-val "+(hoverRoi>=0?"gain":"loss")}>{(hoverRoi>=0?"+":"")+n(Math.round(hoverRoi*100)/100,2)+"%"}</span>
+            </React.Fragment>
+          ):(
+            <span className="ro-hint">با حرکت روی نمودار می‌توانید بازده در هر درصد تغییر قیمت را ببینید.</span>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* =========================================================
+   خروجی اکسل
+   ========================================================= */
+var ISSINGLE_SCENARIO_KINDS={cv:true,box:true};
+var SINGLE_SCEN_LABEL_ADJ="بازده تعدیل‌شده (۳۰ روزه)";
+var SINGLE_SCEN_LABEL_RAW="بازده واقعی تا سررسید";
+
+function buildStrategyAoa(rows,cols,steps,trailingCols,isSingle){
+  var headers=cols.map(function(c){return typeof c.l==="function"?c.l(L):c.k});
+  if(isSingle){
+    headers.push(SINGLE_SCEN_LABEL_ADJ);
+    headers.push(SINGLE_SCEN_LABEL_RAW);
+  }else{
+    steps.forEach(function(v){headers.push("تعدیل "+(v>0?"+":"")+n(v,1)+"%")});
+    steps.forEach(function(v){headers.push("واقعی "+(v>0?"+":"")+n(v,1)+"%")});
+  }
+  (trailingCols||[]).forEach(function(c){headers.push(typeof c.l==="function"?c.l(L):c.k)});
+  var lines=rows.map(function(row){
+    var vals=cols.map(function(c){return row[c.k]==null?"":row[c.k]});
+    (row.scenariosAdjusted||[]).forEach(function(v){vals.push(v==null?"":Math.round(v*100)/100)});
+    (row.scenariosRaw||[]).forEach(function(v){vals.push(v==null?"":Math.round(v*100)/100)});
+    (trailingCols||[]).forEach(function(c){vals.push(row[c.k]==null?"":row[c.k])});
+    return vals;
+  });
+  return [headers].concat(lines);
+}
+function buildWatchAoa(rows,cols){
+  var headers=cols.map(function(c){return c.l(L)});
+  var lines=rows.map(function(row){return cols.map(function(c){return row[c.k]==null?"":row[c.k]})});
+  return [headers].concat(lines);
+}
+var BEST_STRATEGY_LABELS={cc:L.cc,mp:L.mp,co:L.co,cv:L.cv,strangle:L.strangleBuy,strangleSell:L.strangleSell,
+  callspread:L.callSpread,callspreadbear:L.callSpreadBear,putspread:L.putSpread,putspreadbull:L.putSpreadBull,box:L.box};
+
+function buildBestAoa(rows,steps){
+  var typeLbl=BEST_STRATEGY_LABELS;
+  var headers=["استراتژی","موقعیت","سهم پایه","سررسید","روز"];
+  steps.forEach(function(v){headers.push("تعدیل "+(v>0?"+":"")+n(v,1)+"%")});
+  steps.forEach(function(v){headers.push("واقعی "+(v>0?"+":"")+n(v,1)+"%")});
+  headers.push("شوک لازم (٪)","آستانهٔ سود لازم (٪)","شوک مثبت واقعی (٪)","شوک منفی واقعی (٪)","حداقل شوک واقعی (٪)","بازده صفر (٪)");
+  var lines=rows.map(function(r){
+    var vals=[typeLbl[r.strategy_type]||r.strategy_type,r.primary_name,r.basis_name,r.expiry,r.dte];
+    (r.scenariosAdjusted||[]).forEach(function(v){vals.push(v==null?"":Math.round(v*100)/100)});
+    (r.scenariosRaw||[]).forEach(function(v){vals.push(v==null?"":Math.round(v*100)/100)});
+    vals.push(r.required_shock==null?"":r.required_shock);
+    vals.push(r.required_profit==null?"":r.required_profit);
+    vals.push(r.actual_shock_up==null?"":(r.actual_shock_up>=SHOCK_INF_THRESHOLD?"∞":r.actual_shock_up));
+    vals.push(r.actual_shock_down==null?"":(r.actual_shock_down>=SHOCK_INF_THRESHOLD?"∞":r.actual_shock_down));
+    vals.push(r.min_shock==null?"":(r.min_shock>=SHOCK_INF_THRESHOLD?"∞":r.min_shock));
+    vals.push(Math.round(r.roi_zero*100)/100);
+    return vals;
+  });
+  return [headers].concat(lines);
+}
+
+/* =========================================================
+   هستهٔ مشترک جدول استراتژی
+   ========================================================= */
+function StrategyTable(props){
+  var kind=props.kind,data=props.data||EMPTY_ARR,allCols=props.allCols,steps=props.steps||EMPTY_ARR,
+    dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
+    store=props.store,storeKey=props.storeKey,globalSearch=props.globalSearch,
+    trailingCols=props.trailingCols||EMPTY_ARR,note=props.note,exportTitle=props.exportTitle,
+    onOpenChart=props.onOpenChart;
+
+  var isSingle=!!ISSINGLE_SCENARIO_KINDS[kind];
+  var scenAdjArr=isSingle?[SINGLE_SCEN_LABEL_ADJ]:steps;
+  var scenRawArr=isSingle?[SINGLE_SCEN_LABEL_RAW]:steps;
+
+  var saved=(store&&storeKey&&store[storeKey])||{};
+  var sortRes=useSort(data,saved.sortKey||"roi_zero",saved.sortDir||"desc");
+  var sorted=sortRes.sorted,s=sortRes.s,dir=sortRes.dir,onS=sortRes.onS;
+  var filtRes=useFilters(saved.filters||{});
+  var f=filtRes.f,setF=filtRes.set,clear=filtRes.clear,has=filtRes.has,applyRow=filtRes.applyRow;
+
+  var dteMinDeb=useDebounced(dteFilterMin,180);
+  var dteMaxDeb=useDebounced(dteFilterMax,180);
+  var searchDeb=useDebounced(globalSearch,180);
+
+  useEffect(function(){
+    if(store&&storeKey)store[storeKey]={filters:f,sortKey:s,sortDir:dir};
+  },[f,s,dir]);
+
+  var final=useMemo(function(){
+    var rows=sorted.slice();
+    rows=rows.filter(function(r){
+      var dte=r.dte||0;
+      var minOk=dteMinDeb===""||dteMinDeb==null||dte>=parseFloat(dteMinDeb);
+      var maxOk=dteMaxDeb===""||dteMaxDeb==null||dte<=parseFloat(dteMaxDeb);
+      return minOk&&maxOk;
+    });
+    rows=rows.filter(function(r){return applyRow(r,allCols)});
+    rows=rows.filter(function(r){return matchesGlobalSearch(r,searchDeb)});
+    return rows;
+  },[sorted,dteMinDeb,dteMaxDeb,allCols,applyRow,searchDeb]);
+
+  var isMobile=useMemo(function(){return isMobileViewport()},[]);
+  var cols=useMemo(function(){return isMobile?limitStickyCols(allCols,2):allCols},[allCols,isMobile]);
+  var colW=useColWidths(kind+"_"+storeKey+"_v1",cols);
+
+  var stickyOffset=useMemo(function(){
+    var offsets={},acc=0;
+    cols.forEach(function(c){if(c.sticky){offsets[c.k]=acc;acc+=colW.getWidth(c.k,c.w)}});
+    return offsets;
+  },[cols,colW.widths]);
+
+  var twRef=useRef(null);
+  var totalColsCount=cols.length+scenAdjArr.length+scenRawArr.length+trailingCols.length;
+  var vw=useVirtualWindow(twRef,final.length,ROW_H_STRAT,HEADER_H_STRAT,VIRT_OVERSCAN);
+  var visibleRows=final.length>VIRTUALIZE_THRESHOLD?final.slice(vw.start,vw.end):final;
+  var topPad=final.length>VIRTUALIZE_THRESHOLD?vw.start*ROW_H_STRAT:0;
+  var bottomPad=final.length>VIRTUALIZE_THRESHOLD?Math.max(0,(final.length-vw.end)*ROW_H_STRAT):0;
+
+  function RowErrorFallback(){
+    return <tr><td colSpan={totalColsCount} style={{textAlign:"center",color:"var(--loss)",fontSize:11,padding:"6px 8px"}}>خطا در نمایش این ردیف</td></tr>;
+  }
+
+  return (
+    <div className="watch-view">
+      {note?<div className="margin-note-banner">{note}</div>:null}
+      <div className="ibar">
+        <span className="count-badge">{final.length}</span>
+        {props.countLabel?<span className="count-label">{props.countLabel}</span>:null}
+        {has?<button className="cbtn" onClick={clear}>{L.clearFilters}</button>:null}
+      </div>
+      <div className="tw-wrap" style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
+        <div className="tw" style={{flex:1}} ref={twRef}>
+          <table className="tbl-strat">
+            <colgroup>
+              {cols.map(function(c){return <col key={c.k} style={{width:colW.getWidth(c.k,c.w)}} />})}
+              {scenAdjArr.map(function(_,i){return <col key={"csc"+i} style={{width:isSingle?120:54}} />})}
+              {scenRawArr.map(function(_,i){return <col key={"craw"+i} style={{width:isSingle?120:54}} />})}
+              {trailingCols.map(function(_,i){return <col key={"ct"+i} style={{width:80}} />})}
+            </colgroup>
+            <thead>
+              <tr className="grp">
+                {cols.map(function(c){
+                  return <Th key={c.k} col={c.k} lbl={c.l(L)} s={s} dir={dir} onS={onS} sticky={!!c.sticky}
+                    stickyRight={stickyOffset[c.k]}
+                    tip={COL_TOOLTIPS[c.k]} resizable={true} onResizeStart={colW.startResize(c.k,8)} />;
+                })}
+                {scenAdjArr.map(function(v,i){
+                  var key="sc"+i,active=s===key;
+                  var label=isSingle?v:((v>0?"+":"")+n(v,1)+"٪");
+                  return (
+                    <th key={key} className="svh" onClick={function(){onS(key)}} role="columnheader"
+                      aria-sort={active?(dir==="asc"?"ascending":"descending"):"none"} tabIndex={0}
+                      onKeyDown={function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();onS(key)}}}>
+                      {label}{active?<span className="s2">{dir==="asc"?"▲":"▼"}</span>:null}
+                    </th>
+                  );
+                })}
+                {scenRawArr.map(function(v,i){
+                  var key="raw"+i,active=s===key;
+                  var label=isSingle?v:((v>0?"+":"")+n(v,1)+"٪");
+                  return (
+                    <th key={key} className={"svh"+(i===0?" raw-divider":"")} onClick={function(){onS(key)}} role="columnheader"
+                      aria-sort={active?(dir==="asc"?"ascending":"descending"):"none"} tabIndex={0}
+                      onKeyDown={function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();onS(key)}}}>
+                      {i===0?<HeaderTip text={L.scenarioNote}><span className="info-icon">ℹ</span></HeaderTip>:null}
+                      {label}{active?<span className="s2">{dir==="asc"?"▲":"▼"}</span>:null}
+                    </th>
+                  );
+                })}
+                {trailingCols.map(function(c){
+                  return <th key={c.k} className="svh" style={{minWidth:80}}>{typeof c.l==="function"?c.l(L):c.k}</th>;
+                })}
+              </tr>
+              <tr className="fr">
+                {cols.map(function(c){
+                  return (
+                    <td key={c.k} className={c.sticky?"sticky-col":undefined} style={c.sticky?{right:(stickyOffset[c.k]||0)+"px"}:undefined}>
+                      <input type="text" inputMode={c.numeric?"decimal":"text"} placeholder={c.numeric?"≥":""}
+                        value={f[c.k]||""} aria-label={"فیلتر "+(typeof c.l==="function"?c.l(L):c.k)}
+                        onChange={function(e){setF(c.k,e.target.value)}} />
+                    </td>
+                  );
+                })}
+                {scenAdjArr.map(function(_,i){
+                  return <td key={i}><input type="text" inputMode="decimal" placeholder="≥" value={f["sc"+i]||""} onChange={function(e){setF("sc"+i,e.target.value)}} style={{minWidth:44}} /></td>;
+                })}
+                {scenRawArr.map(function(_,i){
+                  return <td key={"raw"+i} className={i===0?"raw-divider":undefined}><input type="text" inputMode="decimal" placeholder="≥" value={f["raw"+i]||""} onChange={function(e){setF("raw"+i,e.target.value)}} style={{minWidth:44}} /></td>;
+                })}
+                {trailingCols.map(function(c){return <td key={c.k}></td>})}
+              </tr>
+            </thead>
+            <tbody>
+              {topPad>0?<tr><td colSpan={totalColsCount} style={{height:topPad,padding:0,border:"none"}} /></tr>:null}
+              {visibleRows.map(function(row){
+                var rk=rowKeyFor(kind,row);
+                return (
+                  <ErrorBoundary key={rk} fallback={RowErrorFallback}>
+                    <StrategyRowMemo row={row} cols={cols} stickyOffset={stickyOffset} trailingCols={trailingCols}
+                      onOpenChart={onOpenChart?function(){onOpenChart(kind,row)}:undefined} />
+                  </ErrorBoundary>
+                );
+              })}
+              {bottomPad>0?<tr><td colSpan={totalColsCount} style={{height:bottomPad,padding:0,border:"none"}} /></tr>:null}
+            </tbody>
+          </table>
+        </div>
+        <button className="floating-export" onClick={function(){downloadXlsx(exportTitle||kind,buildStrategyAoa(final,cols,steps,trailingCols,isSingle))}}>
+          ⬇ {L.exportXlsxShort}
+        </button>
+      </div>
+    </div>
+  );
+}
+StrategyTable=React.memo(StrategyTable);
+
+/* =========================================================
+   بخش‌های استراتژی
+   ========================================================= */
+function CollapsibleWrap(props){
+  var stOpen=useState(props.isOpen);
+  var open=stOpen[0],setOpen=stOpen[1];
+  return (
+    <div className="collapsible-section">
+      <div className="collapsible-header" role="button" tabIndex={0}
+        onClick={function(){setOpen(!open)}}
+        onKeyDown={function(e){if(e.key==="Enter"||e.key===" ")setOpen(!open)}}>
+        <span className={"arrow"+(open?" open":"")}>▶</span>
+        <span>{props.title}</span>
+        <span className="section-badge">{props.count} {props.countLabel}</span>
+      </div>
+      <div className={"collapsible-content "+(open?"open":"closed")}>
+        {open?props.children:null}
+      </div>
+    </div>
+  );
+}
+
+function StrategySection(props){
+  var kind=props.kind,data=props.data,steps=props.steps,dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
+    store=props.store,globalSearch=props.globalSearch,trailingCols=props.trailingCols,onOpenChart=props.onOpenChart;
+  var meta=STRATEGY_META[kind];
+  var groups=useMemo(function(){return splitBuyable(data)},[data]);
+
+  if(!data||data.length===0)return <div className="center" style={{height:120}}><span>{L.noData}</span></div>;
+
+  return (
+    <div className="strategy-scroll">
+      {groups.buyable.length>0?(
+        <ErrorBoundary fallback={function(){return <div className="collapsible-section"><div className="error-box">خطا در نمایش این بخش</div></div>}}>
+          <CollapsibleWrap title={L.buyable} count={groups.buyable.length} countLabel={meta.countLabel} isOpen={true}>
+            <StrategyTable kind={kind} data={groups.buyable} allCols={meta.cols} steps={steps}
+              dteFilterMin={dteFilterMin} dteFilterMax={dteFilterMax} store={store} storeKey={kind+"_buyable"}
+              globalSearch={globalSearch} trailingCols={trailingCols} exportTitle={meta.countLabel+" - "+L.buyable}
+              onOpenChart={onOpenChart} />
+          </CollapsibleWrap>
+        </ErrorBoundary>
+      ):null}
+      {groups.notBuyable.length>0?(
+        <ErrorBoundary fallback={function(){return <div className="collapsible-section"><div className="error-box">خطا در نمایش این بخش</div></div>}}>
+          <CollapsibleWrap title={L.notBuyable} count={groups.notBuyable.length} countLabel={meta.countLabel} isOpen={false}>
+            <StrategyTable kind={kind} data={groups.notBuyable} allCols={meta.cols} steps={steps}
+              dteFilterMin={dteFilterMin} dteFilterMax={dteFilterMax} store={store} storeKey={kind+"_notBuyable"}
+              globalSearch={globalSearch} trailingCols={trailingCols} exportTitle={meta.countLabel+" - "+L.notBuyable}
+              onOpenChart={onOpenChart} />
+          </CollapsibleWrap>
+        </ErrorBoundary>
+      ):null}
+      {groups.buyable.length===0&&groups.notBuyable.length===0?(
+        <div className="center" style={{height:80}}><span>{L.noData}</span></div>
+      ):null}
+    </div>
+  );
+}
+
+function SimpleStrategySection(props){
+  var kind=props.kind,data=props.data,steps=props.steps,dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
+    store=props.store,globalSearch=props.globalSearch,onOpenChart=props.onOpenChart;
+  var meta=NEW_STRATEGY_META[kind];
+  return (
+    <ErrorBoundary fallback={function(){return <div className="error-box">خطا در نمایش این بخش</div>}}>
+      <StrategyTable kind={kind} data={data||EMPTY_ARR} allCols={meta.cols} steps={steps}
+        dteFilterMin={dteFilterMin} dteFilterMax={dteFilterMax} store={store} storeKey={kind+"_main"}
+        globalSearch={globalSearch} countLabel={meta.countLabel} exportTitle={NEW_STRATEGY_TITLE[kind]}
+        note={MARGIN_NOTE_KINDS[kind]?MARGIN_APPROX_NOTE:null}
+        onOpenChart={onOpenChart} />
+    </ErrorBoundary>
+  );
+}
+
+/* =========================================================
+   دیده‌بان
+   ========================================================= */
+function Watch(props){
+  var rows=props.rows,store=props.store,storeKey=props.storeKey,globalSearch=props.globalSearch,
+    dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax;
+  var saved=(store&&storeKey&&store[storeKey])||{};
+  var sortRes=useSort(rows||EMPTY_ARR,saved.sortKey||"tvalue",saved.sortDir||"desc");
+  var sorted=sortRes.sorted,s=sortRes.s,dir=sortRes.dir,onS=sortRes.onS;
+  var filtRes=useFilters(saved.filters||{});
+  var f=filtRes.f,setF=filtRes.set,clear=filtRes.clear,has=filtRes.has,applyRow=filtRes.applyRow;
+  var searchDeb=useDebounced(globalSearch,180);
+  var dteMinDeb=useDebounced(dteFilterMin,180);
+  var dteMaxDeb=useDebounced(dteFilterMax,180);
+
+  var showAllArr=useLocalStorage("watchShowAllCols",!IS_TOUCH);
+  var showAll=showAllArr[0],setShowAll=showAllArr[1];
+  var cols=useMemo(function(){
+    if(!IS_TOUCH||showAll)return WATCH_COLS;
+    return WATCH_COLS.filter(function(c){return WATCH_LOW_PRIORITY_KEYS.indexOf(c.k)===-1});
+  },[showAll]);
+
+  var colW=useColWidths("watch_v1",WATCH_COLS);
+  var stickyOffset=useMemo(function(){
+    var offsets={},acc=0;
+    cols.forEach(function(c){if(c.sticky){offsets[c.k]=acc;acc+=colW.getWidth(c.k,c.w)}});
+    return offsets;
+  },[cols,colW.widths]);
+
+  useEffect(function(){
+    if(store&&storeKey)store[storeKey]={filters:f,sortKey:s,sortDir:dir};
+  },[f,s,dir]);
+
+  var final=useMemo(function(){
+    var r=sorted.filter(function(row){
+      var dte=row.dte||0;
+      var minOk=dteMinDeb===""||dteMinDeb==null||dte>=parseFloat(dteMinDeb);
+      var maxOk=dteMaxDeb===""||dteMaxDeb==null||dte<=parseFloat(dteMaxDeb);
+      return minOk&&maxOk;
+    });
+    return r.filter(function(row){return applyRow(row,WATCH_COLS)}).filter(function(row){return matchesGlobalSearch(row,searchDeb)});
+  },[sorted,applyRow,searchDeb,dteMinDeb,dteMaxDeb]);
+
+  var twRef=useRef(null);
+  var totalCols=cols.length;
+  var vw=useVirtualWindow(twRef,final.length,ROW_H_WATCH,HEADER_H_WATCH,VIRT_OVERSCAN);
+  var visibleRows=final.length>VIRTUALIZE_THRESHOLD?final.slice(vw.start,vw.end):final;
+  var topPad=final.length>VIRTUALIZE_THRESHOLD?vw.start*ROW_H_WATCH:0;
+  var bottomPad=final.length>VIRTUALIZE_THRESHOLD?Math.max(0,(final.length-vw.end)*ROW_H_WATCH):0;
+
+  function RowErrorFallback(){
+    return <tr><td colSpan={totalCols} style={{textAlign:"center",color:"var(--loss)",fontSize:11,padding:"6px 8px"}}>خطا در نمایش این ردیف</td></tr>;
+  }
+
+  if(!rows||rows.length===0)return <div className="center"><span>{L.noData}</span></div>;
+
+  return (
+    <div className="watch-view">
+      <div className="ibar">
+        <span className="count-badge">{final.length}</span>
+        <span className="count-label">قرارداد</span>
+        {has?<button className="cbtn" onClick={clear}>{L.clearFilters}</button>:null}
+        {IS_TOUCH?(
+          <button className="cbtn cbtn-acc" onClick={function(){setShowAll(!showAll)}}>
+            {showAll?L.hideExtraColumns:L.showAllColumns}
+          </button>
+        ):null}
+      </div>
+      <div className="tw-wrap" style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
+        <div className="tw" style={{flex:1}} ref={twRef}>
+          <table className="tbl-watch">
+            <colgroup>
+              {cols.map(function(c){return <col key={c.k} style={{width:colW.getWidth(c.k,c.w)}} />})}
+            </colgroup>
+            <thead>
+              <tr>
+                {cols.map(function(c){
+                  return <Th key={c.k} col={c.k} lbl={c.l(L)} s={s} dir={dir} onS={onS} sticky={!!c.sticky}
+                    stickyRight={stickyOffset[c.k]}
+                    tip={COL_TOOLTIPS[c.k]} resizable={true} onResizeStart={colW.startResize(c.k,8)} />;
+                })}
+              </tr>
+              <tr className="fr">
+                {cols.map(function(c){
+                  return (
+                    <td key={c.k} className={c.sticky?"sticky-col":undefined} style={c.sticky?{right:(stickyOffset[c.k]||0)+"px"}:undefined}>
+                      <input type="text" inputMode={c.numeric?"decimal":"text"} placeholder={c.numeric?"≥":""}
+                        value={f[c.k]||""} aria-label={"فیلتر "+c.l(L)} onChange={function(e){setF(c.k,e.target.value)}} />
+                    </td>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {topPad>0?<tr><td colSpan={totalCols} style={{height:topPad,padding:0,border:"none"}} /></tr>:null}
+              {visibleRows.map(function(row){
+                var rk=watchRowKey(row);
+                return (
+                  <ErrorBoundary key={rk} fallback={RowErrorFallback}>
+                    <WatchRowMemo row={row} cols={cols} stickyOffset={stickyOffset} />
+                  </ErrorBoundary>
+                );
+              })}
+              {bottomPad>0?<tr><td colSpan={totalCols} style={{height:bottomPad,padding:0,border:"none"}} /></tr>:null}
+            </tbody>
+          </table>
+        </div>
+        <button className="floating-export" onClick={function(){downloadXlsx("دیده‌بان",buildWatchAoa(final,cols))}}>
+          ⬇ {L.exportXlsxShort}
+        </button>
+      </div>
+    </div>
+  );
+}
+Watch=React.memo(Watch);
+
+/* =========================================================
+   ویرایشگر قیمت دلخواه سهم پایه (Overrides)
+   ========================================================= */
+function BasisOverridesEditor(props){
+  var overrides=props.overrides||[],onAdd=props.onAdd,onToggle=props.onToggle,
+    onUpdatePrice=props.onUpdatePrice,onRemove=props.onRemove,
+    basisNames=props.basisNames||[],basisSpotMap=props.basisSpotMap||{};
+  var stName=useState(""),stPrice=useState("");
+  var newName=stName[0],setNewName=stName[1];
+  var newPrice=stPrice[0],setNewPrice=stPrice[1];
+
+  function handleAdd(){
+    var name=(newName||"").trim();
+    var price=parseFloat(newPrice);
+    if(!name||isNaN(price)||price<=0)return;
+    onAdd(name,price);
+    setNewName("");setNewPrice("");
+  }
+
+  var sortedOverrides=useMemo(function(){
+    return overrides.slice().sort(function(a,b){return a.name.localeCompare(b.name,"fa")});
+  },[overrides]);
+
+  return (
+    <div className="msec">
+      <div className="msec-t-row">
+        <span className="msec-t">{L.customBasisPrice}</span>
+        <InfoToggle>{L.customBasisHint}</InfoToggle>
+      </div>
+      <div className="ov-add-row">
+        <input type="text" list="basisNamesDatalist" className="ov-input-name"
+          placeholder={L.overridePlaceholderName} value={newName}
+          onChange={function(e){setNewName(e.target.value)}}
+          onKeyDown={function(e){if(e.key==="Enter")handleAdd()}} />
+        <datalist id="basisNamesDatalist">
+          {basisNames.map(function(bn){return <option key={bn} value={bn} />})}
+        </datalist>
+        <input type="text" inputMode="decimal" className="ov-input-price" placeholder={L.overridePlaceholderPrice}
+          value={newPrice} onChange={function(e){setNewPrice(e.target.value)}}
+          onKeyDown={function(e){if(e.key==="Enter")handleAdd()}} />
+        <button className="ov-add-btn" onClick={handleAdd} disabled={!newName||!newPrice}>{L.addOverride}</button>
+      </div>
+      {sortedOverrides.length===0?(
+        <div className="step-hint">{L.noOverrides}</div>
+      ):(
+        <div className="ov-list">
+          {sortedOverrides.map(function(o){
+            var real=basisSpotMap[o.name];
+            return (
+              <div key={o.name} className={"ov-item"+(o.enabled?"":" off")}>
+                <label className="ov-toggle" title={o.enabled?"فعال":"غیرفعال"}>
+                  <input type="checkbox" checked={!!o.enabled} onChange={function(e){onToggle(o.name,e.target.checked)}} />
+                </label>
+                <div className="ov-name" title={o.name}>{o.name}</div>
+                <div className="ov-real" title={L.realPriceShort}>{real!=null?n(real):"—"}</div>
+                <NumberField className="ov-input-price sm" value={o.price} min={0}
+                  onCommit={function(v){onUpdatePrice(o.name,v)}} ariaLabel={"قیمت دستی "+o.name} />
+                <button className="ov-remove" onClick={function(){onRemove(o.name)}} title="حذف">✕</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+/* =========================================================
+   منوی همبرگری (تنظیمات + راهنما)
+   ========================================================= */
+function HuntStrategyRow(props){
+  var type=props.type,cfg=props.cfg,isNoShock=props.isNoShock,onChange=props.onChange;
+  var isStraddleType=type==="strangle";
+
+  var stShockRate=useState(function(){return String(cfg.shockRate)});
+  var shockRateText=stShockRate[0],setShockRateText=stShockRate[1];
+  var stShockFloor=useState(function(){return String(cfg.shockFloor)});
+  var shockFloorText=stShockFloor[0],setShockFloorText=stShockFloor[1];
+  var stProfitRate=useState(function(){return String(cfg.profitRate)});
+  var profitRateText=stProfitRate[0],setProfitRateText=stProfitRate[1];
+  var stProfitFloor=useState(function(){return String(cfg.profitFloor)});
+  var profitFloorText=stProfitFloor[0],setProfitFloorText=stProfitFloor[1];
+
+  useEffect(function(){setShockRateText(String(cfg.shockRate))},[cfg.shockRate]);
+  useEffect(function(){setShockFloorText(String(cfg.shockFloor))},[cfg.shockFloor]);
+  useEffect(function(){setProfitRateText(String(cfg.profitRate))},[cfg.profitRate]);
+  useEffect(function(){setProfitFloorText(String(cfg.profitFloor))},[cfg.profitFloor]);
+
+  function commitNum(raw,curVal,min,max,key,setText){
+    var v=parseFloat(raw);
+    if(isNaN(v))v=curVal;
+    v=clamp(v,min,max);
+    onChange(type,key,v);
+    setText(String(v));
+  }
+
+  var shockMode=cfg.shockMode||"rate";
+  var profitMode=cfg.profitMode||"rate";
+
+  return (
+    <div className="hunt-strat-card">
+      <div className="hunt-strat-card-head">
+        <span className="hunt-strat-name">{BEST_STRATEGY_LABELS[type]||type}</span>
+        <label className="hunt-strat-tg">
+          <input type="checkbox" checked={cfg.telegramEnabled!==false}
+            onChange={function(e){onChange(type,"telegramEnabled",e.target.checked)}}
+            aria-label={L.telegramShort+" "+type} />
+          {L.telegramShort}
+        </label>
+      </div>
+
+      {isStraddleType?(
+        <div className="hunt-straddle-row">
+          <div className="hunt-straddle-field">
+            <span className="hunt-metric-lbl">{L.straddleMinPnlLbl}</span>
+            <NumberField className="hunt-strat-input" value={cfg.straddleMinPnl} min={-100} max={100}
+              onCommit={function(v){onChange(type,"straddleMinPnl",v)}} ariaLabel={L.straddleMinPnlLbl} />
+          </div>
+          <div className="hunt-straddle-field">
+            <span className="hunt-metric-lbl">{L.straddleReqDownLbl}</span>
+            <NumberField className="hunt-strat-input" value={cfg.straddleReqShockDown} min={0} max={500}
+              onCommit={function(v){onChange(type,"straddleReqShockDown",v)}} ariaLabel={L.straddleReqDownLbl} />
+          </div>
+          <div className="hunt-straddle-field">
+            <span className="hunt-metric-lbl">{L.straddleReqUpLbl}</span>
+            <NumberField className="hunt-strat-input" value={cfg.straddleReqShockUp} min={0} max={500}
+              onCommit={function(v){onChange(type,"straddleReqShockUp",v)}} ariaLabel={L.straddleReqUpLbl} />
+          </div>
+        </div>
+      ):(
+        <React.Fragment>
+          {!isNoShock?(
+            <div className="hunt-metric-row">
+              <span className="hunt-metric-lbl">{L.shockRateShort}</span>
+              <select className="hunt-mode-select" value={shockMode}
+                onChange={function(e){onChange(type,"shockMode",e.target.value)}}
+                aria-label={"حالت نوسان "+type}>
+                {HUNT_MODE_OPTIONS.map(function(o){return <option key={o.v} value={o.v}>{o.l}</option>})}
+              </select>
+              <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={shockMode==="floor"}
+                value={shockRateText} placeholder="نرخ/روز"
+                onChange={function(e){setShockRateText(e.target.value)}}
+                onBlur={function(e){commitNum(e.target.value,cfg.shockRate,0.05,5,"shockRate",setShockRateText)}}
+                onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
+                aria-label={"نرخ نوسان روزانه "+type} />
+              <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={shockMode==="rate"}
+                value={shockFloorText} placeholder="کف٪"
+                onChange={function(e){setShockFloorText(e.target.value)}}
+                onBlur={function(e){commitNum(e.target.value,cfg.shockFloor,0,1000,"shockFloor",setShockFloorText)}}
+                onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
+                aria-label={"کف نوسان "+type} />
+            </div>
+          ):null}
+
+          <div className="hunt-metric-row">
+            <span className="hunt-metric-lbl">{L.profitRateShort}</span>
+            <select className="hunt-mode-select" value={profitMode}
+              onChange={function(e){onChange(type,"profitMode",e.target.value)}}
+              aria-label={"حالت سود "+type}>
+              {HUNT_MODE_OPTIONS.map(function(o){return <option key={o.v} value={o.v}>{o.l}</option>})}
+            </select>
+            <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={profitMode==="floor"}
+              value={profitRateText} placeholder="نرخ/روز"
+              onChange={function(e){setProfitRateText(e.target.value)}}
+              onBlur={function(e){commitNum(e.target.value,cfg.profitRate,0,5,"profitRate",setProfitRateText)}}
+              onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
+              aria-label={"نرخ سود روزانه "+type} />
+            <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={profitMode==="rate"}
+              value={profitFloorText} placeholder="کف٪"
+              onChange={function(e){setProfitFloorText(e.target.value)}}
+              onBlur={function(e){commitNum(e.target.value,cfg.profitFloor,0,1000,"profitFloor",setProfitFloorText)}}
+              onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
+              aria-label={"کف سود "+type} />
+          </div>
+        </React.Fragment>
+      )}
+
+      <div className="hunt-dte-row">
+        <span className="hunt-metric-lbl">{L.huntDteLbl}</span>
+        <NumberField className="hunt-strat-input" value={cfg.dteMin} min={0} allowEmpty={true}
+          placeholder="حداقل" onCommit={function(v){onChange(type,"dteMin",v===""?"":String(v))}} ariaLabel={"حداقل روز "+type} />
+        <NumberField className="hunt-strat-input" value={cfg.dteMax} min={0} allowEmpty={true}
+          placeholder="حداکثر" onCommit={function(v){onChange(type,"dteMax",v===""?"":String(v))}} ariaLabel={"حداکثر روز "+type} />
+      </div>
+    </div>
+  );
+}
+
+function HuntSettingsPanel(props){
+  var settings=props.settings,updateSettings=props.updateSettings;
+  var holidayStatus=props.holidayStatus,onToggleHoliday=props.onToggleHoliday,holidayBusy=props.holidayBusy;
+  var huntStrategies=settings.huntStrategies||{};
+
+  function strategyField(type,key,val){
+    var cur=Object.assign({},HUNT_STRATEGY_DEFAULT,huntStrategies[type]);
+    cur[key]=val;
+    var partial={huntStrategies:Object.assign({},huntStrategies)};
+    partial.huntStrategies[type]=cur;
+    updateSettings(partial,true);
+  }
+
+  var cooldownForever=!!settings.huntCooldownForever;
+  var totalMinutes=settings.huntCooldownMinutes==null?720:settings.huntCooldownMinutes;
+  var hoursVal=Math.floor(totalMinutes/60);
+  var minutesVal=totalMinutes%60;
+
+  function commitCooldown(h,m){
+    var mins=Math.max(1,(parseInt(h,10)||0)*60+(parseInt(m,10)||0));
+    updateSettings({huntCooldownMinutes:mins},false);
+  }
+
+  var topNUnlimited=!!settings.huntTopNUnlimited;
+
+  return (
+    <div className="hunt-settings-body">
+      <div className="step-row" style={{marginBottom:8}}>
+        <InfoToggle>{L.huntFormulaHint}</InfoToggle>
+        <span className="step-hint">راهنمای فرمول شکار موقعیت</span>
+      </div>
+
+      <div className="step-row" style={{marginBottom:10}}>
+        <button type="button" className={"holiday-btn"+(holidayStatus&&holidayStatus.isHoliday?" on":"")}
+          disabled={!!holidayBusy} onClick={onToggleHoliday}>
+          {holidayStatus&&holidayStatus.isHoliday?L.holidayOnLbl:L.holidayOffLbl}
+        </button>
+        <InfoToggle>{L.holidayHint}</InfoToggle>
+      </div>
+
+      <label className="toggle-switch" style={{marginBottom:8}}>
+        <input type="checkbox" checked={!!settings.huntOnlyBuyable}
+          onChange={function(e){updateSettings({huntOnlyBuyable:e.target.checked},true)}} />
+        {L.huntOnlyBuyableLbl}
+      </label>
+
+      <div className="msec-t" style={{marginTop:6,marginBottom:6}}>{L.huntTopNLbl}</div>
+      <div className="step-row" style={{marginBottom:4}}>
+        <NumberField className="step-input" value={settings.huntTopN} min={1} max={500} disabled={topNUnlimited}
+          onCommit={function(v){updateSettings({huntTopN:v},false)}} ariaLabel={L.huntTopNLbl} />
+        <label className="toggle-switch">
+          <input type="checkbox" checked={topNUnlimited}
+            onChange={function(e){updateSettings({huntTopNUnlimited:e.target.checked},false)}} />
+          {L.huntTopNUnlimitedLbl}
+        </label>
+      </div>
+
+      <div className="msec-t" style={{marginTop:10,marginBottom:6}}>{L.huntCooldownLbl}</div>
+      <div className="step-row" style={{marginBottom:4}}>
+        <NumberField className="step-input" style={{width:60}} value={hoursVal} min={0} max={999} disabled={cooldownForever}
+          onCommit={function(v){commitCooldown(v,minutesVal)}} ariaLabel={L.hoursShort} />
+        <span className="step-hint">{L.hoursShort}</span>
+        <NumberField className="step-input" style={{width:60}} value={minutesVal} min={0} max={59} disabled={cooldownForever}
+          onCommit={function(v){commitCooldown(hoursVal,v)}} ariaLabel={L.minutesShort} />
+        <span className="step-hint">{L.minutesShort}</span>
+      </div>
+      <label className="toggle-switch" style={{marginBottom:4}}>
+        <input type="checkbox" checked={cooldownForever}
+          onChange={function(e){updateSettings({huntCooldownForever:e.target.checked},false)}} />
+        {L.huntCooldownForeverLbl}
+      </label>
+      <div className="step-hint" style={{display:"block",marginBottom:10}}>{L.huntCooldownHint}</div>
+
+      <div className="msec-t" style={{marginTop:10,marginBottom:6}}>تنظیمات هر استراتژی</div>
+      {HUNT_STRATEGY_TYPES.map(function(type){
+        var cfg=Object.assign({},HUNT_STRATEGY_DEFAULT,huntStrategies[type]);
+        return (
+          <HuntStrategyRow key={type} type={type} cfg={cfg} isNoShock={!!HUNT_NO_SHOCK_TYPES[type]}
+            onChange={strategyField} />
+        );
+      })}
+    </div>
+  );
+}
+
+function HamMenu(props){
+  var open=props.open,onClose=props.onClose,theme=props.theme,setTheme=props.setTheme,
+    settings=props.settings,updateSettings=props.updateSettings,
+    dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
+    overrides=props.overrides,onAddOverride=props.onAddOverride,onToggleOverride=props.onToggleOverride,
+    onUpdateOverridePrice=props.onUpdateOverridePrice,onRemoveOverride=props.onRemoveOverride,
+    basisNames=props.basisNames,basisSpotMap=props.basisSpotMap,
+    refreshSec=props.refreshSec,setRefreshSec=props.setRefreshSec,
+    autoRefreshEnabled=props.autoRefreshEnabled,setAutoRefreshEnabled=props.setAutoRefreshEnabled,
+    onOpenHunt=props.onOpenHunt,
+    holidayStatus=props.holidayStatus,onToggleHoliday=props.onToggleHoliday,holidayBusy=props.holidayBusy;
+
+  var stTab=useState("settings");
+  var mtab=stTab[0],setMtab=stTab[1];
+  var stHuntOpen=useState(false);
+  var huntSettingsOpen=stHuntOpen[0],setHuntSettingsOpen=stHuntOpen[1];
+
+  if(!settings)return null;
+  var scenStep=settings.scenStep;
+  var exampleSteps=[-3,-2,-1,0,1,2,3].map(function(m){return (m>0?"+":"")+n(m*scenStep,1)}).join("٪، ")+"٪";
+
+  return (
+    <React.Fragment>
+      {open?<div className="ov" onClick={onClose} />:null}
+      <div className={"mpanel"+(open?" open":"")} role="dialog" aria-label={L.settings} aria-hidden={!open}>
+        <div className="mhead">
+          <span>{L.settings}</span>
+          <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
+        </div>
+        <div className="msub-tabs" role="tablist">
+          <button className={"msub-tab"+(mtab==="settings"?" on":"")} role="tab" aria-selected={mtab==="settings"} onClick={function(){setMtab("settings")}}>{L.settings}</button>
+          <button className={"msub-tab"+(mtab==="guide"?" on":"")} role="tab" aria-selected={mtab==="guide"} onClick={function(){setMtab("guide")}}>{L.guide}</button>
+        </div>
+        <div className="mbody">
+          {mtab==="settings"?(
+            <React.Fragment>
+              <div className="hunt-card" role="button" tabIndex={0}
+                onClick={function(){onClose();onOpenHunt()}}
+                onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenHunt()}}}>
+                <span>{L.huntPositions}</span><span>›</span>
+              </div>
+              <div className="hunt-settings-toggle" role="button" tabIndex={0}
+                onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}
+                onKeyDown={function(e){if(e.key==="Enter")setHuntSettingsOpen(!huntSettingsOpen)}}>
+                <span className={"arrow"+(huntSettingsOpen?" open":"")}>▶</span>
+                <span>{L.huntSettingsTitle}</span>
+              </div>
+              {huntSettingsOpen?<HuntSettingsPanel settings={settings} updateSettings={updateSettings}
+                holidayStatus={holidayStatus} onToggleHoliday={onToggleHoliday} holidayBusy={holidayBusy} />:null}
+
+              <div className="mdiv" />
+
+              <div className="msec">
+                <div className="msec-t-row">
+                  <span className="msec-t">{L.theme}</span>
+                </div>
+                <div className="theme-dots">
+                  {THEMES.map(function(t){
+                    return (
+                      <div key={t} className={"theme-dot"+(theme===t?" on":"")}
+                        style={{background:THEME_DOT_COLORS[t]}}
+                        role="button" tabIndex={0} title={THEME_NAMES[t]}
+                        onClick={function(){setTheme(t)}} onKeyDown={function(e){if(e.key==="Enter")setTheme(t)}} />
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mdiv" />
+
+              <div className="msec">
+                <div className="msec-t-row">
+                  <span className="msec-t">{L.refreshIntervalLbl}</span>
+                  <InfoToggle>{L.refreshIntervalHint}</InfoToggle>
+                </div>
+                <div className="inline-row">
+                  <label className="toggle-switch">
+                    <input type="checkbox" checked={autoRefreshEnabled} onChange={function(e){setAutoRefreshEnabled(e.target.checked)}} />
+                    {L.autoRefreshLbl}
+                  </label>
+                  <NumberField className="step-input" value={refreshSec} min={MIN_REFRESH_SEC} max={MAX_REFRESH_SEC}
+                    onCommit={function(v){setRefreshSec(v)}} ariaLabel={L.refreshIntervalLbl} disabled={!autoRefreshEnabled} />
+                  <span className="step-hint">ثانیه</span>
+                </div>
+              </div>
+
+              <div className="mdiv" />
+
+              <BasisOverridesEditor overrides={overrides} onAdd={onAddOverride} onToggle={onToggleOverride}
+                onUpdatePrice={onUpdateOverridePrice} onRemove={onRemoveOverride}
+                basisNames={basisNames} basisSpotMap={basisSpotMap} />
+
+              <div className="mdiv" />
+
+              <div className="msec">
+                <div className="msec-t-row">
+                  <span className="msec-t">{L.scenStepLbl}</span>
+                  <InfoToggle>مقادیر ستون‌ها: {exampleSteps}</InfoToggle>
+                </div>
+                <div className="step-row">
+                  <NumberField className="step-input" value={scenStep} min={0.5} max={50}
+                    onCommit={function(v){updateSettings({scenStep:v},true)}} ariaLabel={L.scenStepLbl} />
+                  <span className="step-hint">{L.scenarioStepHint}</span>
+                </div>
+              </div>
+
+              <div className="mdiv" />
+
+              <div className="msec">
+                <div className="msec-t-row">
+                  <span className="msec-t">{L.dteSettingsTitle}</span>
+                  <InfoToggle>{L.dteSettingsHint}</InfoToggle>
+                </div>
+                <div className="step-row">
+                  <NumberField className="step-input" value={dteFilterMin} min={0} allowEmpty={true}
+                    placeholder="حداقل" onCommit={function(v){updateSettings({dteFilterMin:v===""?"":String(v)},true)}} ariaLabel="حداقل روز تا سررسید" />
+                  <span className="step-hint">تا</span>
+                  <NumberField className="step-input" value={dteFilterMax} min={0} allowEmpty={true}
+                    placeholder="حداکثر" onCommit={function(v){updateSettings({dteFilterMax:v===""?"":String(v)},true)}} ariaLabel="حداکثر روز تا سررسید" />
+                </div>
+              </div>
+
+              <div className="mdiv" />
+
+              <div className="msec">
+                <div className="msec-t-row">
+                  <span className="msec-t">{L.checkIntervalLbl}</span>
+                  <InfoToggle>{L.checkIntervalHint}</InfoToggle>
+                </div>
+                <div className="step-row">
+                  <NumberField className="step-input" value={settings.checkIntervalSec} min={20} max={3600}
+                    onCommit={function(v){updateSettings({checkIntervalSec:v},false)}} ariaLabel={L.checkIntervalLbl} />
+                  <span className="step-hint">ثانیه</span>
+                </div>
+              </div>
+            </React.Fragment>
+          ):(
+            <div className="msec">
+              <div className="gcard">
+                <div className="gcard-t">معماری برنامه</div>
+                <div className="gcard-p">
+                  تمام محاسبات (دیده‌بان، استراتژی‌ها، شکار موقعیت) روی سرور انجام می‌شود و این صفحه فقط نتیجهٔ آماده را از سرور می‌خواند. سرور هر چند ثانیه یک‌بار (طبق تنظیم «{L.checkIntervalLbl}») و همچنین با فراخوانی دوره‌ای cron-job.org به‌صورت خودکار محاسبات را تکرار و در صورت پیدا شدن موقعیت جدید، پیام تلگرام ارسال می‌کند.
+                </div>
+              </div>
+              <div className="gcard">
+                <div className="gcard-t">بروزرسانی خودکار در این صفحه</div>
+                <div className="gcard-p">در این حالت، صفحه فقط آخرین نتیجهٔ محاسبه‌شدهٔ سرور را برای تب فعلی دوباره می‌خواند (بدون اجرای محاسبهٔ جدید). برای اجرای فوری محاسبات روی سرور از دکمهٔ ↻ در نوار بالا استفاده کنید؛ ممکن است اگر سرویس مدتی بی‌کار بوده باشد، چند ثانیه طول بکشد تا بیدار شود.</div>
+              </div>
+              <div className="gcard">
+                <div className="gcard-t">تب‌های اصلی</div>
+                <ul className="gcard-ul">
+                  <li><b>دیده‌بان</b>: مشاهده خام همه قراردادها.</li>
+                  <li><b>کاورد کال</b>: خرید سهم + فروش کال روی آن.</li>
+                  <li><b>مریدپوت</b>: خرید سهم + بیمه با خرید پوت.</li>
+                  <li><b>کلار</b>: ترکیب فروش کال و خرید پوت با قیمت اعمال متفاوت.</li>
+                  <li><b>کانورژن</b>: خرید سهم + خرید پوت + فروش کال روی یک قیمت اعمال یکسان (بازده ثابت).</li>
+                  <li><b>استرانگل خرید/فروش</b>، <b>کال/پوت اسپرد</b>، <b>باکس</b>: استراتژی‌های ترکیبی اختیار معامله.</li>
+                </ul>
+              </div>
+              <div className="gcard">
+                <div className="gcard-t">شکار موقعیت‌ها</div>
+                <div className="gcard-p">این بخش به‌صورت خودکار موقعیت‌هایی را که ریسک واقعی (شوک واقعی) و بازده آن‌ها در آستانه‌های تعریف‌شده در تنظیمات هر استراتژی قرار دارد فهرست می‌کند. برای هر ردیف، با اسکن تابع سود/زیان، نزدیک‌ترین درصد تغییر قیمت سهم پایه (در هر دو جهت) که باعث ضرر می‌شود پیدا می‌شود؛ این عدد با «شوک لازم» (که خودتان تعیین می‌کنید) مقایسه می‌شود. برای موقعیت‌های جدید در تلگرام اعلان ارسال می‌شود.</div>
+              </div>
+              <div className="gcard">
+                <div className="gcard-t">فرمول تعدیل بازده به ۳۰ روز</div>
+                <div className="formula-box">
+                  بازده تعدیل‌شده = بازده خام × (۳۰ ÷ روز مانده تا سررسید)
+                </div>
+                <div className="gcard-p" style={{marginTop:6}}>
+                  این تعدیل برای مقایسه بازده قراردادهای با سررسیدهای متفاوت روی یک مبنای مشترک استفاده می‌شود. در جداول، ستون‌های قبل از خط‌چین عمودی بازده تعدیل‌شده و ستون‌های بعد از آن بازده واقعی (بدون تعدیل) تا سررسید هستند.
+                </div>
+              </div>
+              <div className="gcard">
+                <div className="gcard-t">قیمت دلخواه سهم پایه</div>
+                <div className="gcard-p">این تنظیم روی سرور ذخیره می‌شود، بین گوشی و رایانه‌ی شما مشترک است و روی همهٔ محاسبات (شامل دیده‌بان) و همچنین اعلان‌های تلگرام اثر می‌گذارد. سطرهایی که قیمت دستی روی آن‌ها اعمال شده با نماد ✎ و برچسب «دستی» مشخص می‌شوند.</div>
+              </div>
+              <div className="gcard">
+                <div className="gcard-t">نمودار سود/زیان</div>
+                <div className="gcard-p">روی هر سطر از جدول کلیک کنید تا پنجرهٔ نمودار سود/زیان باز شود.</div>
+              </div>
+              <div className="gcard">
+                <div className="gcard-t">فیلتر، مرتب‌سازی و ستون‌ها</div>
+                <div className="gcard-p">روی هر سرستون کلیک کنید تا مرتب شود؛ زیر ستون‌ها فیلتر عددی یا متنی وجود دارد. با کشیدن لبهٔ هر ستون می‌توان عرض آن را تغییر داد (ذخیره می‌شود). جعبهٔ جستجوی بالای صفحه هم‌زمان روی همهٔ تب‌ها فیلتر می‌کند.</div>
+              </div>
+              <div className="gcard">
+                <div className="gcard-t">خروجی Excel</div>
+                <div className="gcard-p">با دکمهٔ «اکسل» در هر جدول، داده‌های فیلترشدهٔ همان بخش به‌صورت فایل xlsx دانلود می‌شود.</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+/* =========================================================
+   شکار موقعیت‌ها (Overlay)
+   ========================================================= */
+function BestPositionsOverlay(props){
+  var open=props.open,onClose=props.onClose,huntData=props.huntData,huntLoading=props.huntLoading,
+    huntError=props.huntError,onRetry=props.onRetry,globalSearch=props.globalSearch,onOpenChart=props.onOpenChart;
+
+  var topNArr=useLocalStorage("bestTopNDisplay",30);
+  var topN=topNArr[0],setTopN=topNArr[1];
+  var onlyBuyArr=useLocalStorage("bestOnlyBuyableDisplay",true);
+  var onlyBuyable=onlyBuyArr[0],setOnlyBuyable=onlyBuyArr[1];
+
+  var rows=(huntData&&huntData.rows)||EMPTY_ARR;
+  var steps=(huntData&&huntData.steps)||EMPTY_ARR;
+
+  var searchDeb=useDebounced(globalSearch,180);
+  var onlyBuyDeb=useDebounced(onlyBuyable,150);
+
+  var filtered=useMemo(function(){
+    var r=rows;
+    if(onlyBuyDeb)r=r.filter(function(x){return !BUYABLE_CHECK_TYPES[x.strategy_type]||x.basis_buyable!==false});
+    r=r.filter(function(x){return matchesGlobalSearch({name:x.primary_name,basis_name:x.basis_name},searchDeb)});
+    return r;
+  },[rows,onlyBuyDeb,searchDeb]);
+
+  var sortRes=useSort(filtered,"min_shock","desc");
+  var sorted=sortRes.sorted,s=sortRes.s,dir=sortRes.dir,onS=sortRes.onS;
+
+  var limited=useMemo(function(){
+    var lim=parseInt(topN,10);
+    if(!lim||lim<=0)return sorted;
+    return sorted.slice(0,lim);
+  },[sorted,topN]);
+
+  if(!open)return null;
+
+  var totalCols=5+steps.length*2+6;
+
+  function ThB(p){
+    var active=s===p.col;
+    return (
+      <th onClick={function(){onS(p.col)}} role="columnheader"
+        aria-sort={active?(dir==="asc"?"ascending":"descending"):"none"} tabIndex={0}
+        onKeyDown={function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();onS(p.col)}}}>
+        {p.children}{active?<span className="s2">{dir==="asc"?"▲":"▼"}</span>:null}
+      </th>
+    );
+  }
+
+  function rowClickHandler(row){
+    if(!onOpenChart)return undefined;
+    return function(){onOpenChart(row.strategy_type,row)};
+  }
+
+  return (
+    <div className="fs-overlay" role="dialog" aria-label={L.huntPositions}>
+      <div className="fs-head">
+        <b>{L.huntPositions}</b>
+        {huntData&&huntData.at?<span className="tb">آخرین اجرا: {new Date(huntData.at).toLocaleTimeString("fa-IR")}</span>:null}
+        <div className="sp1" />
+        <button className="ib" onClick={onRetry} aria-label="بروزرسانی" title="بروزرسانی">↻</button>
+        <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
+      </div>
+      <div className="fs-body">
+        <div className="best-controls">
+          <div className="best-field">
+            <label>{L.topNLbl}</label>
+            <NumberField className="mini-num" value={topN} min={1} max={500} onCommit={setTopN} ariaLabel={L.topNLbl} />
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={onlyBuyable} onChange={function(e){setOnlyBuyable(e.target.checked)}} />
+            {L.onlyBuyableLbl}
+          </label>
+          <span className="count-badge">{limited.length}</span>
+        </div>
+        {huntError?(
+          <div className="error-box"><div className="title">خطا در دریافت اطلاعات</div><div className="desc">{huntError}</div></div>
+        ):huntLoading&&!huntData?(
+          <div className="center" style={{flex:1}}><div className="spinner" /></div>
+        ):(
+          <div className="tw-wrap" style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
+            <div className="tw" style={{flex:1}}>
+              <table className="tbl-best">
+                <colgroup>
+                  <col style={{width:90}} />
+                  <col style={{width:160}} />
+                  <col style={{width:100}} />
+                  <col style={{width:90}} />
+                  <col style={{width:55}} />
+                  {steps.map(function(_,i){return <col key={"hcsc"+i} style={{width:54}} />})}
+                  {steps.map(function(_,i){return <col key={"hcraw"+i} style={{width:54}} />})}
+                  <col style={{width:80}} />
+                  <col style={{width:85}} />
+                  <col style={{width:85}} />
+                  <col style={{width:90}} />
+                  <col style={{width:80}} />
+                  <col style={{width:80}} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <ThB col="strategy_type">{L.strategyTypeLbl}</ThB>
+                    <th>موقعیت</th>
+                    <ThB col="basis_name">{L.basis}</ThB>
+                    <ThB col="expiry">{L.expiry}</ThB>
+                    <ThB col="dte">{L.dte}</ThB>
+                    {steps.map(function(v,i){
+                      var key="sc"+i,active=s===key;
+                      return (
+                        <th key={key} className="svh" onClick={function(){onS(key)}} role="columnheader"
+                          aria-sort={active?(dir==="asc"?"ascending":"descending"):"none"} tabIndex={0}
+                          onKeyDown={function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();onS(key)}}}>
+                          {"تعدیل "+(v>0?"+":"")+n(v,1)+"٪"}
+                          {active?<span className="s2">{dir==="asc"?"▲":"▼"}</span>:null}
+                        </th>
+                      );
+                    })}
+                    {steps.map(function(v,i){
+                      var key="raw"+i,active=s===key;
+                      return (
+                        <th key={key} className={"svh"+(i===0?" raw-divider":"")} onClick={function(){onS(key)}} role="columnheader"
+                          aria-sort={active?(dir==="asc"?"ascending":"descending"):"none"} tabIndex={0}
+                          onKeyDown={function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();onS(key)}}}>
+                          {i===0?<HeaderTip text={L.scenarioNote}><span className="info-icon">ℹ</span></HeaderTip>:null}
+                          {"واقعی "+(v>0?"+":"")+n(v,1)+"٪"}
+                          {active?<span className="s2">{dir==="asc"?"▲":"▼"}</span>:null}
+                        </th>
+                      );
+                    })}
+                    <ThB col="roi_zero">{L.roiZeroCol}</ThB>
+                    <ThB col="required_shock">{L.requiredShockCol}</ThB>
+                    <ThB col="actual_shock_up">{L.actualShockUpCol}</ThB>
+                    <ThB col="actual_shock_down">{L.actualShockDownCol}</ThB>
+                    <ThB col="min_shock">{L.minShockCol}</ThB>
+                    <ThB col="required_profit">{L.requiredProfitCol}</ThB>
+                  </tr>
+                </thead>
+                <tbody>
+                  {limited.length===0?(
+                    <tr><td colSpan={totalCols} style={{textAlign:"center",padding:20,color:"var(--mut)"}}>{L.noData}</td></tr>
+                  ):null}
+                  {limited.map(function(row){
+                    var isNoShock=!!HUNT_NO_SHOCK_TYPES[row.strategy_type];
+                    var badgeCls=isNoShock?"bdg-itm":"bdg-rev";
+                    return (
+                      <ErrorBoundary key={bestRowKey(row)} fallback={function(){return <tr><td colSpan={totalCols}>خطا</td></tr>}}>
+                        <tr onClick={rowClickHandler(row)} style={onOpenChart?{cursor:"pointer"}:undefined}>
+                          <td><span className={"bdg "+badgeCls}>{BEST_STRATEGY_LABELS[row.strategy_type]||row.strategy_type}</span></td>
+                          <td className="tn">{BasisNameR(row.primary_name,row)}</td>
+                          <td className="tb">{BasisNameR(row.basis_name,row)}</td>
+                          <td className="mut">{row.expiry}</td>
+                          <td>{n(row.dte)}</td>
+                          {(row.scenariosAdjusted||[]).map(function(v,j){
+                            return <td key={"sc"+j} className={"sv "+scenClass(v)}>{plainPct(v)}</td>;
+                          })}
+                          {(row.scenariosRaw||[]).map(function(v,j){
+                            return <td key={"raw"+j} className={"sv "+scenClass(v)+(j===0?" raw-divider":"")}>{plainPct(v)}</td>;
+                          })}
+                          <td className={"sv "+scenClass(row.roi_zero)}>{plainPct(row.roi_zero)}</td>
+                          <td className="sv">{isNoShock?"—":fmtShock(row.required_shock)}</td>
+                          <td className="sv">{isNoShock?"—":fmtShock(row.actual_shock_up)}</td>
+                          <td className="sv">{isNoShock?"—":fmtShock(row.actual_shock_down)}</td>
+                          <td className="sv" style={{fontWeight:700}}>{isNoShock?"—":fmtShock(row.min_shock)}</td>
+                          <td className="sv">{n(row.required_profit,1)}٪</td>
+                        </tr>
+                      </ErrorBoundary>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <button className="floating-export" onClick={function(){downloadXlsx(L.huntPositions,buildBestAoa(limited,steps))}}>
+              ⬇ {L.exportXlsxShort}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+/* =========================================================
+   App اصلی
+   ========================================================= */
+function App(){
+  var themeArr=useTheme();
+  var theme=themeArr[0],setTheme=themeArr[1];
+  var refreshSecArr=useLocalStorage("refreshIntervalSec",DEFAULT_REFRESH_SEC);
+  var refreshSec=refreshSecArr[0],setRefreshSec=refreshSecArr[1];
+  var autoRefreshArr=useLocalStorage("autoRefreshEnabled",false);
+  var autoRefreshEnabled=autoRefreshArr[0],setAutoRefreshEnabled=autoRefreshArr[1];
+
+  var stSettings=useState(null);var settings=stSettings[0],setSettings=stSettings[1];
+  var stSettingsErr=useState(null);var settingsError=stSettingsErr[0],setSettingsError=stSettingsErr[1];
+  var stOverrides=useState([]);var overrides=stOverrides[0],setOverrides=stOverrides[1];
+  var stHoliday=useState(null);var holidayStatus=stHoliday[0],setHolidayStatus=stHoliday[1];
+  var stHolidayBusy=useState(false);var holidayBusy=stHolidayBusy[0],setHolidayBusy=stHolidayBusy[1];
+
+  var stTabsData=useState({});var tabsData=stTabsData[0],setTabsData=stTabsData[1];
+  var stTabLoading=useState({});var tabLoading=stTabLoading[0],setTabLoading=stTabLoading[1];
+  var stTabError=useState({});var tabError=stTabError[0],setTabError=stTabError[1];
+
+  var stHuntData=useState(null);var huntData=stHuntData[0],setHuntData=stHuntData[1];
+  var stHuntLoading=useState(false);var huntLoading=stHuntLoading[0],setHuntLoading=stHuntLoading[1];
+  var stHuntErr=useState(null);var huntError=stHuntErr[0],setHuntError=stHuntErr[1];
+  var stHuntOpen=useState(false);var huntOpen=stHuntOpen[0],setHuntOpen=stHuntOpen[1];
+
+  var stMenu=useState(false);var menuOpen=stMenu[0],setMenuOpen=stMenu[1];
+  var stTab=useState("watch");var tab=stTab[0],setTab=stTab[1];
+  var stSearch=useState("");var globalSearch=stSearch[0],setGlobalSearch=stSearch[1];
+
+  var stRefreshing=useState(false);var refreshing=stRefreshing[0],setRefreshing=stRefreshing[1];
+  var stWakeHint=useState(false);var wakeHint=stWakeHint[0],setWakeHint=stWakeHint[1];
+  var stApplying=useState(false);var applying=stApplying[0],setApplying=stApplying[1];
+  var stGlobalErr=useState(null);var globalError=stGlobalErr[0],setGlobalError=stGlobalErr[1];
+
+  var stChart=useState(null);var chartCtx=stChart[0],setChartCtx=stChart[1];
+
+  var sectionStoreRef=useRef({});
+  var watchStoreRef=useRef({});
+
+  var tabRef=useRef(tab);useEffect(function(){tabRef.current=tab},[tab]);
+  var huntOpenRef=useRef(false);useEffect(function(){huntOpenRef.current=huntOpen},[huntOpen]);
+
+  /* ---------- بارگذاری داده از سرور ---------- */
+  function loadTabData(kind){
+    setTabLoading(function(prev){return Object.assign({},prev,{[kind]:true})});
+    var p=kind==="watch"
+      ?Api.watch().then(function(r){return {updatedAt:r.updatedAt,rows:r.rows}})
+      :Api.strategy(kind).then(function(r){return {updatedAt:r.updatedAt,steps:r.steps,rows:r.rows}});
+    return p.then(function(data){
+      setTabsData(function(prev){return Object.assign({},prev,{[kind]:data})});
+      setTabError(function(prev){var c=Object.assign({},prev);delete c[kind];return c});
+      return data;
+    }).catch(function(e){
+      setTabError(function(prev){return Object.assign({},prev,{[kind]:e.message})});
+      throw e;
+    }).finally(function(){
+      setTabLoading(function(prev){return Object.assign({},prev,{[kind]:false})});
+    });
+  }
+
+  /* فقط تب فعلی (و شکار در صورت باز بودن) دوباره خوانده می‌شود */
+  function reloadCurrentTab(){
+    var kind=tabRef.current;
+    var tasks=[loadTabData(kind).catch(function(){})];
+    if(huntOpenRef.current)tasks.push(loadHunt());
+    return Promise.all(tasks);
+  }
+
+  function loadHunt(){
+    setHuntLoading(true);
+    return Api.huntLatest().then(function(res){setHuntData(res);setHuntError(null)})
+      .catch(function(e){setHuntError(e.message)}).finally(function(){setHuntLoading(false)});
+  }
+
+  function loadSettings(){
+    return Api.getSettings().then(function(s){setSettings(s);setSettingsError(null)})
+      .catch(function(e){setSettingsError(e.message)});
+  }
+  function loadOverrides(){
+    return Api.getOverrides().then(function(list){setOverrides(list||[])}).catch(function(){});
+  }
+  function loadHolidayStatus(){
+    return Api.marketToday().then(function(r){setHolidayStatus(r)}).catch(function(){});
+  }
+
+  useEffect(function(){
+    loadSettings();
+    loadOverrides();
+    loadHolidayStatus();
+    loadTabData("watch").catch(function(){});
+  },[]);
+
+  // نشانگر بازه‌ی ارسال پیام باید مستقل از تنظیم "بروزرسانی خودکار" هر ۶۰ ثانیه به‌روز بماند
+  useEffect(function(){
+    var interval=setInterval(function(){loadHolidayStatus()},60000);
+    return function(){clearInterval(interval)};
+  },[]);
+
+  useEffect(function(){if(huntOpen&&!huntData)loadHunt()},[huntOpen]);
+
+  /* ---------- بروزرسانی دستی کامل (اجرای مجدد محاسبات روی سرور) ---------- */
+  function handleManualRefresh(){
+    setRefreshing(true);
+    setGlobalError(null);
+    var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
+    Api.refresh().then(function(){
+      return reloadCurrentTab();
+    }).catch(function(e){
+      setGlobalError("خطا در بروزرسانی: "+e.message);
+    }).finally(function(){
+      clearTimeout(wakeTimer);
+      setWakeHint(false);
+      setRefreshing(false);
+    });
+  }
+
+  /* ---------- بروزرسانی خودکار (فقط تب فعلی، بدون اجرای مجدد محاسبات) ---------- */
+  useEffect(function(){
+    if(!autoRefreshEnabled)return;
+    var ms=Math.max(MIN_REFRESH_SEC,Math.min(MAX_REFRESH_SEC,parseFloat(refreshSec)||DEFAULT_REFRESH_SEC))*1000;
+    var interval=null;
+    function tick(){reloadCurrentTab()}
+    function start(){if(!interval)interval=setInterval(tick,ms)}
+    function stop(){if(interval){clearInterval(interval);interval=null}}
+    function onVis(){
+      if(document.visibilityState==="visible"){document.body.classList.remove("bg-hidden");tick();start()}
+      else{document.body.classList.add("bg-hidden");stop()}
+    }
+    start();
+    document.addEventListener("visibilitychange",onVis);
+    return function(){stop();document.removeEventListener("visibilitychange",onVis)};
+  },[autoRefreshEnabled,refreshSec]);
+
+  /* ---------- تنظیمات ---------- */
+  function updateSettings(partial,needsRefresh){
+    setSettings(function(prev){return Object.assign({},prev,partial)});
+    setApplying(true);
+    setGlobalError(null);
+    Api.postSettings(partial).then(function(saved){
+      setSettings(saved);
+      if(needsRefresh){
+        var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
+        return Api.refresh().then(reloadCurrentTab).finally(function(){clearTimeout(wakeTimer);setWakeHint(false)});
+      }
+    }).catch(function(e){
+      setGlobalError("خطا در ذخیره تنظیمات: "+e.message);
+      loadSettings();
+    }).finally(function(){setApplying(false)});
+  }
+
+  /* ---------- قیمت دلخواه سهم پایه ---------- */
+  function afterOverrideChange(){
+    setApplying(true);
+    var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
+    return loadOverrides().then(function(){
+      return Api.refresh();
+    }).then(reloadCurrentTab).catch(function(e){
+      setGlobalError("خطا در اعمال تغییرات: "+e.message);
+    }).finally(function(){clearTimeout(wakeTimer);setWakeHint(false);setApplying(false)});
+  }
+  function handleAddOverride(name,price){
+    Api.postOverride({name:name,price:price,enabled:true}).then(afterOverrideChange)
+      .catch(function(e){setGlobalError(e.message)});
+  }
+  function handleToggleOverride(name,enabled){
+    var existing=overrides.find(function(o){return o.name===name});
+    if(!existing)return;
+    Api.postOverride({name:name,price:existing.price,enabled:enabled}).then(afterOverrideChange)
+      .catch(function(e){setGlobalError(e.message)});
+  }
+  function handleUpdateOverridePrice(name,price){
+    var existing=overrides.find(function(o){return o.name===name});
+    if(!existing)return;
+    Api.postOverride({name:name,price:price,enabled:existing.enabled}).then(afterOverrideChange)
+      .catch(function(e){setGlobalError(e.message)});
+  }
+  function handleRemoveOverride(name){
+    Api.deleteOverride(name).then(afterOverrideChange)
+      .catch(function(e){setGlobalError(e.message)});
+  }
+  function handleToggleHoliday(){
+    setHolidayBusy(true);
+    Api.toggleHoliday().then(function(res){
+      setHolidayStatus({todayKey:res.todayKey,isHoliday:res.isHoliday,isMarketOpenNow:holidayStatus?holidayStatus.isMarketOpenNow:false});
+      setSettings(function(prev){return prev?Object.assign({},prev,{manualHolidays:res.settings.manualHolidays}):prev});
+    }).catch(function(e){
+      setGlobalError("خطا در تغییر وضعیت تعطیلی: "+e.message);
+    }).finally(function(){setHolidayBusy(false)});
+  }
+
+  var activeOverrideCount=useMemo(function(){
+    var c=0;overrides.forEach(function(o){if(o.enabled&&o.price>0)c++});return c;
+  },[overrides]);
+
+  var basisMeta=useMemo(function(){
+    var watchRows=(tabsData.watch&&tabsData.watch.rows)||EMPTY_ARR;
+    var namesSet={},spotMap={};
+    watchRows.forEach(function(c){
+      if(c.basis_name){
+        namesSet[c.basis_name]=true;
+        var realSpot=c.spot_overridden?c.spot_original:c.spot;
+        if((spotMap[c.basis_name]==null)&&realSpot>0)spotMap[c.basis_name]=realSpot;
+      }
+    });
+    var names=Object.keys(namesSet).sort(function(a,b){return a.localeCompare(b,"fa")});
+    return {names:names,spotMap:spotMap};
+  },[tabsData.watch]);
+
+  function handleTabClick(id){
+    setTab(id);
+    if(!tabsData[id]&&!tabLoading[id])loadTabData(id);
+  }
+
+  /* ---------- نمودار ---------- */
+  function openChart(kind,row){setChartCtx({kind:kind,row:row})}
+  function closeChart(){setChartCtx(null)}
+
+  var dotCls="dot"+((refreshing||applying)?" sp":(globalError?" er":""));
+
+  var coTrailingCols=useMemo(function(){
+    return [{k:"collar_type",l:function(){return L.collarType},r:function(v){return <span className={"bdg "+(v===L.collarReverse?"bdg-rev":"bdg-itm")}>{v}</span>}}];
+  },[]);
+
+  var watchTabData=tabsData.watch;
+  var currentData=tabsData[tab];
+  var currentLoading=tabLoading[tab];
+  var currentError=tabError[tab];
+
+  return (
+    <div className="app">
+      <HamMenu
+        open={menuOpen} onClose={function(){setMenuOpen(false)}} theme={theme} setTheme={setTheme}
+        settings={settings} updateSettings={updateSettings}
+        dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
+        overrides={overrides} onAddOverride={handleAddOverride} onToggleOverride={handleToggleOverride}
+        onUpdateOverridePrice={handleUpdateOverridePrice} onRemoveOverride={handleRemoveOverride}
+        basisNames={basisMeta.names} basisSpotMap={basisMeta.spotMap}
+        refreshSec={refreshSec} setRefreshSec={setRefreshSec}
+        autoRefreshEnabled={autoRefreshEnabled} setAutoRefreshEnabled={setAutoRefreshEnabled}
+        onOpenHunt={function(){setHuntOpen(true)}}
+        holidayStatus={holidayStatus} onToggleHoliday={handleToggleHoliday} holidayBusy={holidayBusy}
+      />
+
+      <BestPositionsOverlay open={huntOpen} onClose={function(){setHuntOpen(false)}}
+        huntData={huntData} huntLoading={huntLoading} huntError={huntError}
+        onRetry={loadHunt} globalSearch={globalSearch} onOpenChart={openChart} />
+
+      {chartCtx?(
+        <ErrorBoundary fallback={function(){return <FloatFallback onClose={closeChart} />}}>
+          <PayoffPanel row={chartCtx.row} kind={chartCtx.kind} onClose={closeChart} />
+        </ErrorBoundary>
+      ):null}
+
+      <div className="top">
+        <button className="ib" onClick={function(){setMenuOpen(true)}} aria-label={L.menu}>
+          ☰
+          {activeOverrideCount>0?<span className="ov-indicator" title={activeOverrideCount+" سهم پایه با قیمت دستی فعال است"} />:null}
+        </button>
+        <span className="brand-top">دیده‌بان اختیار معامله</span>
+        <div className="sp1" />
+        <div className="search-box">
+          <input type="text" className="search-input" placeholder="جستجوی نماد..."
+            value={globalSearch} onChange={function(e){setGlobalSearch(e.target.value)}} />
+          {globalSearch?<button className="search-clear" onClick={function(){setGlobalSearch("")}}>✕</button>:null}
+        </div>
+        <div className="status-chip" role="status">
+          <div className={dotCls} />
+          <span>{refreshing?"در حال اجرای محاسبات...":applying?"در حال اعمال تنظیمات...":globalError?"خطا":(watchTabData&&watchTabData.updatedAt)?new Date(watchTabData.updatedAt).toLocaleTimeString("fa-IR"):""}</span>
+        </div>
+        {holidayStatus?(
+          <div className="status-chip" role="status" title={L.marketWindowHint}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:holidayStatus.isMarketOpenNow?"var(--gain)":"var(--mut)"}} />
+            <span>{holidayStatus.isMarketOpenNow?L.marketOpenNowLbl:L.marketClosedNowLbl}</span>
+          </div>
+        ):null}
+        <button className="rbtn" onClick={handleManualRefresh} disabled={refreshing} aria-label={L.refresh} title={L.refresh}>↻</button>
+      </div>
+
+      {wakeHint?<div className="busy-banner">{L.wakingUp}</div>:null}
+      {globalError?(
+        <div className="stale-banner">{globalError} <button className="cbtn" style={{marginRight:8}} onClick={function(){setGlobalError(null)}}>باشه</button></div>
+      ):null}
+
+      <div className="tabs" role="tablist">
+        {BASE_TABS.map(function(t){
+          var pending=t.id===tab?(!currentData&&currentLoading):false;
+          return (
+            <button key={t.id} className={"tab"+(tab===t.id?" on":"")} role="tab" aria-selected={tab===t.id} onClick={function(){handleTabClick(t.id)}}>
+              {pending?<span className="tab-spin-dot" />:null}
+              {L[t.l]||t.id}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab!=="watch"&&activeOverrideCount>0?(
+        <div className="override-banner">
+          {activeOverrideCount} سهم پایه با قیمت دستی در محاسبات اعمال شده است (قابل مدیریت از تنظیمات ☰).
+        </div>
+      ):null}
+
+      <div className="cnt">
+        {tab==="watch"?(
+          !watchTabData&&!tabError.watch?(
+            <div className="center"><div className="spinner" role="status" aria-label="در حال بارگذاری" /><span>در حال اتصال به سرور... (ممکن است در اولین بار تا ۵۰ ثانیه طول بکشد)</span></div>
+          ):tabError.watch&&!watchTabData?(
+            <div className="center">
+              <div className="error-box">
+                <div className="title">خطا در دریافت داده</div>
+                <div className="desc">{tabError.watch}</div>
+                <button className="rbtn" style={{width:"auto",padding:"0 16px",margin:"12px auto 0"}} onClick={function(){loadTabData("watch")}}>تلاش مجدد</button>
+              </div>
+            </div>
+          ):(
+            <div className="panel-active">
+              <ErrorBoundary fallback={function(){return <div className="error-box">خطا در نمایش دیده‌بان</div>}}>
+                <Watch rows={watchTabData.rows} store={watchStoreRef.current} storeKey="watch" globalSearch={globalSearch}
+                  dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""} />
+              </ErrorBoundary>
+            </div>
+          )
+        ):(
+          currentError?(
+            <div className="center"><div className="error-box"><div className="title">خطا</div><div className="desc">{currentError}</div>
+              <button className="rbtn" style={{width:"auto",padding:"0 16px",margin:"12px auto 0"}} onClick={function(){loadTabData(tab)}}>تلاش مجدد</button></div></div>
+          ):currentData?(
+            <div className="panel-active">
+              {STRATEGY_META[tab]?(
+                <StrategySection kind={tab} data={currentData.rows} steps={currentData.steps||[]}
+                  dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
+                  store={sectionStoreRef.current} globalSearch={globalSearch}
+                  trailingCols={tab==="co"?coTrailingCols:EMPTY_ARR}
+                  onOpenChart={openChart} />
+              ):(
+                <SimpleStrategySection kind={tab} data={currentData.rows} steps={currentData.steps||[]}
+                  dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
+                  store={sectionStoreRef.current} globalSearch={globalSearch}
+                  onOpenChart={openChart} />
+              )}
+            </div>
+          ):(<div className="center"><div className="spinner" /></div>)
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RootFallback(){
+  return (
+    <div className="error-box" style={{marginTop:"20vh"}}>
+      <div className="title">خطای غیرمنتظره</div>
+      <div className="desc">برنامه با خطا مواجه شد. لطفاً صفحه را دوباره بارگذاری کنید.</div>
+      <button className="rbtn" style={{width:"auto",padding:"0 16px",margin:"12px auto 0"}} onClick={function(){window.location.reload()}}>بارگذاری مجدد</button>
+    </div>
+  );
+}
+
+var root=ReactDOM.createRoot(document.getElementById("root"));
+root.render(
+  <ErrorBoundary fallback={RootFallback}>
+    <App />
+  </ErrorBoundary>
+);
+})();
+</script>
+</body>
+</html>
