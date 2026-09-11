@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
-<title>دیده‌بان اختیار معامله</title>
+<title>استراتژیست آپشن</title>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <script src="libs/react.production.min.js"></script>
 <script src="libs/react-dom.production.min.js"></script>
@@ -199,7 +199,7 @@ tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
 .hunt-strat-check input{width:15px;height:15px;cursor:pointer}
 .hunt-strat-card{border:1px solid var(--bor);border-radius:var(--rs);padding:8px 10px;margin-bottom:8px;background:var(--sur2)}
 .hunt-strat-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.hunt-strat-tg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--txt2);cursor:pointer}
+.hunt-strat-tg{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--txt2);cursor:pointer;white-space:nowrap}
 .hunt-strat-tg input{width:14px;height:14px;cursor:pointer}
 .hunt-metric-row{display:grid;grid-template-columns:40px 1fr 62px 62px;gap:6px;align-items:center;margin-bottom:5px}
 .hunt-metric-row:last-child{margin-bottom:0}
@@ -344,15 +344,16 @@ var L={
   huntSettingsTitle:"تنظیمات شکار موقعیت‌ها",
 huntFormulaHint:"برای هر معیار (نوسان و سود) یکی از سه حالت را انتخاب کنید: «فقط نرخ روزانه» (آستانه = روزِ مانده × نرخ)، «فقط کف» (آستانه = مقدار ثابتی که وارد می‌کنید، مستقل از روز مانده) یا «هر دو» (آستانه = هرکدام از این دو که بزرگ‌تر باشد). شرط قبولی: حداقل نوسان واقعی (در هر دو جهت) ≥ آستانهٔ نوسان، و بازده واقعی صفر ≥ آستانهٔ سود. برای کانورژن و باکس فقط شرط سود بررسی می‌شود (این‌ها بازده ثابت دارند).",  huntTopNLbl:"تعداد ارسال به تلگرام",
   huntTopNUnlimitedLbl:"بدون محدودیت (ارسال همه)",
-huntOnlyBuyableLbl:"فقط سهم‌های قابل‌خرید (فقط کاوردکال/مریدپوت/کلار/کانورژن)",
+huntOnlyBuyableLbl:"استراتژی سهم پایه‌محور قابل خرید باشد",
   huntCooldownLbl:"فاصلهٔ یادآوری تلگرام",
   huntCooldownForeverLbl:"فقط یک‌بار برای همیشه اطلاع بده",
-  huntCooldownHint:"مدت زمانی که پس از اطلاع‌رسانی یک موقعیت، دوباره برایش پیام ارسال نمی‌شود؛ در صورت فعال بودن «فقط یک‌بار برای همیشه»، این موقعیت دیگر هرگز تکرار نمی‌شود.",
+  huntCooldownHint:"مدت زمانی که پس از اطلاع‌رسانی یک موقعیت، دوباره برایش پیام ارسال نمی‌شود؛ در صورت فعال بودن «فقط یک‌بار برای همیشه»، این موقعیت دیگر هرگز تکرار نمی‌شود. توجه: برای استراتژی‌هایی که گزینهٔ «اعلان خروج» فعال است، این فاصله اعمال نمی‌شود (چون اعلان ورود فقط یک‌بار در لحظهٔ ورود ارسال می‌شود).",
   checkIntervalLbl:"فاصلهٔ اجرای خودکار سرور",
-  checkIntervalHint:"این مقدار تعیین می‌کند سرور هر چند ثانیه یک‌بار به‌صورت داخلی چرخهٔ محاسبه/اعلان تلگرام را اجرا کند (جدا از cron-job.org).",
+  checkIntervalHint:"این مقدار تعیین می‌کند سرور هر چند ثانیه یک‌بار به‌صورت داخلی چرخهٔ محاسبه/اعلان تلگرام را اجرا کند.",
   applying:"در حال اعمال تغییرات روی سرور...",
   wakingUp:"سرویس سمت سرور در حال بیدار شدن است؛ ممکن است تا ۵۰ ثانیه طول بکشد...",
 shockRateShort:"نوسان/روز",profitRateShort:"سود/روز",telegramShort:"تلگرام",  hoursShort:"ساعت",minutesShort:"دقیقه",
+telegramEntryShort:"ورود",telegramExitShort:"خروج",
 actualShockUpCol:"نوسان مثبت واقعی",actualShockDownCol:"نوسان منفی واقعی",minShockCol:"حداقل نوسان واقعی",
 requiredShockCol:"نوسان لازم",requiredProfitCol:"آستانهٔ سود لازم",roiZeroCol:"بازده صفر",
 straddleMinPnlLbl:"کف سود/زیان قبل از نوسان",straddleReqDownLbl:"نوسان منفی لازم",straddleReqUpLbl:"نوسان مثبت لازم",
@@ -389,6 +390,7 @@ var HUNT_STRATEGY_DEFAULT={
   profitRate:0.35,profitMode:"rate",profitFloor:5,
   dteMin:"",dteMax:"",
   telegramEnabled:true,
+  telegramExitEnabled:true,
   straddleMinPnl:-10,straddleReqShockDown:5,straddleReqShockUp:5
 };
 var HUNT_MODE_OPTIONS=[
@@ -900,7 +902,6 @@ function renderWatchCell(c,row){
   var val=row[c.k];
   return c.r?c.r(val,row):(val!=null?String(val):"—");
 }
-
 var StrategyRowMemo=React.memo(function StrategyRow(props){
   var row=props.row,cols=props.cols,stickyOffset=props.stickyOffset,trailingCols=props.trailingCols||EMPTY_ARR,
     onOpenChart=props.onOpenChart;
@@ -1935,7 +1936,7 @@ function BasisOverridesEditor(props){
   );
 }
 /* =========================================================
-   منوی همبرگری (تنظیمات + راهنما)
+   منوی همبرگری (تنظیمات)
    ========================================================= */
 function HuntStrategyRow(props){
   var type=props.type,cfg=props.cfg,isNoShock=props.isNoShock,onChange=props.onChange;
@@ -1970,12 +1971,20 @@ function HuntStrategyRow(props){
     <div className="hunt-strat-card">
       <div className="hunt-strat-card-head">
         <span className="hunt-strat-name">{BEST_STRATEGY_LABELS[type]||type}</span>
-        <label className="hunt-strat-tg">
-          <input type="checkbox" checked={cfg.telegramEnabled!==false}
-            onChange={function(e){onChange(type,"telegramEnabled",e.target.checked)}}
-            aria-label={L.telegramShort+" "+type} />
-          {L.telegramShort}
-        </label>
+        <div style={{display:"flex",gap:10,alignItems:"center",flexShrink:0}}>
+          <label className="hunt-strat-tg" title="اعلان ورود به شکار">
+            <input type="checkbox" checked={cfg.telegramEnabled!==false}
+              onChange={function(e){onChange(type,"telegramEnabled",e.target.checked)}}
+              aria-label={L.telegramEntryShort+" "+type} />
+            {L.telegramEntryShort}
+          </label>
+          <label className="hunt-strat-tg" title="اعلان خروج از شکار">
+            <input type="checkbox" checked={cfg.telegramExitEnabled!==false}
+              onChange={function(e){onChange(type,"telegramExitEnabled",e.target.checked)}}
+              aria-label={L.telegramExitShort+" "+type} />
+            {L.telegramExitShort}
+          </label>
+        </div>
       </div>
 
       {isStraddleType?(
@@ -2152,8 +2161,6 @@ function HamMenu(props){
     onOpenHunt=props.onOpenHunt,
     holidayStatus=props.holidayStatus,onToggleHoliday=props.onToggleHoliday,holidayBusy=props.holidayBusy;
 
-  var stTab=useState("settings");
-  var mtab=stTab[0],setMtab=stTab[1];
   var stHuntOpen=useState(false);
   var huntSettingsOpen=stHuntOpen[0],setHuntSettingsOpen=stHuntOpen[1];
 
@@ -2169,167 +2176,106 @@ function HamMenu(props){
           <span>{L.settings}</span>
           <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
         </div>
-        <div className="msub-tabs" role="tablist">
-          <button className={"msub-tab"+(mtab==="settings"?" on":"")} role="tab" aria-selected={mtab==="settings"} onClick={function(){setMtab("settings")}}>{L.settings}</button>
-          <button className={"msub-tab"+(mtab==="guide"?" on":"")} role="tab" aria-selected={mtab==="guide"} onClick={function(){setMtab("guide")}}>{L.guide}</button>
-        </div>
         <div className="mbody">
-          {mtab==="settings"?(
-            <React.Fragment>
-              <div className="hunt-card" role="button" tabIndex={0}
-                onClick={function(){onClose();onOpenHunt()}}
-                onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenHunt()}}}>
-                <span>{L.huntPositions}</span><span>›</span>
-              </div>
-              <div className="hunt-settings-toggle" role="button" tabIndex={0}
-                onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}
-                onKeyDown={function(e){if(e.key==="Enter")setHuntSettingsOpen(!huntSettingsOpen)}}>
-                <span className={"arrow"+(huntSettingsOpen?" open":"")}>▶</span>
-                <span>{L.huntSettingsTitle}</span>
-              </div>
-              {huntSettingsOpen?<HuntSettingsPanel settings={settings} updateSettings={updateSettings}
-                holidayStatus={holidayStatus} onToggleHoliday={onToggleHoliday} holidayBusy={holidayBusy} />:null}
+          <div className="hunt-card" role="button" tabIndex={0}
+            onClick={function(){onClose();onOpenHunt()}}
+            onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenHunt()}}}>
+            <span>{L.huntPositions}</span><span>›</span>
+          </div>
+          <div className="hunt-settings-toggle" role="button" tabIndex={0}
+            onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}
+            onKeyDown={function(e){if(e.key==="Enter")setHuntSettingsOpen(!huntSettingsOpen)}}>
+            <span className={"arrow"+(huntSettingsOpen?" open":"")}>▶</span>
+            <span>{L.huntSettingsTitle}</span>
+          </div>
+          {huntSettingsOpen?<HuntSettingsPanel settings={settings} updateSettings={updateSettings}
+            holidayStatus={holidayStatus} onToggleHoliday={onToggleHoliday} holidayBusy={holidayBusy} />:null}
 
-              <div className="mdiv" />
+          <div className="mdiv" />
 
-              <div className="msec">
-                <div className="msec-t-row">
-                  <span className="msec-t">{L.theme}</span>
-                </div>
-                <div className="theme-dots">
-                  {THEMES.map(function(t){
-                    return (
-                      <div key={t} className={"theme-dot"+(theme===t?" on":"")}
-                        style={{background:THEME_DOT_COLORS[t]}}
-                        role="button" tabIndex={0} title={THEME_NAMES[t]}
-                        onClick={function(){setTheme(t)}} onKeyDown={function(e){if(e.key==="Enter")setTheme(t)}} />
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="mdiv" />
-
-              <div className="msec">
-                <div className="msec-t-row">
-                  <span className="msec-t">{L.refreshIntervalLbl}</span>
-                  <InfoToggle>{L.refreshIntervalHint}</InfoToggle>
-                </div>
-                <div className="inline-row">
-                  <label className="toggle-switch">
-                    <input type="checkbox" checked={autoRefreshEnabled} onChange={function(e){setAutoRefreshEnabled(e.target.checked)}} />
-                    {L.autoRefreshLbl}
-                  </label>
-                  <NumberField className="step-input" value={refreshSec} min={MIN_REFRESH_SEC} max={MAX_REFRESH_SEC}
-                    onCommit={function(v){setRefreshSec(v)}} ariaLabel={L.refreshIntervalLbl} disabled={!autoRefreshEnabled} />
-                  <span className="step-hint">ثانیه</span>
-                </div>
-              </div>
-
-              <div className="mdiv" />
-
-              <BasisOverridesEditor overrides={overrides} onAdd={onAddOverride} onToggle={onToggleOverride}
-                onUpdatePrice={onUpdateOverridePrice} onRemove={onRemoveOverride}
-                basisNames={basisNames} basisSpotMap={basisSpotMap} />
-
-              <div className="mdiv" />
-
-              <div className="msec">
-                <div className="msec-t-row">
-                  <span className="msec-t">{L.scenStepLbl}</span>
-                  <InfoToggle>مقادیر ستون‌ها: {exampleSteps}</InfoToggle>
-                </div>
-                <div className="step-row">
-                  <NumberField className="step-input" value={scenStep} min={0.5} max={50}
-                    onCommit={function(v){updateSettings({scenStep:v},true)}} ariaLabel={L.scenStepLbl} />
-                  <span className="step-hint">{L.scenarioStepHint}</span>
-                </div>
-              </div>
-
-              <div className="mdiv" />
-
-              <div className="msec">
-                <div className="msec-t-row">
-                  <span className="msec-t">{L.dteSettingsTitle}</span>
-                  <InfoToggle>{L.dteSettingsHint}</InfoToggle>
-                </div>
-                <div className="step-row">
-                  <NumberField className="step-input" value={dteFilterMin} min={0} allowEmpty={true}
-                    placeholder="حداقل" onCommit={function(v){updateSettings({dteFilterMin:v===""?"":String(v)},true)}} ariaLabel="حداقل روز تا سررسید" />
-                  <span className="step-hint">تا</span>
-                  <NumberField className="step-input" value={dteFilterMax} min={0} allowEmpty={true}
-                    placeholder="حداکثر" onCommit={function(v){updateSettings({dteFilterMax:v===""?"":String(v)},true)}} ariaLabel="حداکثر روز تا سررسید" />
-                </div>
-              </div>
-
-              <div className="mdiv" />
-
-              <div className="msec">
-                <div className="msec-t-row">
-                  <span className="msec-t">{L.checkIntervalLbl}</span>
-                  <InfoToggle>{L.checkIntervalHint}</InfoToggle>
-                </div>
-                <div className="step-row">
-                  <NumberField className="step-input" value={settings.checkIntervalSec} min={20} max={3600}
-                    onCommit={function(v){updateSettings({checkIntervalSec:v},false)}} ariaLabel={L.checkIntervalLbl} />
-                  <span className="step-hint">ثانیه</span>
-                </div>
-              </div>
-            </React.Fragment>
-          ):(
-            <div className="msec">
-              <div className="gcard">
-                <div className="gcard-t">معماری برنامه</div>
-                <div className="gcard-p">
-                  تمام محاسبات (دیده‌بان، استراتژی‌ها، شکار موقعیت) روی سرور انجام می‌شود و این صفحه فقط نتیجهٔ آماده را از سرور می‌خواند. سرور هر چند ثانیه یک‌بار (طبق تنظیم «{L.checkIntervalLbl}») و همچنین با فراخوانی دوره‌ای cron-job.org به‌صورت خودکار محاسبات را تکرار و در صورت پیدا شدن موقعیت جدید، پیام تلگرام ارسال می‌کند.
-                </div>
-              </div>
-              <div className="gcard">
-                <div className="gcard-t">بروزرسانی خودکار در این صفحه</div>
-                <div className="gcard-p">در این حالت، صفحه فقط آخرین نتیجهٔ محاسبه‌شدهٔ سرور را برای تب فعلی دوباره می‌خواند (بدون اجرای محاسبهٔ جدید). برای اجرای فوری محاسبات روی سرور از دکمهٔ ↻ در نوار بالا استفاده کنید؛ ممکن است اگر سرویس مدتی بی‌کار بوده باشد، چند ثانیه طول بکشد تا بیدار شود.</div>
-              </div>
-              <div className="gcard">
-                <div className="gcard-t">تب‌های اصلی</div>
-                <ul className="gcard-ul">
-                  <li><b>دیده‌بان</b>: مشاهده خام همه قراردادها.</li>
-                  <li><b>کاورد کال</b>: خرید سهم + فروش کال روی آن.</li>
-                  <li><b>مریدپوت</b>: خرید سهم + بیمه با خرید پوت.</li>
-                  <li><b>کلار</b>: ترکیب فروش کال و خرید پوت با قیمت اعمال متفاوت.</li>
-                  <li><b>کانورژن</b>: خرید سهم + خرید پوت + فروش کال روی یک قیمت اعمال یکسان (بازده ثابت).</li>
-                  <li><b>استرانگل خرید/فروش</b>، <b>کال/پوت اسپرد</b>، <b>باکس</b>: استراتژی‌های ترکیبی اختیار معامله.</li>
-                </ul>
-              </div>
-              <div className="gcard">
-                <div className="gcard-t">شکار موقعیت‌ها</div>
-                <div className="gcard-p">این بخش به‌صورت خودکار موقعیت‌هایی را که ریسک واقعی (شوک واقعی) و بازده آن‌ها در آستانه‌های تعریف‌شده در تنظیمات هر استراتژی قرار دارد فهرست می‌کند. برای هر ردیف، با اسکن تابع سود/زیان، نزدیک‌ترین درصد تغییر قیمت سهم پایه (در هر دو جهت) که باعث ضرر می‌شود پیدا می‌شود؛ این عدد با «شوک لازم» (که خودتان تعیین می‌کنید) مقایسه می‌شود. برای موقعیت‌های جدید در تلگرام اعلان ارسال می‌شود.</div>
-              </div>
-              <div className="gcard">
-                <div className="gcard-t">فرمول تعدیل بازده به ۳۰ روز</div>
-                <div className="formula-box">
-                  بازده تعدیل‌شده = بازده خام × (۳۰ ÷ روز مانده تا سررسید)
-                </div>
-                <div className="gcard-p" style={{marginTop:6}}>
-                  این تعدیل برای مقایسه بازده قراردادهای با سررسیدهای متفاوت روی یک مبنای مشترک استفاده می‌شود. در جداول، ستون‌های قبل از خط‌چین عمودی بازده تعدیل‌شده و ستون‌های بعد از آن بازده واقعی (بدون تعدیل) تا سررسید هستند.
-                </div>
-              </div>
-              <div className="gcard">
-                <div className="gcard-t">قیمت دلخواه سهم پایه</div>
-                <div className="gcard-p">این تنظیم روی سرور ذخیره می‌شود، بین گوشی و رایانه‌ی شما مشترک است و روی همهٔ محاسبات (شامل دیده‌بان) و همچنین اعلان‌های تلگرام اثر می‌گذارد. سطرهایی که قیمت دستی روی آن‌ها اعمال شده با نماد ✎ و برچسب «دستی» مشخص می‌شوند.</div>
-              </div>
-              <div className="gcard">
-                <div className="gcard-t">نمودار سود/زیان</div>
-                <div className="gcard-p">روی هر سطر از جدول کلیک کنید تا پنجرهٔ نمودار سود/زیان باز شود.</div>
-              </div>
-              <div className="gcard">
-                <div className="gcard-t">فیلتر، مرتب‌سازی و ستون‌ها</div>
-                <div className="gcard-p">روی هر سرستون کلیک کنید تا مرتب شود؛ زیر ستون‌ها فیلتر عددی یا متنی وجود دارد. با کشیدن لبهٔ هر ستون می‌توان عرض آن را تغییر داد (ذخیره می‌شود). جعبهٔ جستجوی بالای صفحه هم‌زمان روی همهٔ تب‌ها فیلتر می‌کند.</div>
-              </div>
-              <div className="gcard">
-                <div className="gcard-t">خروجی Excel</div>
-                <div className="gcard-p">با دکمهٔ «اکسل» در هر جدول، داده‌های فیلترشدهٔ همان بخش به‌صورت فایل xlsx دانلود می‌شود.</div>
-              </div>
+          <div className="msec">
+            <div className="msec-t-row">
+              <span className="msec-t">{L.theme}</span>
             </div>
-          )}
+            <div className="theme-dots">
+              {THEMES.map(function(t){
+                return (
+                  <div key={t} className={"theme-dot"+(theme===t?" on":"")}
+                    style={{background:THEME_DOT_COLORS[t]}}
+                    role="button" tabIndex={0} title={THEME_NAMES[t]}
+                    onClick={function(){setTheme(t)}} onKeyDown={function(e){if(e.key==="Enter")setTheme(t)}} />
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mdiv" />
+
+          <div className="msec">
+            <div className="msec-t-row">
+              <span className="msec-t">{L.refreshIntervalLbl}</span>
+              <InfoToggle>{L.refreshIntervalHint}</InfoToggle>
+            </div>
+            <div className="inline-row">
+              <label className="toggle-switch">
+                <input type="checkbox" checked={autoRefreshEnabled} onChange={function(e){setAutoRefreshEnabled(e.target.checked)}} />
+                {L.autoRefreshLbl}
+              </label>
+              <NumberField className="step-input" value={refreshSec} min={MIN_REFRESH_SEC} max={MAX_REFRESH_SEC}
+                onCommit={function(v){setRefreshSec(v)}} ariaLabel={L.refreshIntervalLbl} disabled={!autoRefreshEnabled} />
+              <span className="step-hint">ثانیه</span>
+            </div>
+          </div>
+
+          <div className="mdiv" />
+
+          <BasisOverridesEditor overrides={overrides} onAdd={onAddOverride} onToggle={onToggleOverride}
+            onUpdatePrice={onUpdateOverridePrice} onRemove={onRemoveOverride}
+            basisNames={basisNames} basisSpotMap={basisSpotMap} />
+
+          <div className="mdiv" />
+
+          <div className="msec">
+            <div className="msec-t-row">
+              <span className="msec-t">{L.scenStepLbl}</span>
+              <InfoToggle>مقادیر ستون‌ها: {exampleSteps}</InfoToggle>
+            </div>
+            <div className="step-row">
+              <NumberField className="step-input" value={scenStep} min={0.5} max={50}
+                onCommit={function(v){updateSettings({scenStep:v},true)}} ariaLabel={L.scenStepLbl} />
+              <span className="step-hint">{L.scenarioStepHint}</span>
+            </div>
+          </div>
+
+          <div className="mdiv" />
+
+          <div className="msec">
+            <div className="msec-t-row">
+              <span className="msec-t">{L.dteSettingsTitle}</span>
+              <InfoToggle>{L.dteSettingsHint}</InfoToggle>
+            </div>
+            <div className="step-row">
+              <NumberField className="step-input" value={dteFilterMin} min={0} allowEmpty={true}
+                placeholder="حداقل" onCommit={function(v){updateSettings({dteFilterMin:v===""?"":String(v)},true)}} ariaLabel="حداقل روز تا سررسید" />
+              <span className="step-hint">تا</span>
+              <NumberField className="step-input" value={dteFilterMax} min={0} allowEmpty={true}
+                placeholder="حداکثر" onCommit={function(v){updateSettings({dteFilterMax:v===""?"":String(v)},true)}} ariaLabel="حداکثر روز تا سررسید" />
+            </div>
+          </div>
+
+          <div className="mdiv" />
+
+          <div className="msec">
+            <div className="msec-t-row">
+              <span className="msec-t">{L.checkIntervalLbl}</span>
+              <InfoToggle>{L.checkIntervalHint}</InfoToggle>
+            </div>
+            <div className="step-row">
+              <NumberField className="step-input" value={settings.checkIntervalSec} min={20} max={3600}
+                onCommit={function(v){updateSettings({checkIntervalSec:v},false)}} ariaLabel={L.checkIntervalLbl} />
+              <span className="step-hint">ثانیه</span>
+            </div>
+          </div>
         </div>
       </div>
     </React.Fragment>
@@ -2774,7 +2720,7 @@ function App(){
           ☰
           {activeOverrideCount>0?<span className="ov-indicator" title={activeOverrideCount+" سهم پایه با قیمت دستی فعال است"} />:null}
         </button>
-        <span className="brand-top">دیده‌بان اختیار معامله</span>
+        <span className="brand-top">استراتژیست آپشن</span>
         <div className="sp1" />
         <div className="search-box">
           <input type="text" className="search-input" placeholder="جستجوی نماد..."

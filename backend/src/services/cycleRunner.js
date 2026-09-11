@@ -2,16 +2,24 @@
 var Settings = require("../models/Settings");
 var BasisOverride = require("../models/BasisOverride");
 var CacheSnapshot = require("../models/CacheSnapshot");
+var HuntState = require("../models/HuntState");
 var { loadContracts } = require("./dataSource");
 var { computeAll, buildSteps, stripInternal } = require("./calcEngine");
 var { buildHuntRows, huntRowKey, BUYABLE_CHECK_TYPES } = require("./huntEngine");
 var { getFreshRows, markNotified } = require("./notifyGate");
 var { sendLongMessage } = require("./telegram");
-var { formatBatch } = require("./messageFormat");
+var { formatBatch, formatExitBatch } = require("./messageFormat");
 var { isMarketOpen } = require("./marketHours");
 
 var HUNT_CACHE_CAP = 300;
 var FAILURE_ALERT_THRESHOLD = 3;
+
+var HUNT_STATE_CAP = 2000;
+
+function strategyExitEnabled(type, settings) {
+  var src = (settings.huntStrategies && settings.huntStrategies[type]) || {};
+  return src.telegramExitEnabled !== false;
+}
 
 var cache = {
   updatedAt: null,
@@ -143,38 +151,96 @@ async function runCycle(opts) {
     var huntRows = buildHuntRows(computed, settings, steps);
     cache.huntLatest = { at: new Date(), rows: huntRows.slice(0, HUNT_CACHE_CAP) };
 
+    // ---------- شناسایی ورود/خروج از شکار ----------
+    var prevState = await HuntState.findOne({ ownerId: "default" }).lean();
+    var prevRows = (prevState && prevState.rows) || [];
+    var prevKeyMap = {};
+    prevRows.forEach(function (r) { prevKeyMap[huntRowKey(r)] = true; });
+    var currKeyMap = {};
+    huntRows.forEach(function (r) { currKeyMap[huntRowKey(r)] = true; });
+
+    var enteredKeySet = {};
+    huntRows.forEach(function (r) {
+      var k = huntRowKey(r);
+      if (!prevKeyMap[k]) enteredKeySet[k] = true;
+    });
+
+    var exitedRows = prevRows.filter(function (r) {
+      if (currKeyMap[huntRowKey(r)]) return false;
+      if ((r.dte || 0) <= 1) return false; // قراردادهای منقضی‌شده را نادیده بگیر
+      return true;
+    });
+
+    // ذخیره‌ی وضعیت جدید (مستقل از notify؛ تا در ری‌استارت‌ها هم درست کار کنه)
+    try {
+      await HuntState.findOneAndUpdate(
+        { ownerId: "default" },
+        { rows: huntRows.slice(0, HUNT_STATE_CAP), updatedAt: new Date() },
+        { upsert: true }
+      );
+    } catch (e) {
+      console.error("[cycle] خطا در ذخیره‌ی HuntState:", e.message);
+    }
+
     // موفقیت این چرخه => ریست شمارنده‌ی خطاهای پی‌درپی
     consecutiveFailures = 0;
     failureAlertSent = false;
 
-    // ذخیره‌ی نسخه‌ی پشتیبان کش در دیتابیس (برای بازیابی سریع بعد از ری‌استارت سرویس)
+    // ذخیره‌ی نسخه‌ی پشتیبان کش در دیتابیس
     await saveSnapshot();
 
+    // ---------- اعلان‌های تلگرام ----------
     if (notify && !isMarketOpen(new Date(), settings.manualHolidays)) {
       console.log("[cycle] خارج از ساعات بازار یا تعطیلی دستی است؛ اعلان تلگرام ارسال نشد.");
     } else if (notify) {
-      var forNotify = settings.huntOnlyBuyable
-        ? huntRows.filter(function (r) { return !BUYABLE_CHECK_TYPES[r.strategy_type] || r.basis_buyable !== false; })
-        : huntRows.slice();
-      forNotify = forNotify.filter(function (r) { return r.telegram_enabled !== false; });
+      var token = process.env.TELEGRAM_BOT_TOKEN;
+      var chatId = process.env.TELEGRAM_CHAT_ID;
 
-      var top = settings.huntTopNUnlimited ? forNotify : forNotify.slice(0, settings.huntTopN || 30);
-
-      if (top.length > 0) {
+      if (token && chatId) {
         var cooldownMs = settings.huntCooldownForever ? Infinity : (settings.huntCooldownMinutes || 720) * 60 * 1000;
-        var fresh = await getFreshRows(top, cooldownMs, "default", huntRowKey);
-        if (fresh.length > 0) {
-          var token = process.env.TELEGRAM_BOT_TOKEN;
-          var chatId = process.env.TELEGRAM_CHAT_ID;
-          if (token && chatId) {
-            try {
-              await sendLongMessage(token, chatId, formatBatch(fresh, steps));
-              // فقط بعد از ارسال موفق، به‌عنوان "اطلاع‌رسانی‌شده" ثبت می‌شود
-              await markNotified(fresh, "default", huntRowKey);
-              console.log("[cycle] " + fresh.length + " موقعیت جدید اطلاع‌رسانی شد.");
-            } catch (e) {
-              console.error("[cycle] خطا در ارسال تلگرام (ثبت نشد؛ در چرخه‌ی بعدی دوباره تلاش می‌شود):", e.message);
-            }
+
+        // برای اعلان ورود: استراتژی‌های دارای «اعلان خروج» → edge-triggered (فقط لحظهٔ ورود، بدون cooldown)
+        // استراتژی‌های بدون آن → رفتار قبلی (cooldown-based)
+        var forNotify = settings.huntOnlyBuyable
+          ? huntRows.filter(function (r) { return !BUYABLE_CHECK_TYPES[r.strategy_type] || r.basis_buyable !== false; })
+          : huntRows.slice();
+        forNotify = forNotify.filter(function (r) { return r.telegram_enabled !== false; });
+
+        var edgeEntryRows = [];
+        var cooldownEntryRows = [];
+        forNotify.forEach(function (r) {
+          if (strategyExitEnabled(r.strategy_type, settings)) {
+            if (enteredKeySet[huntRowKey(r)]) edgeEntryRows.push(r);
+          } else {
+            cooldownEntryRows.push(r);
+          }
+        });
+
+        var topEdge = settings.huntTopNUnlimited ? edgeEntryRows : edgeEntryRows.slice(0, settings.huntTopN || 30);
+        var topCooldown = settings.huntTopNUnlimited ? cooldownEntryRows : cooldownEntryRows.slice(0, settings.huntTopN || 30);
+        var freshCooldown = await getFreshRows(topCooldown, cooldownMs, "default", huntRowKey);
+        var entryToSend = topEdge.concat(freshCooldown);
+
+        var exitToSend = exitedRows.filter(function (r) {
+          return strategyExitEnabled(r.strategy_type, settings);
+        });
+
+        if (entryToSend.length > 0) {
+          try {
+            await sendLongMessage(token, chatId, formatBatch(entryToSend, steps));
+            await markNotified(entryToSend, "default", huntRowKey);
+            console.log("[cycle] " + entryToSend.length + " موقعیت جدید اطلاع‌رسانی شد.");
+          } catch (e) {
+            console.error("[cycle] خطا در ارسال تلگرام (ورود) — ثبت نشد؛ در چرخه‌ی بعدی دوباره تلاش می‌شود:", e.message);
+          }
+        }
+
+        if (exitToSend.length > 0) {
+          try {
+            await sendLongMessage(token, chatId, formatExitBatch(exitToSend, steps));
+            console.log("[cycle] " + exitToSend.length + " خروج از شکار اطلاع‌رسانی شد.");
+          } catch (e) {
+            console.error("[cycle] خطا در ارسال تلگرام (خروج):", e.message);
           }
         }
       }

@@ -65,5 +65,40 @@ function formatBatch(rows, steps) {
   var body = rows.map(function (r) { return formatRow(r, steps); }).join("\n\n———\n\n");
   return header + body;
 }
+function formatExitRow(r, steps) {
+  var lines = [];
+  lines.push("🔕 <b>" + (LABELS[r.strategy_type] || r.strategy_type) + "</b> از شکار خارج شد" + (r.is_straddle ? " (استرادل)" : ""));
+  lines.push("موقعیت: " + formatLegs(r.legs));
+  lines.push("سهم پایه: " + r.basis_name + "  |  سررسید: " + r.expiry + " (" + r.dte + " روز)");
 
-module.exports = { formatRow: formatRow, formatBatch: formatBatch };
+  var scenRaw = r.scenariosRaw || [];
+  if (NO_SHOCK_TYPES[r.strategy_type]) {
+    var val = scenRaw.find(function (v) { return v != null; });
+    lines.push("بازده (ثابت): " + fmt(val) + "٪");
+  } else if (r.is_straddle) {
+    lines.push("سود/زیان قبل از نوسان: " + fmt(r.roi_zero) + "٪");
+    lines.push("نوسان منفی لازم: " + fmt(r.actual_shock_down) + "٪  |  نوسان مثبت لازم: " + fmt(r.actual_shock_up) + "٪");
+  } else {
+    var parts = scenRaw.map(function (v, i) {
+      if (v == null) return null;
+      var stepPct = steps && steps[i] != null ? steps[i] : null;
+      var stepStr = stepPct != null ? ("تغییر " + (stepPct > 0 ? "+" : "") + fmt(stepPct, 1) + "٪: ") : "";
+      return stepStr + fmt(v) + "٪";
+    }).filter(Boolean);
+    lines.push("سناریوهای واقعی: " + parts.join(" | "));
+    lines.push("حداکثر نوسان مثبت مجاز: " + fmt(r.actual_shock_up) + "٪  |  حداکثر نوسان منفی مجاز: " + fmt(r.actual_shock_down) + "٪");
+  }
+  return lines.join("\n");
+}
+
+function formatExitBatch(rows, steps) {
+  var header = "🔕 " + rows.length + " استراتژی از شکار موقعیت‌ها خارج شد:\n\n";
+  var body = rows.map(function (r) { return formatExitRow(r, steps); }).join("\n\n———\n\n");
+  return header + body;
+}
+module.exports = {
+  formatRow: formatRow,
+  formatBatch: formatBatch,
+  formatExitRow: formatExitRow,
+  formatExitBatch: formatExitBatch
+};
