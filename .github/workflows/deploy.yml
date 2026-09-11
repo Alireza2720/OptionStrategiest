@@ -18,7 +18,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             set -e
-            cd ~/apps/option-hunter
+            cd ~/apps/OptionStrategiest
             git pull origin main
             npm install
             chmod -R o+rX frontend
