@@ -6,9 +6,9 @@ var HuntState = require("../models/HuntState");
 var { loadContracts } = require("./dataSource");
 var { computeAll, buildSteps, stripInternal } = require("./calcEngine");
 var { buildHuntRows, huntRowKey, BUYABLE_CHECK_TYPES } = require("./huntEngine");
-var { getFreshRows, markNotified } = require("./notifyGate");
-var { sendLongMessage } = require("./telegram");
-var { formatBatch, formatExitBatch } = require("./messageFormat");
+var { getFreshRows, markNotified, getNotificationByKey } = require("./notifyGate");
+var { sendLongMessage, editTelegramMessage } = require("./telegram");
+var { formatRow } = require("./messageFormat");
 var { isMarketOpen } = require("./marketHours");
 
 var HUNT_CACHE_CAP = 300;
@@ -225,22 +225,48 @@ async function runCycle(opts) {
           return strategyExitEnabled(r.strategy_type, settings);
         });
 
+        // --- ارسال پیام ورود: یک پیام مستقل برای هر موقعیت ---
         if (entryToSend.length > 0) {
-          try {
-            await sendLongMessage(token, chatId, formatBatch(entryToSend, steps));
-            await markNotified(entryToSend, "default", huntRowKey);
-            console.log("[cycle] " + entryToSend.length + " موقعیت جدید اطلاع‌رسانی شد.");
-          } catch (e) {
-            console.error("[cycle] خطا در ارسال تلگرام (ورود) — ثبت نشد؛ در چرخه‌ی بعدی دوباره تلاش می‌شود:", e.message);
+          var sentRows = [];
+          var messageIds = {};
+          for (var i = 0; i < entryToSend.length; i++) {
+            var row = entryToSend[i];
+            var key = huntRowKey(row);
+            try {
+              var text = formatRow(row, steps);
+              var result = await sendLongMessage(token, chatId, text);
+              var mid = result && result.result && result.result.message_id;
+              if (mid != null) messageIds[key] = mid;
+              sentRows.push(row);
+            } catch (e) {
+              console.error("[cycle] خطا در ارسال تلگرام برای " + key + ": " + e.message);
+            }
+          }
+          if (sentRows.length > 0) {
+            await markNotified(sentRows, "default", huntRowKey, messageIds);
+            console.log("[cycle] " + sentRows.length + " موقعیت جدید اطلاع‌رسانی شد.");
           }
         }
 
+        // --- ویرایش پیام خروج: همون پیام ورود با استرایک‌ثرو ---
         if (exitToSend.length > 0) {
-          try {
-            await sendLongMessage(token, chatId, formatExitBatch(exitToSend, steps));
-            console.log("[cycle] " + exitToSend.length + " خروج از شکار اطلاع‌رسانی شد.");
-          } catch (e) {
-            console.error("[cycle] خطا در ارسال تلگرام (خروج):", e.message);
+          var editedCount = 0;
+          for (var j = 0; j < exitToSend.length; j++) {
+            var er = exitToSend[j];
+            var ekey = huntRowKey(er);
+            try {
+              var existing = await getNotificationByKey(ekey, "default");
+              if (existing && existing.messageId) {
+                var exitText = formatRow(er, steps, { isExit: true });
+                await editTelegramMessage(token, chatId, existing.messageId, exitText);
+                editedCount++;
+              }
+            } catch (e) {
+              console.error("[cycle] خطا در ویرایش تلگرام برای " + ekey + ": " + e.message);
+            }
+          }
+          if (editedCount > 0) {
+            console.log("[cycle] " + editedCount + " خروج از شکار اطلاع‌رسانی شد.");
           }
         }
       }

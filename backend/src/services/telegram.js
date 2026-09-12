@@ -19,6 +19,26 @@ async function sendTelegramMessage(token, chatId, text) {
   return json;
 }
 
+async function editTelegramMessage(token, chatId, messageId, text) {
+  var url = "https://api.telegram.org/bot" + token + "/editMessageText";
+  var res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text: text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true
+    })
+  });
+  var json = await res.json().catch(function () { return {}; });
+  if (!res.ok || !json.ok) {
+    throw new Error("Telegram edit error: " + (json.description || res.status));
+  }
+  return json;
+}
+
 // تلگرام هر پیام را حداکثر ۴۰۹۶ کاراکتر می‌پذیرد؛ اگر طولانی بود تکه‌تکه می‌فرستیم
 async function sendLongMessage(token, chatId, text) {
   var LIMIT = 3500;
@@ -36,9 +56,14 @@ async function sendLongMessage(token, chatId, text) {
     cur += line + "\n";
   });
   if (cur) parts.push(cur);
+  var last = null;
   for (var i = 0; i < parts.length; i++) {
-    await sendTelegramMessage(token, chatId, parts[i]);
+    last = await sendTelegramMessage(token, chatId, parts[i]);
   }
+  return last;
 }
 
-module.exports = { sendLongMessage: sendLongMessage };
+module.exports = {
+  sendLongMessage: sendLongMessage,
+  editTelegramMessage: editTelegramMessage
+};

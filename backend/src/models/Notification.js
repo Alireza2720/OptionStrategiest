@@ -4,7 +4,8 @@ var mongoose = require("mongoose");
 var NotificationSchema = new mongoose.Schema({
   ownerId: { type: String, default: "default", index: true },
   key: { type: String, required: true },
-  lastNotifiedAt: { type: Date, default: Date.now }
+  lastNotifiedAt: { type: Date, default: Date.now },
+  messageId: { type: Number, default: null }
 });
 
 NotificationSchema.index({ ownerId: 1, key: 1 }, { unique: true });

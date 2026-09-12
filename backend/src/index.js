@@ -24,15 +24,25 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 
-// محدودیت نرخ عمومی برای همه‌ی مسیرهای API
-var generalLimiter = rateLimit({
+// محدودیت نرخ: خواندن و نوشتن جدا
+var readLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { ok: false, error: "too many read requests" }
+});
+var writeLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { ok: false, error: "too many requests" }
+  message: { ok: false, error: "too many write requests" }
 });
-app.use("/api", generalLimiter, apiRouter);
+app.use("/api", function (req, res, next) {
+  if (req.method === "GET") return readLimiter(req, res, next);
+  return writeLimiter(req, res, next);
+}, apiRouter);
 
 app.get("/", function (req, res) {
   res.json({ ok: true, service: "option-hunter-backend" });

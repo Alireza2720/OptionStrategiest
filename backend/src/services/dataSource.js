@@ -17,10 +17,16 @@ function parsePriceVol(str) {
 }
 
 function isStockInBuyQueue(lastPct, closePct) {
-  if (lastPct == null || isNaN(lastPct) || lastPct < 2.66) return false;
-  if (lastPct > 3.01 && lastPct < 3.74) return false;
-  if (lastPct >= 2.89) return true;
-  return lastPct >= 2.66 && closePct != null && !isNaN(closePct) && lastPct === closePct;
+  if (lastPct == null || isNaN(lastPct)) return false;
+  // صف خرید قطعی: 2.77 تا 3 یا 3.77 تا 4
+  if (lastPct >= 2.77 && lastPct <= 3) return true;
+  if (lastPct >= 3.77 && lastPct <= 4) return true;
+  // محدوده مشکوک 2.66 تا 2.76: فقط اگر آخرین == پایانی
+  if (lastPct >= 2.66 && lastPct <= 2.76) {
+    if (closePct == null || isNaN(closePct)) return false;
+    return lastPct === closePct;
+  }
+  return false;
 }
 
 var TARGET_URL = "https://s3.optionschool24.com/last?type=3";

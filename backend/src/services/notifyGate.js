@@ -22,15 +22,17 @@ async function getFreshRows(rows, cooldownMs, ownerId, huntRowKeyFn) {
 }
 
 // فقط بعد از ارسال موفق پیام تلگرام باید صدا زده شود
-async function markNotified(rows, ownerId, huntRowKeyFn) {
+async function markNotified(rows, ownerId, huntRowKeyFn, messageIds) {
   if (!rows || rows.length === 0) return;
   var now = new Date();
   var ops = rows.map(function (row) {
     var key = huntRowKeyFn(row);
+    var setFields = { lastNotifiedAt: now };
+    if (messageIds && messageIds[key] != null) setFields.messageId = messageIds[key];
     return {
       updateOne: {
         filter: { ownerId: ownerId, key: key },
-        update: { $set: { lastNotifiedAt: now } },
+        update: { $set: setFields },
         upsert: true
       }
     };
@@ -38,4 +40,12 @@ async function markNotified(rows, ownerId, huntRowKeyFn) {
   await Notification.bulkWrite(ops);
 }
 
-module.exports = { getFreshRows: getFreshRows, markNotified: markNotified };
+async function getNotificationByKey(key, ownerId) {
+  return Notification.findOne({ ownerId: ownerId, key: key }).lean();
+}
+
+module.exports = {
+  getFreshRows: getFreshRows,
+  markNotified: markNotified,
+  getNotificationByKey: getNotificationByKey
+};

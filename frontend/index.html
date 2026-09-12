@@ -351,12 +351,11 @@ huntOnlyBuyableLbl:"استراتژی سهم پایه‌محور قابل خری�
   checkIntervalLbl:"فاصلهٔ اجرای خودکار سرور",
   checkIntervalHint:"این مقدار تعیین می‌کند سرور هر چند ثانیه یک‌بار به‌صورت داخلی چرخهٔ محاسبه/اعلان تلگرام را اجرا کند.",
   applying:"در حال اعمال تغییرات روی سرور...",
-  wakingUp:"سرویس سمت سرور در حال بیدار شدن است؛ ممکن است تا ۵۰ ثانیه طول بکشد...",
 shockRateShort:"نوسان/روز",profitRateShort:"سود/روز",telegramShort:"تلگرام",  hoursShort:"ساعت",minutesShort:"دقیقه",
 telegramEntryShort:"ورود",telegramExitShort:"خروج",
 actualShockUpCol:"نوسان مثبت واقعی",actualShockDownCol:"نوسان منفی واقعی",minShockCol:"حداقل نوسان واقعی",
 requiredShockCol:"نوسان لازم",requiredProfitCol:"آستانهٔ سود لازم",roiZeroCol:"بازده صفر",
-straddleMinPnlLbl:"کف سود/زیان قبل از نوسان",straddleReqDownLbl:"نوسان منفی لازم",straddleReqUpLbl:"نوسان مثبت لازم",
+  straddleMinPnlLbl:"کف سود/زیان قبل از نوسان",straddleReqDownLbl:"حداکثر نوسان لازم (منفی)",straddleReqUpLbl:"حداکثر نوسان لازم (مثبت)",
 huntDteLbl:"روز تا سررسید",
   holidayOnLbl:"امروز تعطیل رسمی است (پیامی ارسال نمی‌شود)",
   holidayOffLbl:"علامت‌گذاری امروز به‌عنوان تعطیل رسمی",
@@ -2492,7 +2491,6 @@ function App(){
   var stSearch=useState("");var globalSearch=stSearch[0],setGlobalSearch=stSearch[1];
 
   var stRefreshing=useState(false);var refreshing=stRefreshing[0],setRefreshing=stRefreshing[1];
-  var stWakeHint=useState(false);var wakeHint=stWakeHint[0],setWakeHint=stWakeHint[1];
   var stApplying=useState(false);var applying=stApplying[0],setApplying=stApplying[1];
   var stGlobalErr=useState(null);var globalError=stGlobalErr[0],setGlobalError=stGlobalErr[1];
 
@@ -2566,14 +2564,11 @@ function App(){
   function handleManualRefresh(){
     setRefreshing(true);
     setGlobalError(null);
-    var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
     Api.refresh().then(function(){
       return reloadCurrentTab();
     }).catch(function(e){
       setGlobalError("خطا در بروزرسانی: "+e.message);
     }).finally(function(){
-      clearTimeout(wakeTimer);
-      setWakeHint(false);
       setRefreshing(false);
     });
   }
@@ -2603,8 +2598,7 @@ function App(){
     Api.postSettings(partial).then(function(saved){
       setSettings(saved);
       if(needsRefresh){
-        var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
-        return Api.refresh().then(reloadCurrentTab).finally(function(){clearTimeout(wakeTimer);setWakeHint(false)});
+        return Api.refresh().then(reloadCurrentTab);
       }
     }).catch(function(e){
       setGlobalError("خطا در ذخیره تنظیمات: "+e.message);
@@ -2615,12 +2609,11 @@ function App(){
   /* ---------- قیمت دلخواه سهم پایه ---------- */
   function afterOverrideChange(){
     setApplying(true);
-    var wakeTimer=setTimeout(function(){setWakeHint(true)},6000);
     return loadOverrides().then(function(){
       return Api.refresh();
     }).then(reloadCurrentTab).catch(function(e){
       setGlobalError("خطا در اعمال تغییرات: "+e.message);
-    }).finally(function(){clearTimeout(wakeTimer);setWakeHint(false);setApplying(false)});
+    }).finally(function(){setApplying(false)});
   }
   function handleAddOverride(name,price){
     Api.postOverride({name:name,price:price,enabled:true}).then(afterOverrideChange)
@@ -2740,7 +2733,6 @@ function App(){
         <button className="rbtn" onClick={handleManualRefresh} disabled={refreshing} aria-label={L.refresh} title={L.refresh}>↻</button>
       </div>
 
-      {wakeHint?<div className="busy-banner">{L.wakingUp}</div>:null}
       {globalError?(
         <div className="stale-banner">{globalError} <button className="cbtn" style={{marginRight:8}} onClick={function(){setGlobalError(null)}}>باشه</button></div>
       ):null}
@@ -2766,7 +2758,7 @@ function App(){
       <div className="cnt">
         {tab==="watch"?(
           !watchTabData&&!tabError.watch?(
-            <div className="center"><div className="spinner" role="status" aria-label="در حال بارگذاری" /><span>در حال اتصال به سرور... (ممکن است در اولین بار تا ۵۰ ثانیه طول بکشد)</span></div>
+            <div className="center"><div className="spinner" role="status" aria-label="در حال بارگذاری" /><span>در حال دریافت داده از سرور...</span></div>
           ):tabError.watch&&!watchTabData?(
             <div className="center">
               <div className="error-box">

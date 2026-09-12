@@ -39,6 +39,47 @@ function computeThreshold(mode, rateValue, floorValue) {
 // اسکن خشن + تنصیف بازه برای پیدا کردن نزدیک‌ترین درصد نوسان (در یک جهت) که ROI را منفی می‌کند
 var SHOCK_SENTINEL = 999999; // به‌جای Infinity، چون در JSON سریالایز نمی‌شود
 
+// پیمایش کل نمودار برای یافتن کمترین ROI (کف گودال)
+function findMinRoi(payoffFn) {
+  var minRoi = payoffFn(0);
+  for (var i = 0; i < SCAN_POINTS.length; i++) {
+    var up = SCAN_POINTS[i];
+    var down = Math.min(SCAN_POINTS[i], 99);
+    var upRoi = payoffFn(up);
+    var downRoi = payoffFn(-down);
+    if (upRoi < minRoi) minRoi = upRoi;
+    if (downRoi < minRoi) minRoi = downRoi;
+  }
+  return minRoi;
+}
+
+// از قیمت فعلی، چقدر (%) حرکت لازمه تا ROI به صفر (ابتدای سود) برسه
+function findShockToZero(payoffFn, sign) {
+  var roi0 = payoffFn(0);
+  if (Math.abs(roi0) < 1e-9) return 0;
+  var needPositive = roi0 < 0; // اگر الان منفیه، دنبال عبور به مثبتیم
+  var prevPct = 0;
+  for (var i = 0; i < SCAN_POINTS.length; i++) {
+    var mag = sign === 1 ? SCAN_POINTS[i] : Math.min(SCAN_POINTS[i], 99);
+    var pct = sign * mag;
+    var roi = payoffFn(pct);
+    var reached = needPositive ? roi >= 0 : roi <= 0;
+    if (reached) {
+      var lo = prevPct, hi = pct;
+      for (var iter = 0; iter < 40; iter++) {
+        var mid = (lo + hi) / 2;
+        var midRoi = payoffFn(mid);
+        if (needPositive ? midRoi >= 0 : midRoi <= 0) hi = mid;
+        else lo = mid;
+      }
+      return Math.abs(hi);
+    }
+    prevPct = pct;
+    if (sign === -1 && mag >= 99) break;
+  }
+  return SHOCK_SENTINEL;
+}
+
 function findShockThreshold(payoffFn, sign) {
   var roi0 = payoffFn(0);
   if (roi0 < 0) return 0;
@@ -130,18 +171,20 @@ function buildHuntRows(computed, settings, steps) {
       var roiZero = parseFloat(r.roi_zero);
       if (isNaN(roiZero)) return;
 
-      var isStraddle = type === "strangle" && r.strangle_type === "استرادل";
+      var isStrangleTab = type === "strangle";
+      var isActuallyStraddle = isStrangleTab && r.strangle_type === "استرادل";
 
       var requiredShock = null, requiredProfit = null,
-        actualShockUp = null, actualShockDown = null, minShock = null;
+        actualShockUp = null, actualShockDown = null, minShock = null, minPnl = null;
 
-      if (isStraddle) {
-        actualShockUp = findShockThreshold(r._payoff, 1);
-        actualShockDown = findShockThreshold(r._payoff, -1);
-        minShock = Math.min(actualShockUp, actualShockDown);
-        if (roiZero < cfg.straddleMinPnl) return;
-        if (actualShockDown < cfg.straddleReqShockDown) return;
-        if (actualShockUp < cfg.straddleReqShockUp) return;
+      if (isStrangleTab) {
+        minPnl = findMinRoi(r._payoff);
+        actualShockUp = findShockToZero(r._payoff, 1);
+        actualShockDown = findShockToZero(r._payoff, -1);
+        minShock = Math.max(actualShockUp, actualShockDown);
+        if (minPnl < cfg.straddleMinPnl) return;
+        if (actualShockDown > cfg.straddleReqShockDown) return;
+        if (actualShockUp > cfg.straddleReqShockUp) return;
       } else {
         requiredProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
         if (roiZero < requiredProfit) return;
@@ -172,7 +215,8 @@ function buildHuntRows(computed, settings, steps) {
         actual_shock_up: actualShockUp == null ? null : Math.round(actualShockUp * 100) / 100,
         actual_shock_down: actualShockDown == null ? null : Math.round(actualShockDown * 100) / 100,
         min_shock: minShock == null ? null : Math.round(minShock * 100) / 100,
-        is_straddle: !!isStraddle,
+        min_pnl: minPnl == null ? null : Math.round(minPnl * 100) / 100,
+        is_straddle: isActuallyStraddle,
         telegram_enabled: cfg.telegramEnabled,
         basis_buyable: r.basis_buyable,
         buyable_checked: !!BUYABLE_CHECK_TYPES[type],
