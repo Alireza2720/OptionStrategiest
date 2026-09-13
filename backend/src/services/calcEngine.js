@@ -274,7 +274,10 @@ function calcCallSpread(calls, steps, bull) {
         if (!canBuyOpt(buy) || !canSellOpt(sell)) continue;
         var sz = buy.size;
         var netCost = buy.ask_price - sell.bid_price;
-        var base = bull ? netCost * sz : Math.abs(buy.strike - sell.strike) * sz;
+        var width = Math.abs(buy.strike - sell.strike);
+        // اسپرد بدهی (netCost > 0): مبنا = بدهی پرداختی
+        // اسپرد اعتباری (netCost <= 0): مبنا = حداکثر زیان = عرض − اعتبار
+        var base = netCost > 0 ? netCost * sz : (width + netCost) * sz;
         if (base <= 0) continue;
         (function (buy, sell, sz, netCost, base) {
           function payoff(pct) {
@@ -324,7 +327,10 @@ function calcPutSpread(puts, steps, bull) {
         if (!canBuyOpt(buy) || !canSellOpt(sell)) continue;
         var sz = buy.size;
         var netCost = buy.ask_price - sell.bid_price;
-        var base = bull ? Math.abs(buy.strike - sell.strike) * sz : netCost * sz;
+        var width = Math.abs(buy.strike - sell.strike);
+        // اسپرد بدهی (netCost > 0): مبنا = بدهی پرداختی
+        // اسپرد اعتباری (netCost <= 0): مبنا = حداکثر زیان = عرض − اعتبار
+        var base = netCost > 0 ? netCost * sz : (width + netCost) * sz;
         if (base <= 0) continue;
         (function (buy, sell, sz, netCost, base) {
           function payoff(pct) {

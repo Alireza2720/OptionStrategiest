@@ -56,26 +56,29 @@ function findMinRoi(payoffFn) {
 // از قیمت فعلی، چقدر (%) حرکت لازمه تا ROI به صفر (ابتدای سود) برسه
 function findShockToZero(payoffFn, sign) {
   var roi0 = payoffFn(0);
-  if (Math.abs(roi0) < 1e-9) return 0;
+  if (!isFinite(roi0)) return SHOCK_SENTINEL;
+  if (Math.abs(roi0) < 1e-6) return 0;
   var needPositive = roi0 < 0; // اگر الان منفیه، دنبال عبور به مثبتیم
+  var maxPct = sign === 1 ? 500 : 99;
+  var step = 0.1;
   var prevPct = 0;
-  for (var i = 0; i < SCAN_POINTS.length; i++) {
-    var mag = sign === 1 ? SCAN_POINTS[i] : Math.min(SCAN_POINTS[i], 99);
-    var pct = sign * mag;
-    var roi = payoffFn(pct);
+  for (var pct = step; pct <= maxPct + 1e-9; pct += step) {
+    var signed = sign * pct;
+    var roi = payoffFn(signed);
+    if (!isFinite(roi)) { prevPct = pct; continue; }
     var reached = needPositive ? roi >= 0 : roi <= 0;
     if (reached) {
       var lo = prevPct, hi = pct;
-      for (var iter = 0; iter < 40; iter++) {
+      for (var iter = 0; iter < 60; iter++) {
         var mid = (lo + hi) / 2;
-        var midRoi = payoffFn(mid);
-        if (needPositive ? midRoi >= 0 : midRoi <= 0) hi = mid;
+        var midRoi = payoffFn(sign * mid);
+        var midReached = needPositive ? midRoi >= 0 : midRoi <= 0;
+        if (midReached) hi = mid;
         else lo = mid;
       }
-      return Math.abs(hi);
+      return hi;
     }
     prevPct = pct;
-    if (sign === -1 && mag >= 99) break;
   }
   return SHOCK_SENTINEL;
 }
@@ -117,29 +120,45 @@ function nameFor(type, row) {
 
 // اطلاعات هر پایهٔ قرارداد؛ برای نمایش/کپی جداگانهٔ هرکدام در پیام تلگرام استفاده می‌شود
 function legsFor(type, row) {
-  if (type === "cc") return [{ label: "فروش", name: row.name }];
-  if (type === "mp") return [{ label: "خرید", name: row.name }];
+  if (type === "cc") {
+    return [{ label: "فروش", name: row.name, price: row.bid_price }];
+  }
+  if (type === "mp") {
+    return [{ label: "خرید", name: row.name, price: row.ask_price }];
+  }
   if (type === "co" || type === "cv") {
-    return [{ label: "خرید پوت", name: row.put_name }, { label: "فروش کال", name: row.call_name }];
+    return [
+      { label: "خرید پوت", name: row.put_name, price: row.ask_price },
+      { label: "فروش کال", name: row.call_name, price: row.bid_price }
+    ];
   }
   if (type === "strangle") {
-    return [{ label: "خرید پوت", name: row.put_name }, { label: "خرید کال", name: row.call_name }];
+    return [
+      { label: "خرید پوت", name: row.put_name, price: row.put_ask_price },
+      { label: "خرید کال", name: row.call_name, price: row.call_ask_price }
+    ];
   }
   if (type === "strangleSell") {
-    return [{ label: "فروش پوت", name: row.put_name }, { label: "فروش کال", name: row.call_name }];
+    return [
+      { label: "فروش پوت", name: row.put_name, price: row.put_bid_price },
+      { label: "فروش کال", name: row.call_name, price: row.call_bid_price }
+    ];
   }
   if (type === "callspread" || type === "callspreadbear" || type === "putspread" || type === "putspreadbull") {
-    return [{ label: "خرید", name: row.buy_name }, { label: "فروش", name: row.sell_name }];
+    return [
+      { label: "خرید", name: row.buy_name, price: row.buy_ask_price },
+      { label: "فروش", name: row.sell_name, price: row.sell_bid_price }
+    ];
   }
   if (type === "box") {
     return [
-      { label: "خرید", name: row.call_buy_name },
-      { label: "فروش", name: row.call_sell_name },
-      { label: "خرید", name: row.put_buy_name },
-      { label: "فروش", name: row.put_sell_name }
+      { label: "خرید", name: row.call_buy_name, price: row.call_buy_ask_price },
+      { label: "فروش", name: row.call_sell_name, price: row.call_sell_bid_price },
+      { label: "خرید", name: row.put_buy_name, price: row.put_buy_ask_price },
+      { label: "فروش", name: row.put_sell_name, price: row.put_sell_bid_price }
     ];
   }
-  return [{ label: "", name: row.name || "" }];
+  return [{ label: "", name: row.name || "", price: null }];
 }
 
 function dteInRange(dte, minStr, maxStr) {

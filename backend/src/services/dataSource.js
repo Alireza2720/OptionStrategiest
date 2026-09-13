@@ -21,10 +21,11 @@ function isStockInBuyQueue(lastPct, closePct) {
   // صف خرید قطعی: 2.77 تا 3 یا 3.77 تا 4
   if (lastPct >= 2.77 && lastPct <= 3) return true;
   if (lastPct >= 3.77 && lastPct <= 4) return true;
-  // محدوده مشکوک 2.66 تا 2.76: فقط اگر آخرین == پایانی
+  // محدوده مشکوک 2.66 تا 2.76: فقط اگر آخرین == پایانی (با تحمل اعشار)
   if (lastPct >= 2.66 && lastPct <= 2.76) {
     if (closePct == null || isNaN(closePct)) return false;
-    return lastPct === closePct;
+    // گرد کردن به دو رقم اعشار قبل از مقایسه (رفع float precision)
+    return Math.round(lastPct * 100) === Math.round(closePct * 100);
   }
   return false;
 }

@@ -42,10 +42,21 @@ function formatRow(r, steps, opts) {
     var lbl = leg.label ? leg.label + ": " : "";
     var nameHtml = "<code>" + escapeHtml(leg.name) + "</code>";
     if (isExit) nameHtml = "<s>" + nameHtml + "</s>";
-    lines.push("   • " + lbl + nameHtml);
+    var priceStr = (leg.price != null && leg.price > 0) ? "  ·  سرخط: <b>" + fmt(leg.price, 0) + "</b>" : "";
+    lines.push("   • " + lbl + nameHtml + priceStr);
   });
   lines.push("   • سهم پایه: <b>" + escapeHtml(r.basis_name || "") + "</b>");
   lines.push("   • سررسید: " + escapeHtml(String(r.expiry || "")) + "  ·  " + (r.dte != null ? r.dte + " روز" : "—"));
+
+  // برای استراتژی‌های سهم‌محور، درصد آخرین و پایانی سهم پایه
+  if (["cc", "mp", "co", "cv"].indexOf(r.strategy_type) !== -1) {
+    if (r.basis_last_percent != null && !isNaN(r.basis_last_percent)) {
+      lines.push("   • درصد آخرین سهم پایه: <b>" + fmtSigned(r.basis_last_percent, 2, "٪") + "</b>");
+    }
+    if (r.basis_close_percent != null && !isNaN(r.basis_close_percent)) {
+      lines.push("   • درصد پایانی سهم پایه: <b>" + fmtSigned(r.basis_close_percent, 2, "٪") + "</b>");
+    }
+  }
 
   var scenRaw = r.scenariosRaw || [];
 
@@ -54,7 +65,17 @@ function formatRow(r, steps, opts) {
     lines.push("📊 <b>بازده (ثابت)</b>");
     var val = scenRaw.find(function (v) { return v != null; });
     lines.push("   " + fmtSigned(val, 1, "٪"));
-  } else if (r.strategy_type === "strangle") {
+  } else if (r.strategy_type === "strangle" && r.is_straddle === false) {
+    // استرانگل خرید (شامل استرانگل و گاتس، نه استرادل)
+    lines.push("");
+    lines.push("📊 <b>کف سود/زیان قبل از نوسان</b>");
+    lines.push("   " + fmtSigned(r.min_pnl, 1, "٪"));
+    lines.push("");
+    lines.push("🛡 <b>حداکثر نوسان لازم</b>");
+    lines.push("   ↗ مثبت: <b>" + fmtSigned(r.actual_shock_up, 1, "٪") + "</b>");
+    lines.push("   ↘ منفی: <b>-" + fmt(r.actual_shock_down, 1) + "٪</b>");
+  } else if (r.strategy_type === "strangle" && r.is_straddle === true) {
+    // استرادل خرید
     lines.push("");
     lines.push("📊 <b>کف سود/زیان قبل از نوسان</b>");
     lines.push("   " + fmtSigned(r.min_pnl, 1, "٪"));
@@ -63,6 +84,7 @@ function formatRow(r, steps, opts) {
     lines.push("   ↗ مثبت: <b>" + fmtSigned(r.actual_shock_up, 1, "٪") + "</b>");
     lines.push("   ↘ منفی: <b>-" + fmt(r.actual_shock_down, 1) + "٪</b>");
   } else {
+    // cc, mp, co, cv, strangleSell, callspread, callspreadbear, putspread, putspreadbull, box
     lines.push("");
     lines.push("📊 <b>سناریوها</b>");
     if (steps && scenRaw.length > 0) {

@@ -135,6 +135,18 @@ async function runCycle(opts) {
     var steps = buildSteps(settings.scenStep);
     var computed = computeAll(calls, puts, steps);
 
+    // نقشه‌ی سهم پایه → {درصد آخرین، درصد پایانی}
+    var basisPctMap = {};
+    allWithOverrides.forEach(function (c) {
+      if (!c.basis_name) return;
+      if (!basisPctMap[c.basis_name]) {
+        basisPctMap[c.basis_name] = {
+          last: c.basis_last_percent,
+          close: c.basis_close_percent
+        };
+      }
+    });
+
     cache.watch = allWithOverrides;
 
     var cleanStrategies = {};
@@ -232,9 +244,14 @@ async function runCycle(opts) {
           for (var i = 0; i < entryToSend.length; i++) {
             var row = entryToSend[i];
             var key = huntRowKey(row);
-            try {
-              var text = formatRow(row, steps);
-              var result = await sendLongMessage(token, chatId, text);
+          try {
+            var bp = basisPctMap[row.basis_name] || {};
+            var enrichedRow = Object.assign({}, row, {
+              basis_last_percent: bp.last != null ? bp.last : null,
+              basis_close_percent: bp.close != null ? bp.close : null
+            });
+            var text = formatRow(enrichedRow, steps);
+            var result = await sendLongMessage(token, chatId, text);
               var mid = result && result.result && result.result.message_id;
               if (mid != null) messageIds[key] = mid;
               sentRows.push(row);
@@ -257,7 +274,12 @@ async function runCycle(opts) {
             try {
               var existing = await getNotificationByKey(ekey, "default");
               if (existing && existing.messageId) {
-                var exitText = formatRow(er, steps, { isExit: true });
+                var ebp = basisPctMap[er.basis_name] || {};
+                var enrichedEr = Object.assign({}, er, {
+                  basis_last_percent: ebp.last != null ? ebp.last : null,
+                  basis_close_percent: ebp.close != null ? ebp.close : null
+                });
+                var exitText = formatRow(enrichedEr, steps, { isExit: true });
                 await editTelegramMessage(token, chatId, existing.messageId, exitText);
                 editedCount++;
               }
