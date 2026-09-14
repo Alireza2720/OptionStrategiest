@@ -208,5 +208,45 @@ router.get("/debug/strangle-raw", async function (req, res) {
     res.status(500).json({ ok: false, error: e.message });
   }
 });
+// ⚠️ Endpoint موقت دیباگ — بعد از رفع باگ صف خرید حذف شود
+router.get("/debug/basis-raw", async function (req, res) {
+  try {
+    var { loadContracts } = require("../services/dataSource");
+    var data = await loadContracts();
 
+    var seen = {};
+    var sample = [];
+    data.all.forEach(function (c) {
+      if (!c.basis_name || seen[c.basis_name]) return;
+      seen[c.basis_name] = true;
+      sample.push({
+        basis_name: c.basis_name,
+        spot: c.spot,
+        spot_original: c.spot_original,
+        spot_overridden: c.spot_overridden,
+        basis_last_percent: c.basis_last_percent,
+        basis_close_percent: c.basis_close_percent,
+        basis_buyable: c.basis_buyable
+      });
+    });
+
+    // فقط اون‌هایی که درصد مشکوکه (نزدیک 3 یا 4 ولی قابل خرید تشخیص داده شدن)
+    var suspicious = sample.filter(function (s) {
+      var lp = s.basis_last_percent;
+      if (lp == null || isNaN(lp)) return false;
+      var nearCeiling = (lp >= 2.5 && lp <= 3.2) || (lp >= 3.5 && lp <= 4.2);
+      return nearCeiling && s.basis_buyable === true;
+    });
+
+    res.json({
+      ok: true,
+      total: sample.length,
+      suspicious_count: suspicious.length,
+      suspicious: suspicious,
+      all_sample: sample.slice(0, 100)
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 module.exports = router;
