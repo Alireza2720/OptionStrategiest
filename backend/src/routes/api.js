@@ -161,5 +161,52 @@ router.post("/market/today/toggle-holiday", requireApiKey, async function (req, 
   await settings.save();
   res.json({ ok: true, todayKey: todayKey, isHoliday: willBeHoliday, settings: settings });
 });
+// ⚠️ Endpoint موقت دیباگ — بعد از رفع باگ استرانگل حذف شود
+router.get("/debug/strangle-raw", async function (req, res) {
+  try {
+    var { loadContracts } = require("../services/dataSource");
+    var { computeAll, buildSteps } = require("../services/calcEngine");
+
+    var settings = await Settings.findOne({ ownerId: "default" });
+    if (!settings) settings = await Settings.create({ ownerId: "default" });
+
+    var data = await loadContracts();
+    var steps = buildSteps(settings.scenStep);
+    var computed = computeAll(data.calls, data.puts, steps);
+
+    var rows = computed.strangle || [];
+    var probes = [0, 0.1, -0.1, 0.5, -0.5, 1, -1, 5, -5, 10, -10, 20, -20, 50, -50, 99, -99, 200, -99];
+
+    var sample = rows.slice(0, 5).map(function (r) {
+      if (typeof r._payoff !== "function") return { error: "no _payoff function" };
+      var probeResults = probes.map(function (p) {
+        var roi;
+        try { roi = r._payoff(p); } catch (e) { roi = "ERR:" + e.message; }
+        return { pct: p, roi: roi };
+      });
+      return {
+        call_name: r.call_name,
+        put_name: r.put_name,
+        basis_name: r.basis_name,
+        k_call: r.k_call,
+        k_put: r.k_put,
+        spot: r.spot,
+        dte: r.dte,
+        size: r.size,
+        total_cost: r.total_cost,
+        roi_zero: r.roi_zero,
+        strangle_type: r.strangle_type,
+        call_ask_price: r.call_ask_price,
+        put_ask_price: r.put_ask_price,
+        scenariosRaw: r.scenariosRaw,
+        probes: probeResults
+      };
+    });
+
+    res.json({ ok: true, count: rows.length, sample: sample });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 module.exports = router;

@@ -65,17 +65,18 @@ function formatRow(r, steps, opts) {
     lines.push("📊 <b>بازده (ثابت)</b>");
     var val = scenRaw.find(function (v) { return v != null; });
     lines.push("   " + fmtSigned(val, 1, "٪"));
-  } else if (r.strategy_type === "strangle" && r.is_straddle === false) {
-    // استرانگل خرید (شامل استرانگل و گاتس، نه استرادل)
+  } else if (r.strategy_type === "strangle") {
+    // استرادل، استرانگل، گاتس — همه یک شکل
     lines.push("");
-    lines.push("📊 <b>کف سود/زیان قبل از نوسان</b>");
-    lines.push("   " + fmtSigned(r.min_pnl, 1, "٪"));
-    lines.push("");
-    lines.push("🛡 <b>حداکثر نوسان لازم</b>");
-    lines.push("   ↗ مثبت: <b>" + fmtSigned(r.actual_shock_up, 1, "٪") + "</b>");
-    lines.push("   ↘ منفی: <b>-" + fmt(r.actual_shock_down, 1) + "٪</b>");
-  } else if (r.strategy_type === "strangle" && r.is_straddle === true) {
-    // استرادل خرید
+    lines.push("📊 <b>سناریوها</b>");
+    if (steps && scenRaw.length > 0) {
+      scenRaw.forEach(function (v, i) {
+        if (v == null) return;
+        var stepPct = steps[i];
+        if (stepPct == null) return;
+        lines.push("   ▸ <b>" + fmtSigned(stepPct, 1, "٪") + "</b>  →  " + fmtSigned(v, 1, "٪"));
+      });
+    }
     lines.push("");
     lines.push("📊 <b>کف سود/زیان قبل از نوسان</b>");
     lines.push("   " + fmtSigned(r.min_pnl, 1, "٪"));
