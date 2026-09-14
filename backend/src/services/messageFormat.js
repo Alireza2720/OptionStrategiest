@@ -9,6 +9,7 @@ var LABELS = {
 };
 var NO_SHOCK_TYPES = { cv: true, box: true };
 var BUYABLE_CHECK_TYPES = { cc: true, mp: true, co: true, cv: true };
+var SHOCK_INF_THRESHOLD = 99999;
 
 function fmt(v, d) {
   if (v == null || isNaN(v)) return "—";
@@ -78,8 +79,15 @@ function formatRow(r, steps, opts) {
       });
     }
     lines.push("");
+    lines.push("📊 <b>بازده در قیمت فعلی (بدون نوسان)</b>");
+    lines.push("   " + fmtSigned(r.roi_zero, 1, "٪"));
+    lines.push("");
     lines.push("📊 <b>کف سود/زیان قبل از نوسان</b>");
-    lines.push("   " + fmtSigned(r.min_pnl, 1, "٪"));
+    if (r.min_pnl != null && Math.abs(r.min_pnl) < 1e-6 && r.actual_shock_up >= SHOCK_INF_THRESHOLD && r.actual_shock_down >= SHOCK_INF_THRESHOLD) {
+      lines.push("   0.0٪ <i>(در قیمت فعلی سربه‌سر — هر نوسانی سود می‌دهد)</i>");
+    } else {
+      lines.push("   " + fmtSigned(r.min_pnl, 1, "٪"));
+    }
     lines.push("");
     lines.push("🛡 <b>حداکثر نوسان لازم</b>");
     lines.push("   ↗ مثبت: <b>" + fmtSigned(r.actual_shock_up, 1, "٪") + "</b>");

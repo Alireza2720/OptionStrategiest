@@ -53,14 +53,34 @@ function findMinRoi(payoffFn) {
   return minRoi;
 }
 
-// از قیمت فعلی، چقدر (%) حرکت لازمه تا ROI به صفر (ابتدای سود) برسه
+// از قیمت فعلی، چقدر (%) حرکت لازمه تا ROI به صفر (ابتدای سود) برسه.
+// اگر در قیمت فعلی دقیقاً سربه‌سر باشیم (roi0 = 0)، دنبال نقطه‌ای می‌گردیم که ROI منفی بشه؛
+// اگر هیچ‌وقت منفی نشه (هر نوسانی سود می‌ده), SHOCK_SENTINEL برمی‌گردونیم.
 function findShockToZero(payoffFn, sign) {
   var roi0 = payoffFn(0);
   if (!isFinite(roi0)) return SHOCK_SENTINEL;
-  if (Math.abs(roi0) < 1e-6) return 0;
-  var needPositive = roi0 < 0; // اگر الان منفیه، دنبال عبور به مثبتیم
   var maxPct = sign === 1 ? 500 : 99;
   var step = 0.1;
+
+  if (Math.abs(roi0) < 1e-6) {
+    // سربه‌سر هستیم؛ ببینیم با حرکت در این جهت، اصلاً ROI منفی می‌شود یا نه
+    for (var p = step; p <= maxPct + 1e-9; p += step) {
+      var r = payoffFn(sign * p);
+      if (isFinite(r) && r < -1e-6) {
+        var lo0 = 0, hi0 = p;
+        for (var it0 = 0; it0 < 60; it0++) {
+          var mid0 = (lo0 + hi0) / 2;
+          var mr0 = payoffFn(sign * mid0);
+          if (isFinite(mr0) && mr0 < -1e-6) hi0 = mid0;
+          else lo0 = mid0;
+        }
+        return hi0;
+      }
+    }
+    return SHOCK_SENTINEL;
+  }
+
+  var needPositive = roi0 < 0;
   var prevPct = 0;
   for (var pct = step; pct <= maxPct + 1e-9; pct += step) {
     var signed = sign * pct;
@@ -202,8 +222,11 @@ function buildHuntRows(computed, settings, steps) {
         actualShockDown = findShockToZero(r._payoff, -1);
         minShock = Math.max(actualShockUp, actualShockDown);
         if (minPnl < cfg.straddleMinPnl) return;
-        if (actualShockDown > cfg.straddleReqShockDown) return;
-        if (actualShockUp > cfg.straddleReqShockUp) return;
+        // اگر شوک = بی‌نهایت یعنی حرکت در آن جهت هیچ‌وقت به زیان نمی‌رسد (خوب است)؛
+        // پس فقط وقتی رد می‌کنیم که شوک متناهی و بزرگ‌تر از حد مجاز باشد.
+        var upReject = isFinite(actualShockUp) && actualShockUp < SHOCK_SENTINEL && actualShockUp > cfg.straddleReqShockUp;
+        var downReject = isFinite(actualShockDown) && actualShockDown < SHOCK_SENTINEL && actualShockDown > cfg.straddleReqShockDown;
+        if (upReject || downReject) return;
       } else {
         requiredProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
         if (roiZero < requiredProfit) return;
