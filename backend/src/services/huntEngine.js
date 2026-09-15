@@ -14,6 +14,23 @@ function cfgFor(type, settings) {
   var src = (settings.huntStrategies && settings.huntStrategies[type]) || {};
   function num(v, d) { var x = parseFloat(v); return isNaN(x) ? d : x; }
   function mode(v) { return VALID_MODES[v] ? v : "rate"; }
+
+  var strangleScenarios = [];
+  if (Array.isArray(src.strangleScenarios) && src.strangleScenarios.length > 0) {
+    for (var i = 0; i < 7; i++) {
+      var s = src.strangleScenarios[i] || {};
+      strangleScenarios.push({
+        profitRate: num(s.profitRate, 0.35),
+        profitMode: mode(s.profitMode),
+        profitFloor: num(s.profitFloor, 5)
+      });
+    }
+  } else {
+    for (var j = 0; j < 7; j++) {
+      strangleScenarios.push({ profitRate: 0.35, profitMode: "rate", profitFloor: 5 });
+    }
+  }
+
   return {
     shockRate: num(src.shockRate, 0.5),
     shockMode: mode(src.shockMode),
@@ -21,6 +38,7 @@ function cfgFor(type, settings) {
     profitRate: num(src.profitRate, 0.35),
     profitMode: mode(src.profitMode),
     profitFloor: num(src.profitFloor, 5),
+    strangleScenarios: strangleScenarios,
     dteMin: (src.dteMin === undefined || src.dteMin === null) ? "" : String(src.dteMin),
     dteMax: (src.dteMax === undefined || src.dteMax === null) ? "" : String(src.dteMax),
     telegramEnabled: src.telegramEnabled !== false,
@@ -29,7 +47,6 @@ function cfgFor(type, settings) {
     straddleReqShockUp: num(src.straddleReqShockUp, 5)
   };
 }
-
 function computeThreshold(mode, rateValue, floorValue) {
   if (mode === "floor") return floorValue;
   if (mode === "both") return Math.max(rateValue, floorValue);
@@ -214,21 +231,28 @@ function buildHuntRows(computed, settings, steps) {
       var isActuallyStraddle = isStrangleTab && r.strangle_type === "استرادل";
 
       var requiredShock = null, requiredProfit = null,
-        actualShockUp = null, actualShockDown = null, minShock = null, minPnl = null;
+        actualShockUp = null, actualShockDown = null, minShock = null, minPnl = null,
+        strangleScenarioReqs = null;
 
       if (isStrangleTab) {
-        // منطق جدید (تفسیر A): آستانهٔ سود بر اساس dte×profitRate یا profitFloor
-        // باید در هر ۷ سناریو (یا هر تعداد step) برقرار باشد؛ در غیر این صورت رد می‌شود.
-        requiredProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
+        // منطق جدید: هر ستون سناریو آستانهٔ مستقل خودش را دارد.
+        // در هر ستون، ROI باید ≥ آستانهٔ همان ستون باشد؛ در غیر این صورت رد.
+        var scenCfg = cfg.strangleScenarios || [];
         var scenRawForFilter = r.scenariosRaw || [];
+        var perScenarioReqs = [];
         var allPass = true;
         for (var sIdx = 0; sIdx < steps.length; sIdx++) {
+          var sc = scenCfg[sIdx] || { profitRate: 0.35, profitMode: "rate", profitFloor: 5 };
+          var th = computeThreshold(sc.profitMode, dte * sc.profitRate, sc.profitFloor);
+          perScenarioReqs.push(Math.round(th * 100) / 100);
           var roiAtStep = scenRawForFilter[sIdx];
-          if (roiAtStep == null || isNaN(roiAtStep) || roiAtStep < requiredProfit) {
-            allPass = false; break;
+          if (roiAtStep == null || isNaN(roiAtStep) || roiAtStep < th) {
+            allPass = false;
           }
         }
         if (!allPass) return;
+        requiredProfit = null; // آستانهٔ تکی نداریم
+        strangleScenarioReqs = perScenarioReqs;
       } else {
         requiredProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
         if (roiZero < requiredProfit) return;
@@ -262,6 +286,7 @@ function buildHuntRows(computed, settings, steps) {
         min_pnl: minPnl == null ? null : Math.round(minPnl * 100) / 100,
         is_straddle: isActuallyStraddle,
         is_strangle_tab: isStrangleTab,
+        strangle_scenario_reqs: strangleScenarioReqs,
         telegram_enabled: cfg.telegramEnabled,
         basis_buyable: r.basis_buyable,
         buyable_checked: !!BUYABLE_CHECK_TYPES[type],

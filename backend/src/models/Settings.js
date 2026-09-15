@@ -4,6 +4,20 @@ var mongoose = require("mongoose");
 var HUNT_STRATEGY_TYPES = ["cc", "mp", "co", "cv", "strangle", "strangleSell",
   "callspread", "callspreadbear", "putspread", "putspreadbull", "box"];
 
+var StrangleScenarioCfgSchema = new mongoose.Schema({
+  profitRate: { type: Number, default: 0.35 },
+  profitMode: { type: String, enum: ["rate", "floor", "both"], default: "rate" },
+  profitFloor: { type: Number, default: 5 }
+}, { _id: false });
+
+function defaultStrangleScenarios() {
+  var arr = [];
+  for (var i = 0; i < 7; i++) {
+    arr.push({ profitRate: 0.35, profitMode: "rate", profitFloor: 5 });
+  }
+  return arr;
+}
+
 var HuntStrategyCfgSchema = new mongoose.Schema({
   shockRate: { type: Number, default: 0.5 },
   shockMode: { type: String, enum: ["rate", "floor", "both"], default: "rate" },
@@ -11,12 +25,14 @@ var HuntStrategyCfgSchema = new mongoose.Schema({
   profitRate: { type: Number, default: 0.35 },
   profitMode: { type: String, enum: ["rate", "floor", "both"], default: "rate" },
   profitFloor: { type: Number, default: 5 },
+  // فقط برای نوع strangle استفاده می‌شود: ۷ آستانهٔ جدا برای ۷ ستون سناریو
+  strangleScenarios: { type: [StrangleScenarioCfgSchema], default: defaultStrangleScenarios },
   // بازهٔ روز تا سررسید مخصوص همین استراتژی؛ اگر خالی باشد از فیلتر عمومی استفاده می‌شود
   dteMin: { type: String, default: "" },
   dteMax: { type: String, default: "" },
   telegramEnabled: { type: Boolean, default: true },
   telegramExitEnabled: { type: Boolean, default: true },
-  // فقط برای «استرادل خرید» (وقتی در نوع strangle، قیمت اعمال کال و پوت برابر باشد) استفاده می‌شود
+  // فیلدهای قدیمی؛ نگه‌داشته شده برای سازگاری با داده‌های قبلی، ولی دیگر استفاده نمی‌شوند
   straddleMinPnl: { type: Number, default: -10 },
   straddleReqShockDown: { type: Number, default: 5 },
   straddleReqShockUp: { type: Number, default: 5 }
@@ -26,6 +42,7 @@ function defaultHuntStrategyCfg() {
   return {
     shockRate: 0.5, shockMode: "rate", shockFloor: 5,
     profitRate: 0.35, profitMode: "rate", profitFloor: 5,
+    strangleScenarios: defaultStrangleScenarios(),
     dteMin: "", dteMax: "",
     telegramEnabled: true,
     telegramExitEnabled: true,

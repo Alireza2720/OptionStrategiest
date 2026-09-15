@@ -67,21 +67,19 @@ function formatRow(r, steps, opts) {
     var val = scenRaw.find(function (v) { return v != null; });
     lines.push("   " + fmtSigned(val, 1, "٪"));
   } else if (r.strategy_type === "strangle") {
-    // استرادل، استرانگل، گاتس — منطق جدید: فقط سناریوها + آستانه
+    // استرادل، استرانگل، گاتس — منطق جدید: هر ستون آستانهٔ خودش را دارد
     lines.push("");
-    lines.push("📊 <b>سناریوها</b>");
+    lines.push("📊 <b>سناریوها (آستانه در پرانتز)</b>");
+    var reqs = r.strangle_scenario_reqs || [];
     if (steps && scenRaw.length > 0) {
       scenRaw.forEach(function (v, i) {
         if (v == null) return;
         var stepPct = steps[i];
         if (stepPct == null) return;
-        lines.push("   ▸ <b>" + fmtSigned(stepPct, 1, "٪") + "</b>  →  " + fmtSigned(v, 1, "٪"));
+        var req = reqs[i];
+        var reqStr = (req != null) ? "  <i>(≥" + fmtSigned(req, 1, "٪") + ")</i>" : "";
+        lines.push("   ▸ <b>" + fmtSigned(stepPct, 1, "٪") + "</b>  →  " + fmtSigned(v, 1, "٪") + reqStr);
       });
-    }
-    if (r.required_profit != null) {
-      lines.push("");
-      lines.push("📊 <b>آستانهٔ سود لازم در هر سناریو</b>");
-      lines.push("   " + fmtSigned(r.required_profit, 1, "٪") + (r.dte != null ? "  (" + r.dte + " روز)" : ""));
     }
   } else {
     // cc, mp, co, cv, strangleSell, callspread, callspreadbear, putspread, putspreadbull, box
