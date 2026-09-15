@@ -144,7 +144,8 @@ function parseContracts(raw) {
         iv: iv, hist_vol: histVol, delta: delta, theta: theta, gamma: gamma, vega: vega, rho: rho,
         leverage: leverage, bid_price: bidPrice, bid_vol: bidVol, ask_price: askPrice, ask_vol: askVol,
         spread: spread, margin: sf(row.tazmin_3 || row.tazmin3 || row.tazmin || 0), status: status,
-        basis_last_percent: basisLastPercent, basis_close_percent: basisClosePercent
+        basis_last_percent: basisLastPercent, basis_close_percent: basisClosePercent,
+        _raw: row
       });
     } catch (e) { /* رد شدن از ردیف خراب */ }
   }
@@ -152,9 +153,30 @@ function parseContracts(raw) {
 }
 
 function dedupeAndFlagBuyable(contracts) {
+  // نرمال‌سازی درصدهای سهم پایه: برای هر سهم پایه، بزرگ‌ترین قدر مطلق درصد را در نظر می‌گیریم
+  // (چون API ممکن است برای قراردادهای مختلف یک سهم، مقادیر ناهمگون برگرداند)
+  var basisBest = {};
   contracts.forEach(function (c) {
+    if (!c.basis_name) return;
+    var lp = c.basis_last_percent;
+    var cp = c.basis_close_percent;
+    if (!basisBest[c.basis_name]) {
+      basisBest[c.basis_name] = { last: lp, close: cp };
+    } else {
+      var b = basisBest[c.basis_name];
+      if (lp != null && !isNaN(lp) && (b.last == null || isNaN(b.last) || Math.abs(lp) > Math.abs(b.last))) b.last = lp;
+      if (cp != null && !isNaN(cp) && (b.close == null || isNaN(b.close) || Math.abs(cp) > Math.abs(b.close))) b.close = cp;
+    }
+  });
+
+  contracts.forEach(function (c) {
+    if (c.basis_name && basisBest[c.basis_name]) {
+      c.basis_last_percent = basisBest[c.basis_name].last;
+      c.basis_close_percent = basisBest[c.basis_name].close;
+    }
     c.basis_buyable = !isStockInBuyQueue(c.basis_last_percent, c.basis_close_percent);
   });
+
   var map = {};
   contracts.forEach(function (c) {
     var key = c.name + "|" + c.expiry;

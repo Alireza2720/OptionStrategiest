@@ -3,6 +3,7 @@ var Settings = require("../models/Settings");
 var BasisOverride = require("../models/BasisOverride");
 var CacheSnapshot = require("../models/CacheSnapshot");
 var HuntState = require("../models/HuntState");
+var DebugTick = require("../models/DebugTick");
 var { loadContracts } = require("./dataSource");
 var { computeAll, buildSteps, stripInternal } = require("./calcEngine");
 var { buildHuntRows, huntRowKey, BUYABLE_CHECK_TYPES } = require("./huntEngine");
@@ -80,6 +81,55 @@ async function saveSnapshot() {
     );
   } catch (e) {
     console.error("[cycle] خطا در ذخیره‌ی snapshot در دیتابیس:", e.message);
+  }
+}
+
+function saveDebugTick(settings) {
+  if (!settings || !settings.debugCollectEnabled) return Promise.resolve();
+  try {
+    var basisSnapshot = [];
+    var seenBasis = {};
+    cache.watch.forEach(function (c) {
+      if (!c.basis_name || seenBasis[c.basis_name]) return;
+      seenBasis[c.basis_name] = true;
+      basisSnapshot.push({
+        n: c.basis_name,
+        lp: c.basis_last_percent,
+        cp: c.basis_close_percent,
+        b: c.basis_buyable
+      });
+    });
+
+    var huntRowsSummary = cache.huntLatest.rows.map(function (r) {
+      return {
+        t: r.strategy_type,
+        n: r.primary_name,
+        b: r.basis_name,
+        dte: r.dte,
+        roi: r.roi_zero,
+        rp: r.required_profit,
+        bb: r.basis_buyable
+      };
+    });
+
+    var stratCounts = {};
+    Object.keys(cache.strategies).forEach(function (k) {
+      stratCounts[k] = (cache.strategies[k] || []).length;
+    });
+
+    return DebugTick.create({
+      at: new Date(),
+      basisSnapshot: basisSnapshot,
+      huntRowsSummary: huntRowsSummary,
+      counts: {
+        watch: cache.watch.length,
+        hunt: cache.huntLatest.rows.length,
+        strategies: stratCounts
+      },
+      lastError: cache.lastError
+    });
+  } catch (e) {
+    return Promise.reject(e);
   }
 }
 
@@ -201,6 +251,11 @@ async function runCycle(opts) {
     // ذخیره‌ی نسخه‌ی پشتیبان کش در دیتابیس
     await saveSnapshot();
 
+    // ذخیره‌ی داده‌های دیباگ (اگر فعال باشد)
+    saveDebugTick(settings).catch(function (e) {
+      console.error("[cycle] خطا در ذخیره دیباگ:", e.message);
+    });
+
     // ---------- اعلان‌های تلگرام ----------
     if (notify && !isMarketOpen(new Date(), settings.manualHolidays)) {
       console.log("[cycle] خارج از ساعات بازار یا تعطیلی دستی است؛ اعلان تلگرام ارسال نشد.");
@@ -279,7 +334,11 @@ async function runCycle(opts) {
                   basis_last_percent: ebp.last != null ? ebp.last : null,
                   basis_close_percent: ebp.close != null ? ebp.close : null
                 });
-                var exitText = formatRow(enrichedEr, steps, { isExit: true });
+                var elapsedSec = null;
+                if (existing.lastNotifiedAt) {
+                  elapsedSec = Math.floor((Date.now() - new Date(existing.lastNotifiedAt).getTime()) / 1000);
+                }
+                var exitText = formatRow(enrichedEr, steps, { isExit: true, elapsedSec: elapsedSec });
                 await editTelegramMessage(token, chatId, existing.messageId, exitText);
                 editedCount++;
               }

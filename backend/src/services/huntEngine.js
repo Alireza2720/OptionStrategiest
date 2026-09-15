@@ -217,16 +217,18 @@ function buildHuntRows(computed, settings, steps) {
         actualShockUp = null, actualShockDown = null, minShock = null, minPnl = null;
 
       if (isStrangleTab) {
-        minPnl = findMinRoi(r._payoff);
-        actualShockUp = findShockToZero(r._payoff, 1);
-        actualShockDown = findShockToZero(r._payoff, -1);
-        minShock = Math.max(actualShockUp, actualShockDown);
-        if (minPnl < cfg.straddleMinPnl) return;
-        // اگر شوک = بی‌نهایت یعنی حرکت در آن جهت هیچ‌وقت به زیان نمی‌رسد (خوب است)؛
-        // پس فقط وقتی رد می‌کنیم که شوک متناهی و بزرگ‌تر از حد مجاز باشد.
-        var upReject = isFinite(actualShockUp) && actualShockUp < SHOCK_SENTINEL && actualShockUp > cfg.straddleReqShockUp;
-        var downReject = isFinite(actualShockDown) && actualShockDown < SHOCK_SENTINEL && actualShockDown > cfg.straddleReqShockDown;
-        if (upReject || downReject) return;
+        // منطق جدید (تفسیر A): آستانهٔ سود بر اساس dte×profitRate یا profitFloor
+        // باید در هر ۷ سناریو (یا هر تعداد step) برقرار باشد؛ در غیر این صورت رد می‌شود.
+        requiredProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
+        var scenRawForFilter = r.scenariosRaw || [];
+        var allPass = true;
+        for (var sIdx = 0; sIdx < steps.length; sIdx++) {
+          var roiAtStep = scenRawForFilter[sIdx];
+          if (roiAtStep == null || isNaN(roiAtStep) || roiAtStep < requiredProfit) {
+            allPass = false; break;
+          }
+        }
+        if (!allPass) return;
       } else {
         requiredProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
         if (roiZero < requiredProfit) return;
@@ -259,6 +261,7 @@ function buildHuntRows(computed, settings, steps) {
         min_shock: minShock == null ? null : Math.round(minShock * 100) / 100,
         min_pnl: minPnl == null ? null : Math.round(minPnl * 100) / 100,
         is_straddle: isActuallyStraddle,
+        is_strangle_tab: isStrangleTab,
         telegram_enabled: cfg.telegramEnabled,
         basis_buyable: r.basis_buyable,
         buyable_checked: !!BUYABLE_CHECK_TYPES[type],

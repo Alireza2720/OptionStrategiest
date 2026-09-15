@@ -67,7 +67,7 @@ function formatRow(r, steps, opts) {
     var val = scenRaw.find(function (v) { return v != null; });
     lines.push("   " + fmtSigned(val, 1, "٪"));
   } else if (r.strategy_type === "strangle") {
-    // استرادل، استرانگل، گاتس — همه یک شکل
+    // استرادل، استرانگل، گاتس — منطق جدید: فقط سناریوها + آستانه
     lines.push("");
     lines.push("📊 <b>سناریوها</b>");
     if (steps && scenRaw.length > 0) {
@@ -78,20 +78,11 @@ function formatRow(r, steps, opts) {
         lines.push("   ▸ <b>" + fmtSigned(stepPct, 1, "٪") + "</b>  →  " + fmtSigned(v, 1, "٪"));
       });
     }
-    lines.push("");
-    lines.push("📊 <b>بازده در قیمت فعلی (بدون نوسان)</b>");
-    lines.push("   " + fmtSigned(r.roi_zero, 1, "٪"));
-    lines.push("");
-    lines.push("📊 <b>کف سود/زیان قبل از نوسان</b>");
-    if (r.min_pnl != null && Math.abs(r.min_pnl) < 1e-6 && r.actual_shock_up >= SHOCK_INF_THRESHOLD && r.actual_shock_down >= SHOCK_INF_THRESHOLD) {
-      lines.push("   0.0٪ <i>(در قیمت فعلی سربه‌سر — هر نوسانی سود می‌دهد)</i>");
-    } else {
-      lines.push("   " + fmtSigned(r.min_pnl, 1, "٪"));
+    if (r.required_profit != null) {
+      lines.push("");
+      lines.push("📊 <b>آستانهٔ سود لازم در هر سناریو</b>");
+      lines.push("   " + fmtSigned(r.required_profit, 1, "٪") + (r.dte != null ? "  (" + r.dte + " روز)" : ""));
     }
-    lines.push("");
-    lines.push("🛡 <b>حداکثر نوسان لازم</b>");
-    lines.push("   ↗ مثبت: <b>" + fmtSigned(r.actual_shock_up, 1, "٪") + "</b>");
-    lines.push("   ↘ منفی: <b>-" + fmt(r.actual_shock_down, 1) + "٪</b>");
   } else {
     // cc, mp, co, cv, strangleSell, callspread, callspreadbear, putspread, putspreadbull, box
     lines.push("");
@@ -117,11 +108,18 @@ function formatRow(r, steps, opts) {
 
   if (isExit) {
     lines.push("");
+    if (opts.elapsedSec != null && opts.elapsedSec >= 0) {
+      var secs = Math.floor(opts.elapsedSec);
+      var dur = secs < 60
+        ? secs + " ثانیه"
+        : (Math.floor(secs / 60) + " دقیقه و " + (secs % 60) + " ثانیه");
+      lines.push("⏱ <b>مدت شکار:</b> " + dur);
+    }
+    lines.push("");
     lines.push("━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("🔕 <b>موقعیت شکار شده از دست رفت</b>");
   }
 
   return lines.join("\n");
 }
-
 module.exports = { formatRow: formatRow };

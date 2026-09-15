@@ -3,9 +3,9 @@ var express = require("express");
 var mongoose = require("mongoose");
 var rateLimit = require("express-rate-limit");
 var router = express.Router();
-
 var Settings = require("../models/Settings");
 var BasisOverride = require("../models/BasisOverride");
+var DebugTick = require("../models/DebugTick");
 var { runCycle, getCache, getHealth } = require("../services/cycleRunner");
 var { isMarketOpen, todayKeyTehran, pruneOldHolidays } = require("../services/marketHours");
 
@@ -71,7 +71,7 @@ router.get("/hunt/latest", function (req, res) {
   res.json({ at: c.huntLatest.at, steps: c.steps || [], rows: c.huntLatest.rows });
 });
 
-// اجرای فوری (همینی که cron-job.org صداش می‌زنه)
+// اجرای فوری چرخه (با اعلان تلگرام)
 router.post("/hunt/run", heavyLimiter, requireApiKey, function (req, res) {
   runCycle({ notify: true }).then(function () {
     res.json({ ok: true });
@@ -160,6 +160,45 @@ router.post("/market/today/toggle-holiday", requireApiKey, async function (req, 
   settings.manualHolidays = list;
   await settings.save();
   res.json({ ok: true, todayKey: todayKey, isHoliday: willBeHoliday, settings: settings });
+});
+
+// ---------- API خام هر قرارداد (برای مشاهده در Watch) ----------
+router.get("/raw-contract/:name/:expiry", function (req, res) {
+  var c = getCache();
+  var target = c.watch.find(function (r) {
+    return r.name === req.params.name && r.expiry === req.params.expiry;
+  });
+  if (!target) return res.status(404).json({ ok: false, error: "contract not found" });
+  res.json({ ok: true, raw: target._raw || null, parsed: target });
+});
+
+// ---------- دیباگ: مشاهده و حذف tickها ----------
+router.get("/debug/ticks", async function (req, res) {
+  var from = req.query.from ? new Date(req.query.from) : null;
+  var to = req.query.to ? new Date(req.query.to) : null;
+  var limit = Math.min(parseInt(req.query.limit, 10) || 200, 2000);
+  var q = {};
+  if (from || to) {
+    q.at = {};
+    if (from) q.at.$gte = from;
+    if (to) q.at.$lte = to;
+  }
+  var list = await DebugTick.find(q).sort({ at: -1 }).limit(limit).lean();
+  var total = await DebugTick.countDocuments(q);
+  res.json({ ok: true, total: total, returned: list.length, ticks: list });
+});
+
+router.delete("/debug/ticks", requireApiKey, async function (req, res) {
+  var from = req.query.from ? new Date(req.query.from) : null;
+  var to = req.query.to ? new Date(req.query.to) : null;
+  var q = {};
+  if (from || to) {
+    q.at = {};
+    if (from) q.at.$gte = from;
+    if (to) q.at.$lte = to;
+  }
+  var result = await DebugTick.deleteMany(q);
+  res.json({ ok: true, deleted: result.deletedCount });
 });
 
 module.exports = router;

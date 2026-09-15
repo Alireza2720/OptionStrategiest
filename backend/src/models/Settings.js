@@ -68,7 +68,10 @@ var SettingsSchema = new mongoose.Schema({
   },
 
   // تاریخ‌های تعطیلی دستی (فرمت "YYYY-MM-DD" بر اساس تقویم میلادی، به وقت تهران)
-  manualHolidays: { type: [String], default: [] }
+  manualHolidays: { type: [String], default: [] },
+
+  // فعال/غیرفعال کردن ذخیره‌ی داده‌های دیباگ در هر چرخه
+  debugCollectEnabled: { type: Boolean, default: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Settings", SettingsSchema);

@@ -8,6 +8,7 @@ var { connectDB } = require("./db");
 var Settings = require("./models/Settings");
 var apiRouter = require("./routes/api");
 var { runCycle, restoreFromSnapshot } = require("./services/cycleRunner");
+var { isMarketOpen } = require("./services/marketHours");
 
 var PORT = process.env.PORT || 3000;
 
@@ -52,10 +53,17 @@ var timerRef = { current: null };
 
 function scheduleNextInternalTick() {
   Settings.findOne({ ownerId: "default" }).then(function (settings) {
-    var sec = (settings && settings.checkIntervalSec) || 60;
-    sec = Math.max(20, Math.min(3600, sec));
+    var sec = (settings && settings.checkIntervalSec) || 30;
+    sec = Math.max(10, Math.min(3600, sec));
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(function () {
+      var holidays = (settings && settings.manualHolidays) || [];
+      if (!isMarketOpen(new Date(), holidays)) {
+        // خارج از ساعت بازار: فقط هر ۶۰ ثانیه دوباره چک کن (بدون hit به API خارجی)
+        console.log("[internal tick] خارج از ساعت بازار؛ فقط منتظر می‌مانیم.");
+        timerRef.current = setTimeout(scheduleNextInternalTick, 60 * 1000);
+        return;
+      }
       runCycle({ notify: true }).catch(function (e) {
         console.error("[internal tick] error:", e.message);
       }).finally(function () {
@@ -67,7 +75,6 @@ function scheduleNextInternalTick() {
     timerRef.current = setTimeout(scheduleNextInternalTick, 60 * 1000);
   });
 }
-
 async function main() {
   await connectDB(process.env.MONGODB_URI);
 
@@ -86,7 +93,7 @@ async function main() {
     console.error("[startup] initial run error:", e.message);
   });
 
-  // شروع حلقه‌ی داخلی (علاوه بر cron-job.org، به‌عنوان پشتیبان وقتی سرویس بیدار می‌ماند)
+  // شروع حلقه‌ی داخلی (فقط در ساعات بازار فعال است)
   scheduleNextInternalTick();
 }
 
