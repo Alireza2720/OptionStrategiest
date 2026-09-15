@@ -1964,7 +1964,8 @@ function BasisOverridesEditor(props){
    ========================================================= */
 function HuntStrategyRow(props){
   var type=props.type,cfg=props.cfg,isNoShock=props.isNoShock,onChange=props.onChange;
-  var isStraddleType=type==="strangle";
+  // استرانگل هم مثل cv/box دیگه از «نوسان» استفاده نمی‌کنه؛ فقط سود + DTE
+  var effectiveNoShock = isNoShock || type === "strangle";
 
   var stShockRate=useState(function(){return String(cfg.shockRate)});
   var shockRateText=stShockRate[0],setShockRateText=stShockRate[1];
@@ -1990,6 +1991,7 @@ function HuntStrategyRow(props){
 
   var shockMode=cfg.shockMode||"rate";
   var profitMode=cfg.profitMode||"rate";
+  var isStrangle=type==="strangle";
 
   return (
     <div className="hunt-strat-card">
@@ -2011,71 +2013,59 @@ function HuntStrategyRow(props){
         </div>
       </div>
 
-      {isStraddleType?(
-        <div className="hunt-straddle-row">
-          <div className="hunt-straddle-field">
-            <span className="hunt-metric-lbl">{L.straddleMinPnlLbl}</span>
-            <NumberField className="hunt-strat-input" value={cfg.straddleMinPnl} min={-100} max={100}
-              onCommit={function(v){onChange(type,"straddleMinPnl",v)}} ariaLabel={L.straddleMinPnlLbl} />
-          </div>
-          <div className="hunt-straddle-field">
-            <span className="hunt-metric-lbl">{L.straddleReqDownLbl}</span>
-            <NumberField className="hunt-strat-input" value={cfg.straddleReqShockDown} min={0} max={500}
-              onCommit={function(v){onChange(type,"straddleReqShockDown",v)}} ariaLabel={L.straddleReqDownLbl} />
-          </div>
-          <div className="hunt-straddle-field">
-            <span className="hunt-metric-lbl">{L.straddleReqUpLbl}</span>
-            <NumberField className="hunt-strat-input" value={cfg.straddleReqShockUp} min={0} max={500}
-              onCommit={function(v){onChange(type,"straddleReqShockUp",v)}} ariaLabel={L.straddleReqUpLbl} />
+      {isStrangle?(
+        <div className="hunt-strat-card" style={{margin:"0 0 6px",padding:"6px 8px",background:"var(--sur)"}}>
+          <div className="step-hint" style={{fontSize:11,lineHeight:1.7}}>
+            منطق جدید: در هر ۷ ستون سناریو، بازده باید ≥ آستانهٔ سود باشد. اگر یک ستون زیر آستانه باشد، موقعیت رد می‌شود.
           </div>
         </div>
-      ):(
-        <React.Fragment>
-          {!isNoShock?(
-            <div className="hunt-metric-row">
-              <span className="hunt-metric-lbl">{L.shockRateShort}</span>
-              <select className="hunt-mode-select" value={shockMode}
-                onChange={function(e){onChange(type,"shockMode",e.target.value)}}
-                aria-label={"حالت نوسان "+type}>
-                {HUNT_MODE_OPTIONS.map(function(o){return <option key={o.v} value={o.v}>{o.l}</option>})}
-              </select>
-              <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={shockMode==="floor"}
-                value={shockRateText} placeholder="نرخ/روز"
-                onChange={function(e){setShockRateText(e.target.value)}}
-                onBlur={function(e){commitNum(e.target.value,cfg.shockRate,0.05,5,"shockRate",setShockRateText)}}
-                onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
-                aria-label={"نرخ نوسان روزانه "+type} />
-              <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={shockMode==="rate"}
-                value={shockFloorText} placeholder="کف٪"
-                onChange={function(e){setShockFloorText(e.target.value)}}
-                onBlur={function(e){commitNum(e.target.value,cfg.shockFloor,0,1000,"shockFloor",setShockFloorText)}}
-                onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
-                aria-label={"کف نوسان "+type} />
-            </div>
-          ):null}
+      ):null}
 
+      <React.Fragment>
+        {!effectiveNoShock?(
           <div className="hunt-metric-row">
-            <span className="hunt-metric-lbl">{L.profitRateShort}</span>
-            <select className="hunt-mode-select" value={profitMode}
-              onChange={function(e){onChange(type,"profitMode",e.target.value)}}
-              aria-label={"حالت سود "+type}>
+            <span className="hunt-metric-lbl">{L.shockRateShort}</span>
+            <select className="hunt-mode-select" value={shockMode}
+              onChange={function(e){onChange(type,"shockMode",e.target.value)}}
+              aria-label={"حالت نوسان "+type}>
               {HUNT_MODE_OPTIONS.map(function(o){return <option key={o.v} value={o.v}>{o.l}</option>})}
             </select>
-            <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={profitMode==="floor"}
-              value={profitRateText} placeholder="نرخ/روز"
-              onChange={function(e){setProfitRateText(e.target.value)}}
-              onBlur={function(e){commitNum(e.target.value,cfg.profitRate,0,5,"profitRate",setProfitRateText)}}
+            <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={shockMode==="floor"}
+              value={shockRateText} placeholder="نرخ/روز"
+              onChange={function(e){setShockRateText(e.target.value)}}
+              onBlur={function(e){commitNum(e.target.value,cfg.shockRate,0.05,5,"shockRate",setShockRateText)}}
               onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
-              aria-label={"نرخ سود روزانه "+type} />
-            <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={profitMode==="rate"}
-              value={profitFloorText} placeholder="کف٪"
-              onChange={function(e){setProfitFloorText(e.target.value)}}
-              onBlur={function(e){commitNum(e.target.value,cfg.profitFloor,0,1000,"profitFloor",setProfitFloorText)}}
+              aria-label={"نرخ نوسان روزانه "+type} />
+            <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={shockMode==="rate"}
+              value={shockFloorText} placeholder="کف٪"
+              onChange={function(e){setShockFloorText(e.target.value)}}
+              onBlur={function(e){commitNum(e.target.value,cfg.shockFloor,0,1000,"shockFloor",setShockFloorText)}}
               onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
-              aria-label={"کف سود "+type} />
+              aria-label={"کف نوسان "+type} />
           </div>
-        </React.Fragment>
-      )}
+        ):null}
+
+        <div className="hunt-metric-row">
+          <span className="hunt-metric-lbl">{L.profitRateShort}</span>
+          <select className="hunt-mode-select" value={profitMode}
+            onChange={function(e){onChange(type,"profitMode",e.target.value)}}
+            aria-label={"حالت سود "+type}>
+            {HUNT_MODE_OPTIONS.map(function(o){return <option key={o.v} value={o.v}>{o.l}</option>})}
+          </select>
+          <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={profitMode==="floor"}
+            value={profitRateText} placeholder="نرخ/روز"
+            onChange={function(e){setProfitRateText(e.target.value)}}
+            onBlur={function(e){commitNum(e.target.value,cfg.profitRate,0,5,"profitRate",setProfitRateText)}}
+            onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
+            aria-label={"نرخ سود روزانه "+type} />
+          <input type="text" inputMode="decimal" className="hunt-strat-input" disabled={profitMode==="rate"}
+            value={profitFloorText} placeholder="کف٪"
+            onChange={function(e){setProfitFloorText(e.target.value)}}
+            onBlur={function(e){commitNum(e.target.value,cfg.profitFloor,0,1000,"profitFloor",setProfitFloorText)}}
+            onKeyDown={function(e){if(e.key==="Enter")e.target.blur()}}
+            aria-label={"کف سود "+type} />
+        </div>
+      </React.Fragment>
 
       <div className="hunt-dte-row">
         <span className="hunt-metric-lbl">{L.huntDteLbl}</span>
