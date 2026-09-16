@@ -174,7 +174,19 @@ function dedupeAndFlagBuyable(contracts) {
       c.basis_last_percent = basisBest[c.basis_name].last;
       c.basis_close_percent = basisBest[c.basis_name].close;
     }
-    c.basis_buyable = !isStockInBuyQueue(c.basis_last_percent, c.basis_close_percent);
+    var lp = c.basis_last_percent;
+    var cp = c.basis_close_percent;
+    var lpZero = (lp == null || isNaN(lp) || lp === 0);
+    var cpZero = (cp == null || isNaN(cp) || cp === 0);
+    // اگر هر دو درصد صفر/نامعتبر باشن، یعنی API هنوز داده رو پر نکرده.
+    // برای امنیت، این سهم رو «غیرقابل خرید» علامت می‌زنیم تا سیگنال نادرست ندیم.
+    if (lpZero && cpZero) {
+      c.basis_buyable = false;
+      c.basis_data_pending = true;
+    } else {
+      c.basis_buyable = !isStockInBuyQueue(lp, cp);
+      c.basis_data_pending = false;
+    }
   });
 
   var map = {};

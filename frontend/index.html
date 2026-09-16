@@ -821,17 +821,23 @@ var SpotR=function(v,row){
   return n(v,0);
 };
 var BasisNameR=function(v,row){
+  var parts=[];
   if(row&&row.spot_overridden){
-    return (
-      <span>
-        {v}
-        <span className="bdg bdg-rev" style={{fontSize:9,padding:"0 5px",marginRight:4}} title="قیمت این سهم پایه به‌صورت دستی تنظیم شده">
-          {L.manualBadge}
-        </span>
+    parts.push(
+      <span key="ov" className="bdg bdg-rev" style={{fontSize:9,padding:"0 5px",marginRight:4}} title="قیمت این سهم پایه به‌صورت دستی تنظیم شده">
+        {L.manualBadge}
       </span>
     );
   }
-  return v;
+  if(row&&row.basis_data_pending){
+    parts.push(
+      <span key="pd" className="bdg" style={{fontSize:9,padding:"0 5px",marginRight:4,background:"var(--warn-t)",color:"var(--warn)"}} title="داده‌ی درصد سهم پایه هنوز از منبع نرسیده؛ این سهم موقتاً غیرقابل خرید در نظر گرفته شده">
+        ⏳ داده در انتظار
+      </span>
+    );
+  }
+  if(parts.length===0) return v;
+  return <span>{v}{parts}</span>;
 };
 var StrangleTypeR=function(v){
   var cls=v==="استرادل"?"bdg-itm":v==="استرانگل"?"bdg-rev":"bdg-q1";
@@ -1803,6 +1809,16 @@ function Watch(props){
     return r.filter(function(row){return applyRow(row,WATCH_COLS)}).filter(function(row){return matchesGlobalSearch(row,searchDeb)});
   },[sorted,applyRow,searchDeb,dteMinDeb,dteMaxDeb]);
 
+  var pendingCount=useMemo(function(){
+    var seen={},cnt=0;
+    (rows||[]).forEach(function(r){
+      if(r.basis_data_pending&&r.basis_name&&!seen[r.basis_name]){
+        seen[r.basis_name]=true;cnt++;
+      }
+    });
+    return cnt;
+  },[rows]);
+
   var twRef=useRef(null);
   var totalCols=cols.length;
   var vw=useVirtualWindow(twRef,final.length,ROW_H_WATCH,HEADER_H_WATCH,VIRT_OVERSCAN);
@@ -1821,6 +1837,12 @@ function Watch(props){
       <div className="ibar">
         <span className="count-badge">{final.length}</span>
         <span className="count-label">قرارداد</span>
+        {pendingCount>0?(
+          <span className="bdg" style={{background:"var(--warn-t)",color:"var(--warn)"}}
+            title="تعداد سهم‌های پایه‌ای که داده‌ی درصدشان هنوز نرسیده">
+            ⏳ {pendingCount} در انتظار
+          </span>
+        ):null}
         {has?<button className="cbtn" onClick={clear}>{L.clearFilters}</button>:null}
         {IS_TOUCH?(
           <button className="cbtn cbtn-acc" onClick={function(){setShowAll(!showAll)}}>
