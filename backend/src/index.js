@@ -9,6 +9,7 @@ var Settings = require("./models/Settings");
 var apiRouter = require("./routes/api");
 var { runCycle, restoreFromSnapshot } = require("./services/cycleRunner");
 var { isMarketOpen } = require("./services/marketHours");
+var apiWatcher = require("./services/apiWatcher");
 
 var PORT = process.env.PORT || 3000;
 
@@ -83,6 +84,19 @@ async function main() {
 
   // بازیابی آخرین کش ذخیره‌شده (اگر سرویس تازه ری‌استارت شده، فرانت فوراً داده می‌بیند)
   await restoreFromSnapshot();
+
+  // شروع خودکار Watcher (پایش تازگی API)
+  // فاصله از متغیر محیطی WATCH_INTERVAL_SEC خوانده می‌شود (پیش‌فرض 30)
+  var watchInterval = parseInt(process.env.WATCH_INTERVAL_SEC, 10) || 30;
+  apiWatcher.start({ intervalSec: watchInterval }).then(function (r) {
+    if (r && r.alreadyRunning) {
+      console.log("[watcher] از قبل در حال اجرا بود.");
+    } else {
+      console.log("[watcher] با فاصله " + watchInterval + " ثانیه شروع شد.");
+    }
+  }).catch(function (e) {
+    console.error("[watcher] خطا در شروع:", e.message);
+  });
 
   app.listen(PORT, function () {
     console.log("🚀 Server listening on port " + PORT);
