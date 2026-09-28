@@ -84,7 +84,7 @@ async function saveSnapshot() {
   }
 }
 
-function saveDebugTick(settings) {
+function saveDebugTick(settings, meta) {
   if (!settings || !settings.debugCollectEnabled) return Promise.resolve();
   try {
     var basisSnapshot = [];
@@ -119,6 +119,12 @@ function saveDebugTick(settings) {
 
     return DebugTick.create({
       at: new Date(),
+      kind: "auto",
+      fetchedAt: meta && meta.fetchedAt ? meta.fetchedAt : null,
+      apiHash: meta && meta.hash ? meta.hash : null,
+      apiRowCount: meta && meta.rowCount ? meta.rowCount : 0,
+      apiFetchMs: meta && meta.fetchMs ? meta.fetchMs : 0,
+      apiSample: meta && meta.sample ? meta.sample : null,
       basisSnapshot: basisSnapshot,
       huntRowsSummary: huntRowsSummary,
       counts: {
@@ -178,6 +184,7 @@ async function runCycle(opts) {
     var overrides = await BasisOverride.find({ ownerId: "default" });
 
     var data = await loadContracts();
+    var dataMeta = data.meta || null;
     var calls = applyOverrides(data.calls, overrides);
     var puts = applyOverrides(data.puts, overrides);
     var allWithOverrides = applyOverrides(data.all, overrides);
@@ -252,7 +259,7 @@ async function runCycle(opts) {
     await saveSnapshot();
 
     // ذخیره‌ی داده‌های دیباگ (اگر فعال باشد)
-    saveDebugTick(settings).catch(function (e) {
+    saveDebugTick(settings, dataMeta).catch(function (e) {
       console.error("[cycle] خطا در ذخیره دیباگ:", e.message);
     });
 

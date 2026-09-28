@@ -434,7 +434,13 @@ var Api={
   postSettings:function(partial){return apiSend("POST","/api/settings",partial)},
   getOverrides:function(){return apiGet("/api/overrides")},
   postOverride:function(o){return apiSend("POST","/api/overrides",o)},
-  deleteOverride:function(name){return apiSend("DELETE","/api/overrides/"+encodeURIComponent(name))}
+  deleteOverride:function(name){return apiSend("DELETE","/api/overrides/"+encodeURIComponent(name))},
+  debugCapture:function(){return apiSend("POST","/api/debug/capture")},
+  debugTicks:function(limit){return apiGet("/api/debug/ticks?limit="+(limit||50))},
+  debugTick:function(id){return apiGet("/api/debug/ticks/"+id)},
+  debugFreshness:function(minutes){return apiGet("/api/debug/api-freshness?minutes="+(minutes||30))},
+  debugDeleteTick:function(id){return apiSend("DELETE","/api/debug/ticks/"+id)},
+  debugClearAll:function(){return apiSend("DELETE","/api/debug/ticks")}
 };
 
 /* =========================================================
@@ -2325,7 +2331,7 @@ function HamMenu(props){
     basisNames=props.basisNames,basisSpotMap=props.basisSpotMap,
     refreshSec=props.refreshSec,setRefreshSec=props.setRefreshSec,
     autoRefreshEnabled=props.autoRefreshEnabled,setAutoRefreshEnabled=props.setAutoRefreshEnabled,
-    onOpenHunt=props.onOpenHunt,
+    onOpenHunt=props.onOpenHunt,onOpenDebug=props.onOpenDebug,
     holidayStatus=props.holidayStatus,onToggleHoliday=props.onToggleHoliday,holidayBusy=props.holidayBusy;
 
   var stHuntOpen=useState(false);
@@ -2348,6 +2354,11 @@ function HamMenu(props){
             onClick={function(){onClose();onOpenHunt()}}
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenHunt()}}}>
             <span>{L.huntPositions}</span><span>›</span>
+          </div>
+          <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--warn)", background:"var(--warn-t)", color:"var(--warn)"}}
+            onClick={function(){onClose();onOpenDebug()}}
+            onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenDebug()}}}>
+            <span>🔍 دیباگ API و سرخطی</span><span>›</span>
           </div>
           <div className="hunt-settings-toggle" role="button" tabIndex={0}
             onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}
@@ -2654,6 +2665,333 @@ function BestPositionsOverlay(props){
   );
 }
 /* =========================================================
+   دیباگ API و سرخطی
+   ========================================================= */
+function DebugOverlay(props){
+  var open=props.open,onClose=props.onClose;
+  var stTab=useState("capture");
+  var tab=stTab[0],setTab=stTab[1];
+
+  var stCapture=useState(null),capture=stCapture[0],setCapture=stCapture[1];
+  var stCapturing=useState(false),capturing=stCapturing[0],setCapturing=stCapturing[1];
+  var stCapErr=useState(null),capErr=stCapErr[0],setCapErr=stCapErr[1];
+
+  var stTicks=useState([]),ticks=stTicks[0],setTicks=stTicks[1];
+  var stTickLoading=useState(false),tickLoading=stTickLoading[0],setTickLoading=stTickLoading[1];
+  var stTickDetail=useState(null),tickDetail=stTickDetail[0],setTickDetail=stTickDetail[1];
+  var stTickDetailLoading=useState(false),tickDetailLoading=stTickDetailLoading[0],setTickDetailLoading=stTickDetailLoading[1];
+
+  var stFresh=useState(null),fresh=fresh[0]||null,setFresh=stFresh[1];
+  var stFreshLoading=useState(false),freshLoading=freshLoading[0],setFreshLoading=stFreshLoading[1];
+
+  useEffect(function(){
+    if(!open)return;
+    if(tab==="ticks")loadTicks();
+    if(tab==="freshness")loadFreshness();
+  },[open,tab]);
+
+  function loadTicks(){
+    setTickLoading(true);
+    Api.debugTicks(100).then(function(r){
+      setTicks(r.ticks||[]);
+    }).catch(function(e){
+      setCapErr("خطا در بارگذاری تیک‌ها: "+e.message);
+    }).finally(function(){setTickLoading(false)});
+  }
+
+  function loadFreshness(){
+    setFreshLoading(true);
+    Api.debugFreshness(30).then(function(r){
+      setFresh(r);
+    }).catch(function(e){
+      setCapErr("خطا در تحلیل تازگی: "+e.message);
+    }).finally(function(){setFreshLoading(false)});
+  }
+
+  function doCapture(){
+    setCapturing(true);
+    setCapErr(null);
+    Api.debugCapture().then(function(r){
+      setCapture(r);
+      setTab("capture");
+    }).catch(function(e){
+      setCapErr(e.message);
+    }).finally(function(){setCapturing(false)});
+  }
+
+  function openTick(id){
+    setTickDetailLoading(true);
+    Api.debugTick(id).then(function(r){
+      setTickDetail(r.tick||null);
+    }).catch(function(e){
+      setCapErr("خطا در بارگذاری تیک: "+e.message);
+    }).finally(function(){setTickDetailLoading(false)});
+  }
+
+  if(!open)return null;
+
+  return (
+    <div className="fs-overlay" role="dialog" aria-label="دیباگ API">
+      <div className="fs-head">
+        <b>🔍 دیباگ API و سرخطی</b>
+        <div className="sp1" />
+        <button className="cbtn cbtn-acc" onClick={doCapture} disabled={capturing}>
+          {capturing?"در حال Capture...":"📸 Capture Now"}
+        </button>
+        <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
+      </div>
+
+      <div className="msub-tabs">
+        <button className={"msub-tab "+(tab==="capture"?"on":"")} onClick={function(){setTab("capture")}}>آخرین Capture</button>
+        <button className={"msub-tab "+(tab==="ticks"?"on":"")} onClick={function(){setTab("ticks")}}>تاریخچه تیک‌ها</button>
+        <button className={"msub-tab "+(tab==="freshness"?"on":"")} onClick={function(){setTab("freshness")}}>تازگی API</button>
+      </div>
+
+      <div className="fs-body" style={{padding:12, overflowY:"auto"}}>
+        {capErr?<div className="error-box" style={{marginBottom:12}}><div className="desc">{capErr}</div></div>:null}
+
+        {tab==="capture"?(
+          <CaptureTab capture={capture} onCapture={doCapture} capturing={capturing} />
+        ):tab==="ticks"?(
+          <TicksTab ticks={ticks} loading={tickLoading} onOpen={openTick} onRefresh={loadTicks} />
+        ):(
+          <FreshnessTab fresh={fresh} loading={freshLoading} onRefresh={loadFreshness} />
+        )}
+      </div>
+
+      {tickDetail||tickDetailLoading?(
+        <Modal title={tickDetail?("جزئیات تیک — "+tickDetail._id):"در حال بارگذاری..."} onClose={function(){setTickDetail(null)}} width="min(1100px,96vw)">
+          <div style={{padding:"10px 14px"}}>
+            {tickDetail?<TickDetailView tick={tickDetail} />:<div className="spinner" />}
+          </div>
+        </Modal>
+      ):null}
+    </div>
+  );
+}
+
+function CaptureTab(props){
+  var capture=props.capture,capturing=props.capturing,onCapture=props.onCapture;
+  if(!capture){
+    return (
+      <div className="center" style={{padding:30}}>
+        <div>هیچ capture هنوز گرفته نشده</div>
+        <button className="cbtn cbtn-acc" onClick={onCapture} disabled={capturing} style={{marginTop:10}}>
+          {capturing?"...":"📸 گرفتن Capture جدید"}
+        </button>
+        <div className="step-hint" style={{marginTop:14,maxWidth:520,lineHeight:1.8}}>
+          با زدن این دکمه، برنامه یک درخواست تازه به API می‌فرستد، پاسخ را کاملاً پارس می‌کند و با آنچه در کش سرور است مقایسه می‌کند.
+          نتیجه به شما نشان می‌دهد که آیا سرخطی‌ها (ask/bid) درست پارس شده‌اند یا نه.
+        </div>
+      </div>
+    );
+  }
+  var d=capture.diffSummary||{};
+  return (
+    <div>
+      <div className="gcard">
+        <div className="gcard-t">📊 نتیجه Capture</div>
+        <div className="gcard-p">
+          <div>API rows: <b>{capture.apiRowCount}</b></div>
+          <div>Hash API: <code style={{fontSize:11}}>{capture.apiHash}</code></div>
+          <div>زمان fetch: <b>{capture.fetchMs}ms</b></div>
+          <div>مقایسه شده: <b>{d.compared}</b> قرارداد</div>
+          <div>اختلاف‌ها: <b className={d.mismatchCount>0?"loss":"gain"}>{d.mismatchCount}</b> فیلد</div>
+          {d.cacheAge!=null?<div>عمر کش: <b>{Math.round(d.cacheAge/1000)}</b> ثانیه</div>:null}
+        </div>
+      </div>
+
+      {d.mismatchCount>0?(
+        <div className="gcard">
+          <div className="gcard-t">⚠️ نمونه اختلاف‌ها (cache vs fresh)</div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{fontSize:11,width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{background:"var(--sur3)"}}>
+                  <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>قرارداد</th>
+                  <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>فیلد</th>
+                  <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>cache (سرور)</th>
+                  <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>fresh (API)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(d.samples||[]).map(function(m,i){
+                  return (
+                    <tr key={i}>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}><code>{m.key}</code></td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{m.field}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}} className="loss">{String(m.cache)}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}} className="gain">{String(m.fresh)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ):(
+        <div className="gcard">
+          <div className="gcard-t gain">✓ هیچ اختلافی یافت نشد</div>
+          <div className="gcard-p">سرخطی‌های کش سرور با پاسخ تازه‌ی API یکسان هستند.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TicksTab(props){
+  var ticks=props.ticks,loading=props.loading,onOpen=props.onOpen,onRefresh=props.onRefresh;
+  return (
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:8}}>
+        <button className="cbtn cbtn-acc" onClick={onRefresh} disabled={loading}>↻ بروزرسانی</button>
+        <span className="step-hint">{ticks.length} تیک</span>
+      </div>
+      {loading?<div className="spinner"/>:(
+        <table style={{fontSize:11,width:"100%",borderCollapse:"collapse"}}>
+          <thead>
+            <tr style={{background:"var(--sur3)"}}>
+              <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>زمان</th>
+              <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>نوع</th>
+              <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>API rows</th>
+              <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>hash</th>
+              <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>fetch ms</th>
+              <th style={{padding:4,borderBottom:"1px solid var(--bor)",textAlign:"right"}}>خطا</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ticks.map(function(t){
+              return (
+                <tr key={t._id} onClick={function(){onOpen(t._id)}} style={{cursor:"pointer"}}>
+                  <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{new Date(t.at).toLocaleString("fa-IR")}</td>
+                  <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>
+                    <span className={"bdg "+(t.kind==="capture"?"bdg-rev":"bdg-itm")}>{t.kind||"auto"}</span>
+                  </td>
+                  <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{t.apiRowCount||0}</td>
+                  <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}><code style={{fontSize:10}}>{(t.apiHash||"").slice(0,8)}</code></td>
+                  <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{t.apiFetchMs||"-"}</td>
+                  <td style={{padding:4,borderBottom:"1px solid var(--bor)"}} className={t.lastError?"loss":"mut"}>{t.lastError||"—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function FreshnessTab(props){
+  var fresh=props.fresh,loading=props.loading,onRefresh=props.onRefresh;
+  if(loading)return <div className="spinner"/>;
+  if(!fresh)return <div className="center">داده‌ای نیست — روی «بروزرسانی» بزن</div>;
+  return (
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:12}}>
+        <button className="cbtn cbtn-acc" onClick={onRefresh}>↻ بروزرسانی</button>
+      </div>
+      <div className="gcard">
+        <div className="gcard-t">تحلیل ۳۰ دقیقه اخیر</div>
+        <div className="gcard-p">
+          <div>تعداد تیک‌ها: <b>{fresh.tickCount}</b></div>
+          <div>هش‌های یکتا: <b className={fresh.uniqueHashCount===1?"loss":"gain"}>{fresh.uniqueHashCount}</b></div>
+          {fresh.uniqueHashCount===1&&fresh.tickCount>1?(
+            <div className="loss" style={{marginTop:6,fontWeight:700}}>
+              ⚠️ API پاسخ یکسان داده — یعنی داده‌ی stale سرو می‌کند!
+            </div>
+          ):fresh.tickCount>1?(
+            <div className="gain" style={{marginTop:6}}>✓ API در حال به‌روزرسانی است</div>
+          ):null}
+        </div>
+      </div>
+      <div className="gcard">
+        <div className="gcard-t">تغییرات hash</div>
+        <div style={{maxHeight:400,overflowY:"auto"}}>
+          {(fresh.transitions||[]).map(function(tr,i){
+            return (
+              <div key={i} style={{fontSize:11,padding:4,borderBottom:"1px solid var(--bor)"}}>
+                <div>{new Date(tr.at).toLocaleString("fa-IR")}</div>
+                <div><code>{tr.hash}</code> — rows: {tr.rows} — {tr.ms}ms</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TickDetailView(props){
+  var tick=props.tick;
+  var rows=tick.parsedContracts||tick.cacheContracts||[];
+  return (
+    <div>
+      <div className="gcard">
+        <div className="gcard-t">اطلاعات کلی</div>
+        <div className="gcard-p">
+          <div>زمان: {new Date(tick.at).toLocaleString("fa-IR")}</div>
+          <div>نوع: <b>{tick.kind}</b></div>
+          <div>API rows: {tick.apiRowCount||0}</div>
+          <div>Hash: <code>{tick.apiHash}</code></div>
+          <div>Fetch: {tick.apiFetchMs}ms</div>
+        </div>
+      </div>
+
+      {tick.apiSample?(
+        <div className="gcard">
+          <div className="gcard-t">نمونه ردیف خام API</div>
+          <pre style={{maxHeight:"40vh",overflow:"auto",background:"var(--sur3)",padding:8,borderRadius:6,fontSize:11,direction:"ltr",textAlign:"left"}}>
+            {JSON.stringify(tick.apiSample,null,2)}
+          </pre>
+        </div>
+      ):null}
+
+      {rows.length>0?(
+        <div className="gcard">
+          <div className="gcard-t">پارس‌شده‌ها ({rows.length})</div>
+          <div style={{maxHeight:"50vh",overflow:"auto"}}>
+            <table style={{fontSize:11,width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{background:"var(--sur3)"}}>
+                  <th style={{padding:4,textAlign:"right"}}>نام</th>
+                  <th style={{padding:4,textAlign:"right"}}>سررسید</th>
+                  <th style={{padding:4,textAlign:"right"}}>اعمال</th>
+                  <th style={{padding:4,textAlign:"right"}}>نوع</th>
+                  <th style={{padding:4,textAlign:"right"}}>ask</th>
+                  <th style={{padding:4,textAlign:"right"}}>ask vol</th>
+                  <th style={{padding:4,textAlign:"right"}}>bid</th>
+                  <th style={{padding:4,textAlign:"right"}}>bid vol</th>
+                  <th style={{padding:4,textAlign:"right"}}>final</th>
+                  <th style={{padding:4,textAlign:"right"}}>tvalue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map(function(r,i){
+                  return (
+                    <tr key={i}>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}><code>{r.n}</code></td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.e}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.k}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.t}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.ap}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.av}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.bp}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.bv}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.fp}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{r.tv}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ):null}
+    </div>
+  );
+}
+
+/* =========================================================
    App اصلی
    ========================================================= */
 function App(){
@@ -2678,6 +3016,7 @@ function App(){
   var stHuntLoading=useState(false);var huntLoading=stHuntLoading[0],setHuntLoading=stHuntLoading[1];
   var stHuntErr=useState(null);var huntError=stHuntErr[0],setHuntError=stHuntErr[1];
   var stHuntOpen=useState(false);var huntOpen=stHuntOpen[0],setHuntOpen=stHuntOpen[1];
+  var stDebugOpen=useState(false);var debugOpen=stDebugOpen[0],setDebugOpen=stDebugOpen[1];
 
   var stMenu=useState(false);var menuOpen=stMenu[0],setMenuOpen=stMenu[1];
   var stTab=useState("watch");var tab=stTab[0],setTab=stTab[1];
@@ -2905,12 +3244,15 @@ function App(){
         refreshSec={refreshSec} setRefreshSec={setRefreshSec}
         autoRefreshEnabled={autoRefreshEnabled} setAutoRefreshEnabled={setAutoRefreshEnabled}
         onOpenHunt={function(){setHuntOpen(true)}}
+        onOpenDebug={function(){setDebugOpen(true)}}
         holidayStatus={holidayStatus} onToggleHoliday={handleToggleHoliday} holidayBusy={holidayBusy}
       />
 
       <BestPositionsOverlay open={huntOpen} onClose={function(){setHuntOpen(false)}}
         huntData={huntData} huntLoading={huntLoading} huntError={huntError}
         onRetry={loadHunt} globalSearch={globalSearch} onOpenChart={openChart} />
+
+      <DebugOverlay open={debugOpen} onClose={function(){setDebugOpen(false)}} />
 
       {chartCtx?(
         <ErrorBoundary fallback={function(){return <FloatFallback onClose={closeChart} />}}>

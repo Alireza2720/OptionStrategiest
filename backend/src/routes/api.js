@@ -8,6 +8,8 @@ var BasisOverride = require("../models/BasisOverride");
 var DebugTick = require("../models/DebugTick");
 var { runCycle, getCache, getHealth } = require("../services/cycleRunner");
 var { isMarketOpen, todayKeyTehran, pruneOldHolidays } = require("../services/marketHours");
+var { fetchRawDataOnce, parseContracts, dedupeAndFlagBuyable } = require("../services/dataSource");
+var crypto = require("crypto");
 
 function requireApiKey(req, res, next) {
   var key = process.env.API_KEY;
@@ -172,22 +174,7 @@ router.get("/raw-contract/:name/:expiry", function (req, res) {
   res.json({ ok: true, raw: target._raw || null, parsed: target });
 });
 
-// ---------- دیباگ: مشاهده و حذف tickها ----------
-router.get("/debug/ticks", async function (req, res) {
-  var from = req.query.from ? new Date(req.query.from) : null;
-  var to = req.query.to ? new Date(req.query.to) : null;
-  var limit = Math.min(parseInt(req.query.limit, 10) || 200, 2000);
-  var q = {};
-  if (from || to) {
-    q.at = {};
-    if (from) q.at.$gte = from;
-    if (to) q.at.$lte = to;
-  }
-  var list = await DebugTick.find(q).sort({ at: -1 }).limit(limit).lean();
-  var total = await DebugTick.countDocuments(q);
-  res.json({ ok: true, total: total, returned: list.length, ticks: list });
-});
-
+// ---------- دیباگ: حذف گروهی ----------
 router.delete("/debug/ticks", requireApiKey, async function (req, res) {
   var from = req.query.from ? new Date(req.query.from) : null;
   var to = req.query.to ? new Date(req.query.to) : null;
@@ -199,6 +186,170 @@ router.delete("/debug/ticks", requireApiKey, async function (req, res) {
   }
   var result = await DebugTick.deleteMany(q);
   res.json({ ok: true, deleted: result.deletedCount });
+});
+
+// ---------- دیباگ پیشرفته ----------
+
+// گرفتن یک snapshot کامل: API تازه + کش فعلی + مقایسه
+router.post("/debug/capture", requireApiKey, async function (req, res) {
+  try {
+    var t0 = Date.now();
+    var raw;
+    try {
+      raw = await fetchRawDataOnce();
+    } catch (e) {
+      return res.status(502).json({ ok: false, error: "API fetch failed: " + e.message });
+    }
+    var fetchMs = Date.now() - t0;
+    var rawArr = Array.isArray(raw) ? raw : [];
+    var hash = crypto.createHash("md5").update(JSON.stringify(rawArr)).digest("hex");
+
+    var parsed = parseContracts(rawArr);
+    var deduped = dedupeAndFlagBuyable(parsed);
+
+    var c = getCache();
+    var cacheContracts = (c.watch || []).map(function (cc) {
+      return {
+        n: cc.name, e: cc.expiry, b: cc.basis_name, k: cc.strike, t: cc.type,
+        ap: cc.ask_price, av: cc.ask_vol,
+        bp: cc.bid_price, bv: cc.bid_vol,
+        fp: cc.price, tv: cc.tvalue,
+        rap: cc._raw && cc._raw.s_price,
+        rav: cc._raw && cc._raw.s_volume,
+        rbp: cc._raw && cc._raw.b_price,
+        rbv: cc._raw && cc._raw.b_volume,
+        rfp: cc._raw && cc._raw.final
+      };
+    });
+
+    var parsedContracts = deduped.map(function (cc) {
+      return {
+        n: cc.name, e: cc.expiry, b: cc.basis_name, k: cc.strike, t: cc.type,
+        ap: cc.ask_price, av: cc.ask_vol,
+        bp: cc.bid_price, bv: cc.bid_vol,
+        fp: cc.price, tv: cc.tvalue,
+        rap: cc._raw && cc._raw.s_price,
+        rav: cc._raw && cc._raw.s_volume,
+        rbp: cc._raw && cc._raw.b_price,
+        rbv: cc._raw && cc._raw.b_volume,
+        rfp: cc._raw && cc._raw.final
+      };
+    });
+
+    // مقایسه‌ی فشرده
+    var cacheMap = {};
+    cacheContracts.forEach(function (x) { cacheMap[x.n + "|" + x.e] = x; });
+    var mismatches = [];
+    var compared = 0;
+    parsedContracts.forEach(function (fr) {
+      var key = fr.n + "|" + fr.e;
+      var cr = cacheMap[key];
+      if (!cr) return;
+      compared++;
+      var fields = ["ap", "av", "bp", "bv", "fp"];
+      fields.forEach(function (f) {
+        if (cr[f] !== fr[f]) {
+          mismatches.push({ key: key, field: f, cache: cr[f], fresh: fr[f] });
+        }
+      });
+    });
+
+    var diffSummary = {
+      compared: compared,
+      mismatchCount: mismatches.length,
+      samples: mismatches.slice(0, 30),
+      cacheAge: c.updatedAt ? (Date.now() - new Date(c.updatedAt).getTime()) : null
+    };
+
+    var tick = await DebugTick.create({
+      at: new Date(),
+      kind: "capture",
+      fetchedAt: new Date(),
+      apiHash: hash,
+      apiRowCount: rawArr.length,
+      apiFetchMs: fetchMs,
+      apiSample: rawArr[0] || null,
+      parsedContracts: parsedContracts,
+      cacheContracts: cacheContracts,
+      diffSummary: diffSummary,
+      counts: { cacheWatch: cacheContracts.length, parsed: parsedContracts.length }
+    });
+
+    res.json({
+      ok: true,
+      tickId: tick._id,
+      fetchMs: fetchMs,
+      apiRowCount: rawArr.length,
+      apiHash: hash,
+      diffSummary: diffSummary
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// لیست تیک‌های اخیر (فشرده)
+router.get("/debug/ticks", async function (req, res) {
+  var from = req.query.from ? new Date(req.query.from) : null;
+  var to = req.query.to ? new Date(req.query.to) : null;
+  var limit = Math.min(parseInt(req.query.limit, 10) || 200, 2000);
+  var kind = req.query.kind || null;
+  var q = {};
+  if (kind) q.kind = kind;
+  if (from || to) {
+    q.at = {};
+    if (from) q.at.$gte = from;
+    if (to) q.at.$lte = to;
+  }
+  var list = await DebugTick.find(q, {
+    apiSample: 0, parsedContracts: 0, cacheContracts: 0, diffSummary: 0
+  }).sort({ at: -1 }).limit(limit).lean();
+  var total = await DebugTick.countDocuments(q);
+  res.json({ ok: true, total: total, returned: list.length, ticks: list });
+});
+
+// جزئیات کامل یک تیک (فقط capture)
+router.get("/debug/ticks/:id", async function (req, res) {
+  try {
+    var doc = await DebugTick.findById(req.params.id).lean();
+    if (!doc) return res.status(404).json({ ok: false, error: "not found" });
+    res.json({ ok: true, tick: doc });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// حذف یک تیک
+router.delete("/debug/ticks/:id", requireApiKey, async function (req, res) {
+  await DebugTick.deleteOne({ _id: req.params.id });
+  res.json({ ok: true });
+});
+
+// تحلیل تازگی API در بازه‌ی اخیر
+router.get("/debug/api-freshness", async function (req, res) {
+  var minutes = Math.min(parseInt(req.query.minutes, 10) || 30, 360);
+  var since = new Date(Date.now() - minutes * 60 * 1000);
+  var ticks = await DebugTick.find(
+    { at: { $gte: since }, apiHash: { $ne: null } },
+    { at: 1, apiHash: 1, apiRowCount: 1, apiFetchMs: 1 }
+  ).sort({ at: 1 }).lean();
+  var uniqueHashes = {};
+  var transitions = [];
+  var lastHash = null;
+  ticks.forEach(function (t) {
+    if (t.apiHash !== lastHash) {
+      transitions.push({ at: t.at, hash: t.apiHash, rows: t.apiRowCount, ms: t.apiFetchMs });
+      lastHash = t.apiHash;
+    }
+    uniqueHashes[t.apiHash] = true;
+  });
+  res.json({
+    ok: true,
+    windowMinutes: minutes,
+    tickCount: ticks.length,
+    uniqueHashCount: Object.keys(uniqueHashes).length,
+    transitions: transitions
+  });
 });
 
 module.exports = router;

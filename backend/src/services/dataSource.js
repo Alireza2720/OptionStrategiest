@@ -214,12 +214,31 @@ function dedupeAndFlagBuyable(contracts) {
 }
 
 async function loadContracts() {
+  var t0 = Date.now();
   var raw = await fetchRawData();
+  var t1 = Date.now();
+  var crypto = require("crypto");
+  var meta = {
+    fetchedAt: new Date(t1),
+    fetchMs: t1 - t0,
+    rowCount: Array.isArray(raw) ? raw.length : 0,
+    sample: (Array.isArray(raw) && raw.length > 0) ? raw[0] : null
+  };
+  try {
+    meta.hash = crypto.createHash("md5").update(JSON.stringify(raw)).digest("hex");
+  } catch (e) {
+    meta.hash = null;
+  }
   var parsed = parseContracts(raw);
   var deduped = dedupeAndFlagBuyable(parsed);
   var calls = deduped.filter(function (c) { return c.type === "call"; });
   var puts = deduped.filter(function (c) { return c.type === "put"; });
-  return { calls: calls, puts: puts, all: deduped };
+  return { calls: calls, puts: puts, all: deduped, meta: meta };
 }
 
-module.exports = { loadContracts: loadContracts };
+module.exports = {
+  loadContracts: loadContracts,
+  fetchRawDataOnce: fetchRawDataOnce,
+  parseContracts: parseContracts,
+  dedupeAndFlagBuyable: dedupeAndFlagBuyable
+};
