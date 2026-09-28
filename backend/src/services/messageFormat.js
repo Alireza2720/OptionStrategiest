@@ -9,7 +9,8 @@ var LABELS = {
 };
 var NO_SHOCK_TYPES = { cv: true, box: true, boxSell: true };
 var BUYABLE_CHECK_TYPES = { cc: true, mp: true, co: true, cv: true };
-var SHOCK_INF_THRESHOLD = 99999;
+// ✅ هماهنگ با SHOCK_SENTINEL در huntEngine.js
+var SHOCK_INF_THRESHOLD = 999999;
 
 function fmt(v, d) {
   if (v == null || isNaN(v)) return "—";

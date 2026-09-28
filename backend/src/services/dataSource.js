@@ -2,6 +2,13 @@
 
 function sf(v, d) { if (d === undefined) d = 0; var x = parseFloat(v); return isNaN(x) ? d : x; }
 function si(v, d) { if (d === undefined) d = 0; var x = parseInt(v, 10); return isNaN(x) ? d : x; }
+// ✅ برای روزهای مانده که ممکن است اعشاری باشد و truncate شدنش خطای یک‌روزه ایجاد کند
+function daysLeft(v, d) {
+  if (d === undefined) d = 0;
+  var x = parseFloat(v);
+  if (isNaN(x)) return d;
+  return Math.max(0, Math.round(x));
+}
 
 function firstNumber(row, keys, fallback) {
   for (var i = 0; i < keys.length; i++) {
@@ -75,7 +82,7 @@ function parseContracts(raw) {
       var spot = firstNumber(row, ["basis_c", "basis", "basis_last", "basis_price"], 0);
       var strike = sf(row.emal || 0);
       var finalPrice = sf(row.final || 0);
-      var dte = si(row.day_left || 0);
+      var dte = daysLeft(row.day_left || 0);
       var size = si(row.size || 1000);
       if (spot <= 0 || strike <= 0 || dte <= 0) continue;
 
@@ -135,8 +142,9 @@ function parseContracts(raw) {
       out.push({
         name: String(row.name || ""), basis_name: String(row.basis_name || ""),
         type: isCall ? "call" : "put", strike: strike, spot: spot, price: finalPrice,
-        buy_price: askPrice > 0 && askVol > 0 ? askPrice : finalPrice,
-        sell_price: bidPrice > 0 && bidVol > 0 ? bidPrice : finalPrice,
+        // ✅ به‌جای fallback به قیمت پایانی، صفر می‌گذاریم تا canBuyOpt/canSellOpt ردیف را رد کند
+        buy_price: askPrice > 0 && askVol > 0 ? askPrice : 0,
+        sell_price: bidPrice > 0 && bidVol > 0 ? bidPrice : 0,
         end_price: lastPrice, end_pct: lastPct, final_pct: finalPct, low: low, high: high,
         intrinsic: intrinsic, time_val: timeVal, be: be, be_diff: beDiff, strike_diff: strikeDiff,
         bs: bs, bs_diff: bsDiff, volume: volume, tvalue: tvalue, oi: oi, op_change: opChange,

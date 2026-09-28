@@ -379,7 +379,8 @@ var HEADER_H_WATCH=70;
 var VIRTUALIZE_THRESHOLD=IS_TOUCH?14:30;
 var VIRT_OVERSCAN=IS_TOUCH?6:12;
 var EMPTY_ARR=[];
-var SHOCK_INF_THRESHOLD=99999;
+// ✅ هماهنگ با SHOCK_SENTINEL در huntEngine.js
+var SHOCK_INF_THRESHOLD=999999;
 
 var HUNT_STRATEGY_TYPES=["cc","mp","co","cv","strangle","strangleSell","callspread","callspreadbear","putspread","putspreadbull","box","boxSell"];
 var HUNT_NO_SHOCK_TYPES={cv:true,box:true,boxSell:true};

@@ -76,7 +76,8 @@ function calcCollar(calls, puts, steps) {
   var byGroup = {};
   calls.forEach(function (c) {
     if (canSellOpt(c)) {
-      var key = c.basis_name + "|" + c.dte;
+      // ✅ گروه‌بندی بر اساس expiry (نه dte)
+      var key = c.basis_name + "|" + c.expiry;
       if (!byGroup[key]) byGroup[key] = [];
       byGroup[key].push(c);
     }
@@ -84,10 +85,13 @@ function calcCollar(calls, puts, steps) {
   var results = [];
   puts.forEach(function (put) {
     if (!canBuyOpt(put) || put.dte <= 0) return;
-    var group = byGroup[put.basis_name + "|" + put.dte];
+    var group = byGroup[put.basis_name + "|" + put.expiry];
     if (!group) return;
     group.forEach(function (call) {
       if (call.strike === put.strike) return;
+      // ✅ چک یکسانی سررسید و اندازه
+      if (call.expiry !== put.expiry) return;
+      if (call.size !== put.size) return;
       var sz = call.size, net = sp(call) - bp(put), block = (call.spot - net) * sz;
       if (block <= 0) return;
       function posVal(S) { return S - Math.max(S - call.strike, 0) + Math.max(put.strike - S, 0); }
@@ -173,7 +177,8 @@ function calcStrangleBuy(calls, puts, steps) {
   var byGroup = {};
   calls.forEach(function (c) {
     if (canBuyOpt(c)) {
-      var key = c.basis_name + "|" + c.dte;
+      // ✅ گروه‌بندی بر اساس expiry (نه dte)
+      var key = c.basis_name + "|" + c.expiry;
       if (!byGroup[key]) byGroup[key] = [];
       byGroup[key].push(c);
     }
@@ -181,9 +186,12 @@ function calcStrangleBuy(calls, puts, steps) {
   var results = [];
   puts.forEach(function (put) {
     if (!canBuyOpt(put) || put.dte <= 0) return;
-    var group = byGroup[put.basis_name + "|" + put.dte];
+    var group = byGroup[put.basis_name + "|" + put.expiry];
     if (!group) return;
     group.forEach(function (call) {
+      // ✅ چک یکسانی سررسید و اندازه
+      if (call.expiry !== put.expiry) return;
+      if (call.size !== put.size) return;
       var sz = call.size;
       var totalCost = (put.ask_price + call.ask_price) * sz;
       if (totalCost <= 0) return;
@@ -218,7 +226,8 @@ function calcStrangleSell(calls, puts, steps) {
   var byGroup = {};
   calls.forEach(function (c) {
     if (canSellOpt(c)) {
-      var key = c.basis_name + "|" + c.dte;
+      // ✅ گروه‌بندی بر اساس expiry (نه dte)
+      var key = c.basis_name + "|" + c.expiry;
       if (!byGroup[key]) byGroup[key] = [];
       byGroup[key].push(c);
     }
@@ -226,9 +235,12 @@ function calcStrangleSell(calls, puts, steps) {
   var results = [];
   puts.forEach(function (put) {
     if (!canSellOpt(put) || put.dte <= 0) return;
-    var group = byGroup[put.basis_name + "|" + put.dte];
+    var group = byGroup[put.basis_name + "|" + put.expiry];
     if (!group) return;
     group.forEach(function (call) {
+      // ✅ چک یکسانی سررسید و اندازه
+      if (call.expiry !== put.expiry) return;
+      if (call.size !== put.size) return;
       var sz = call.size;
       var totalPremium = call.bid_price * sz + put.bid_price * sz;
       var m1 = call.margin || 0, m2 = put.margin || 0;

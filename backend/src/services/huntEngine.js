@@ -246,6 +246,7 @@ function buildHuntRows(computed, settings, steps) {
           var th = computeThreshold(sc.profitMode, dte * sc.profitRate, sc.profitFloor);
           perScenarioReqs.push(Math.round(th * 100) / 100);
           var roiAtStep = scenRawForFilter[sIdx];
+          // ✅ scenRaw خام است؛ تحمل اضافه لازم ندارد
           if (roiAtStep == null || isNaN(roiAtStep) || roiAtStep < th) {
             allPass = false;
           }
@@ -255,7 +256,8 @@ function buildHuntRows(computed, settings, steps) {
         strangleScenarioReqs = perScenarioReqs;
       } else {
         requiredProfit = computeThreshold(cfg.profitMode, dte * cfg.profitRate, cfg.profitFloor);
-        if (roiZero < requiredProfit) return;
+        // ✅ تحمل 0.01 برای گرد شدن roi_zero به 2 رقم اعشار
+        if (roiZero + 0.005 < requiredProfit) return;
         if (!isNoShock) {
           requiredShock = computeThreshold(cfg.shockMode, dte * cfg.shockRate, cfg.shockFloor);
           actualShockUp = findShockThreshold(r._payoff, 1);
