@@ -197,18 +197,31 @@ function dedupeAndFlagBuyable(contracts) {
     }
   });
 
-  var map = {};
+var map = {};
   contracts.forEach(function (c) {
     var key = c.name + "|" + c.expiry;
     if (!map[key]) { map[key] = c; return; }
     var old = map[key];
-    var has = c.ask_vol > 0 || c.bid_vol > 0;
-    var oldHas = old.ask_vol > 0 || old.bid_vol > 0;
-    if (has && !oldHas) map[key] = c;
-    else if (has && oldHas) {
-      if (c.ask_vol > 0 && old.ask_vol === 0) map[key] = c;
-      else if (!(c.ask_vol === 0 && old.ask_vol > 0) && c.bid_vol > old.bid_vol) map[key] = c;
+    // Merge: بهترین ask و بهترین bid را از هر دو ردیف بردار
+    var merged = Object.assign({}, old);
+    // ask: اگر ردیف جدید ask معتبر دارد و قدیمی ندارد، یا ask جدید بهتر است (کمتر)، از جدید بگیر
+    if (c.ask_vol > 0 && c.ask_price > 0) {
+      if (!(old.ask_vol > 0 && old.ask_price > 0) || c.ask_price < old.ask_price) {
+        merged.ask_price = c.ask_price;
+        merged.ask_vol = c.ask_vol;
+      }
     }
+    // bid: اگر ردیف جدید bid معتبر دارد و قدیمی ندارد، یا bid جدید بهتر است (بیشتر)، از جدید بگیر
+    if (c.bid_vol > 0 && c.bid_price > 0) {
+      if (!(old.bid_vol > 0 && old.bid_price > 0) || c.bid_price > old.bid_price) {
+        merged.bid_price = c.bid_price;
+        merged.bid_vol = c.bid_vol;
+      }
+    }
+    // buy_price و sell_price را هم به‌روز کن
+    merged.buy_price = merged.ask_price > 0 && merged.ask_vol > 0 ? merged.ask_price : 0;
+    merged.sell_price = merged.bid_price > 0 && merged.bid_vol > 0 ? merged.bid_price : 0;
+    map[key] = merged;
   });
   return Object.keys(map).map(function (k) { return map[k]; });
 }

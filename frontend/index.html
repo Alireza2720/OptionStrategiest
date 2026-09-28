@@ -440,9 +440,13 @@ var Api={
   debugTick:function(id){return apiGet("/api/debug/ticks/"+id)},
   debugFreshness:function(minutes){return apiGet("/api/debug/api-freshness?minutes="+(minutes||30))},
   debugDeleteTick:function(id){return apiSend("DELETE","/api/debug/ticks/"+id)},
-  debugClearAll:function(){return apiSend("DELETE","/api/debug/ticks")}
+  debugClearAll:function(){return apiSend("DELETE","/api/debug/ticks")},
+  watcherStatus:function(){return apiGet("/api/watcher/status")},
+  watcherStart:function(intervalSec){return apiSend("POST","/api/watcher/start",{intervalSec:intervalSec})},
+  watcherStop:function(){return apiSend("POST","/api/watcher/stop")},
+  watcherSamples:function(limit){return apiGet("/api/watcher/samples?limit="+(limit||100))},
+  watcherClear:function(){return apiSend("DELETE","/api/watcher/samples")}
 };
-
 /* =========================================================
    توابع کمکی عمومی
    ========================================================= */
@@ -2745,6 +2749,7 @@ function DebugOverlay(props){
         <button className={"msub-tab "+(tab==="capture"?"on":"")} onClick={function(){setTab("capture")}}>آخرین Capture</button>
         <button className={"msub-tab "+(tab==="ticks"?"on":"")} onClick={function(){setTab("ticks")}}>تاریخچه تیک‌ها</button>
         <button className={"msub-tab "+(tab==="freshness"?"on":"")} onClick={function(){setTab("freshness")}}>تازگی API</button>
+        <button className={"msub-tab "+(tab==="watcher"?"on":"")} onClick={function(){setTab("watcher")}}>پایش خودکار</button>
       </div>
 
       <div className="fs-body" style={{padding:12, overflowY:"auto"}}>
@@ -2754,6 +2759,8 @@ function DebugOverlay(props){
           <CaptureTab capture={capture} onCapture={doCapture} capturing={capturing} />
         ):tab==="ticks"?(
           <TicksTab ticks={ticks} loading={tickLoading} onOpen={openTick} onRefresh={loadTicks} />
+        ):tab==="watcher"?(
+          <WatcherTab open={open} />
         ):(
           <FreshnessTab fresh={fresh} loading={freshLoading} onRefresh={loadFreshness} />
         )}
@@ -2921,6 +2928,191 @@ function FreshnessTab(props){
   );
 }
 
+function WatcherTab(props){
+  var stStatus=useState(null);
+  var status=stStatus[0],setStatus=stStatus[1];
+  var stSamples=useState([]);
+  var samples=stSamples[0],setSamples=stSamples[1];
+  var stInterval=useState(30);
+  var intervalSec=stInterval[0],setIntervalSec=stInterval[1];
+  var stLoading=useState(false);
+  var loading=stLoading[0],setLoading=stLoading[1];
+  var stErr=useState(null);
+  var err=stErr[0],setErr=stErr[1];
+  var stAuto=useState(true);
+  var autoRefresh=stAuto[0],setAutoRefresh=stAuto[1];
+
+  function reload(){
+    return Promise.all([
+      Api.watcherStatus(),
+      Api.watcherSamples(100)
+    ]).then(function(r){
+      setStatus(r[0]);
+      setSamples(r[1].samples||[]);
+      setErr(null);
+    }).catch(function(e){
+      setErr(e.message);
+    });
+  }
+
+  useEffect(function(){
+    if(!props.open)return;
+    reload();
+    if(!autoRefresh)return;
+    var t=setInterval(reload,5000);
+    return function(){clearInterval(t)};
+  },[props.open,autoRefresh]);
+
+  function handleStart(){
+    setLoading(true);
+    setErr(null);
+    Api.watcherStart(intervalSec).then(function(){
+      return reload();
+    }).catch(function(e){
+      setErr(e.message);
+    }).finally(function(){setLoading(false)});
+  }
+  function handleStop(){
+    setLoading(true);
+    Api.watcherStop().then(function(){
+      return reload();
+    }).catch(function(e){
+      setErr(e.message);
+    }).finally(function(){setLoading(false)});
+  }
+  function handleClear(){
+    if(!window.confirm("همه نمونه‌ها پاک شوند؟"))return;
+    setLoading(true);
+    Api.watcherClear().then(function(){
+      return reload();
+    }).catch(function(e){
+      setErr(e.message);
+    }).finally(function(){setLoading(false)});
+  }
+
+  if(!status)return <div className="center" style={{padding:30}}><div className="spinner" /></div>;
+
+  var summary=status.summary||{};
+  var intervals=summary.intervals;
+  var running=status.running;
+
+  function fmtDur(sec){
+    if(sec==null)return "—";
+    if(sec<60)return n(sec,1)+" ثانیه";
+    if(sec<3600)return n(sec/60,1)+" دقیقه";
+    return n(sec/3600,2)+" ساعت";
+  }
+
+  return (
+    <div>
+      {err?<div className="error-box" style={{marginBottom:12}}><div className="desc">{err}</div></div>:null}
+
+      <div className="gcard">
+        <div className="gcard-t" style={{justifyContent:"space-between",display:"flex",alignItems:"center"}}>
+          <span>🛰 وضعیت Watcher</span>
+          <span className={"bdg "+(running?"bdg-itm":"bdg-otm")}>{running?"در حال اجرا":"متوقف"}</span>
+        </div>
+        <div className="gcard-p" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <div>زمان تهران: <b>{status.tehranNow?new Date(status.tehranNow).toLocaleTimeString("fa-IR"):"—"}</b></div>
+          <div>بازار: <b className={status.isMarketOpenNow?"gain":"mut"}>{status.isMarketOpenNow?"باز":"بسته"}</b></div>
+          <div>فاصله‌ی نمونه‌برداری: <b>{status.intervalSec} ثانیه</b></div>
+          <div>تعداد نمونه‌های این اجرا: <b>{n(status.sampleCount||0)}</b></div>
+          {status.startedAt?<div>شروع: <b>{new Date(status.startedAt).toLocaleString("fa-IR")}</b></div>:null}
+          {status.lastSampleAt?<div>آخرین نمونه: <b>{new Date(status.lastSampleAt).toLocaleTimeString("fa-IR")}</b></div>:null}
+          {status.lastChangeAt?<div>آخرین تغییر: <b>{new Date(status.lastChangeAt).toLocaleTimeString("fa-IR")}</b></div>:null}
+          {status.lastError?<div className="loss">آخرین خطا: {status.lastError}</div>:null}
+        </div>
+        <div className="step-row" style={{marginTop:10,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <label className="step-hint">فاصله (ثانیه):</label>
+          <input type="number" className="step-input" min={5} max={3600}
+            value={intervalSec} disabled={running}
+            onChange={function(e){setIntervalSec(parseInt(e.target.value,10)||30)}} />
+          {!running?(
+            <button className="cbtn cbtn-acc" onClick={handleStart} disabled={loading}>
+              {loading?"...":"▶ شروع"}
+            </button>
+          ):(
+            <button className="cbtn" onClick={handleStop} disabled={loading}>
+              {loading?"...":"⏹ توقف"}
+            </button>
+          )}
+          <label className="toggle-switch" style={{marginRight:"auto"}}>
+            <input type="checkbox" checked={autoRefresh} onChange={function(e){setAutoRefresh(e.target.checked)}} />
+            بروزرسانی خودکار UI (۵ ثانیه)
+          </label>
+          <button className="cbtn" onClick={handleClear} disabled={loading} title="همهٔ نمونه‌ها را حذف کن">
+            🗑 پاک‌سازی داده
+          </button>
+        </div>
+      </div>
+
+      <div className="gcard">
+        <div className="gcard-t">📊 خلاصه آماری (فقط ساعات بازار)</div>
+        <div className="gcard-p" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <div>کل نمونه‌ها: <b>{n(summary.totalSamples||0)}</b></div>
+          <div>خطاها: <b className={(summary.totalErrors||0)>0?"loss":"mut"}>{n(summary.totalErrors||0)}</b></div>
+          <div>نمونه‌های ساعات بازار: <b>{n(summary.marketSamples||0)}</b></div>
+          <div>تغییرات در ساعات بازار: <b>{n(summary.changeCount||0)}</b></div>
+          <div>hash های یکتا: <b>{n(summary.uniqueHashCount||0)}</b></div>
+        </div>
+        {intervals?(
+          <div className="gcard-p" style={{marginTop:8,borderTop:"1px dashed var(--bor)",paddingTop:8}}>
+            <div style={{marginBottom:4,fontWeight:700}}>فاصله‌ی بین تغییرات API:</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+              <div>میانگین: <b>{fmtDur(intervals.avg)}</b></div>
+              <div>میانه: <b>{fmtDur(intervals.median)}</b></div>
+              <div>P90: <b>{fmtDur(intervals.p90)}</b></div>
+              <div>کمینه: <b>{fmtDur(intervals.min)}</b></div>
+              <div>بیشینه: <b>{fmtDur(intervals.max)}</b></div>
+              <div>تعداد بازه: <b>{n(intervals.count)}</b></div>
+            </div>
+          </div>
+        ):(
+          <div className="step-hint" style={{marginTop:8}}>هنوز تغییر کافی ثبت نشده تا آمار محاسبه شود.</div>
+        )}
+      </div>
+
+      <div className="gcard">
+        <div className="gcard-t">🕒 آخرین نمونه‌ها</div>
+        {samples.length===0?(<div className="step-hint">هنوز نمونه‌ای ثبت نشده.</div>):(
+          <div style={{maxHeight:"45vh",overflow:"auto"}}>
+            <table style={{fontSize:11,width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{background:"var(--sur3)"}}>
+                  <th style={{padding:4,textAlign:"right"}}>زمان</th>
+                  <th style={{padding:4,textAlign:"right"}}>بازار</th>
+                  <th style={{padding:4,textAlign:"right"}}>وضعیت</th>
+                  <th style={{padding:4,textAlign:"right"}}>hash</th>
+                  <th style={{padding:4,textAlign:"right"}}>rows</th>
+                  <th style={{padding:4,textAlign:"right"}}>fetch</th>
+                </tr>
+              </thead>
+              <tbody>
+                {samples.map(function(s){
+                  return (
+                    <tr key={s._id}>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{new Date(s.at).toLocaleString("fa-IR")}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>
+                        <span className={"bdg "+(s.isMarketOpen?"bdg-itm":"bdg-otm")}>{s.isMarketOpen?"باز":"بسته"}</span>
+                      </td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>
+                        {s.error?(<span className="loss">خطا</span>):s.changedSincePrev?(<span className="gain">تغییر</span>):(<span className="mut">بدون تغییر</span>)}
+                      </td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}><code style={{fontSize:10}}>{(s.hash||"").slice(0,8)}</code></td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{s.rowCount||0}</td>
+                      <td style={{padding:4,borderBottom:"1px solid var(--bor)"}}>{s.fetchMs||0}ms</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TickDetailView(props){
   var tick=props.tick;
   var rows=tick.parsedContracts||tick.cacheContracts||[];
@@ -2999,7 +3191,7 @@ function App(){
   var theme=themeArr[0],setTheme=themeArr[1];
   var refreshSecArr=useLocalStorage("refreshIntervalSec",DEFAULT_REFRESH_SEC);
   var refreshSec=refreshSecArr[0],setRefreshSec=refreshSecArr[1];
-  var autoRefreshArr=useLocalStorage("autoRefreshEnabled",false);
+var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
   var autoRefreshEnabled=autoRefreshArr[0],setAutoRefreshEnabled=autoRefreshArr[1];
 
   var stSettings=useState(null);var settings=stSettings[0],setSettings=stSettings[1];
@@ -3196,9 +3388,15 @@ function App(){
     return {names:names,spotMap:spotMap};
   },[tabsData.watch]);
 
-  function handleTabClick(id){
+function handleTabClick(id){
     setTab(id);
-    if(!tabsData[id]&&!tabLoading[id])loadTabData(id);
+    loadTabData(id);
+    if(id==="box"||id==="boxSell"){
+      setRefreshing(true);
+      Api.refresh().then(function(){return loadTabData(id)})
+        .catch(function(e){setGlobalError("خطا در بروزرسانی: "+e.message)})
+        .finally(function(){setRefreshing(false)});
+    }
   }
 
   /* ---------- نمودار ---------- */

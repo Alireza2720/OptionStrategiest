@@ -129,10 +129,15 @@ async function main() {
     var fr = findContractInRaw(arr, cr.name);
     console.log("\n  • " + cr.name + "  |  expiry=" + cr.expiry);
     fieldsToCompare.forEach(function (pair) {
-      var cacheV = cr[pair[0]];
-      var freshRaw = fr && fr[pair[1]];
-      var flag = (cacheV != freshRaw) ? "  ⚠️ MISMATCH" : "";
-      console.log("      " + pair[0] + ": cache=" + cacheV + "   fresh." + pair[1] + "=" + freshRaw + flag);
+var cacheV = cr[pair[0]];
+      var freshRawStr = fr && fr[pair[1]];
+      var freshFirst = 0;
+      if (freshRawStr != null && freshRawStr !== "") {
+        var parts = String(freshRawStr).split("/");
+        freshFirst = parseFloat(parts[0]) || 0;
+      }
+      var flag = (cacheV != freshFirst) ? "  ⚠️ MISMATCH" : "";
+      console.log("      " + pair[0] + ": cache=" + cacheV + "   fresh[0]=" + freshFirst + " (raw=" + freshRawStr + ")" + flag);
     });
   }
 
@@ -207,7 +212,23 @@ async function main() {
     }
   }
 
-  console.log("\n✔ Done");
+console.log("\n=== خلاصه‌ی API Watcher ===");
+try {
+  var ApiWatchSample = require("../backend/src/models/ApiWatchSample");
+  var total = await ApiWatchSample.countDocuments({});
+  var marketCount = await ApiWatchSample.countDocuments({ isMarketOpen: true, hash: { $ne: null } });
+  var changeCount = await ApiWatchSample.countDocuments({ isMarketOpen: true, changedSincePrev: true });
+  console.log("  کل نمونه‌ها: " + total);
+  console.log("  نمونه‌های ساعات بازار: " + marketCount);
+  console.log("  تغییرات در ساعات بازار: " + changeCount);
+  if (changeCount > 0 && marketCount > 0) {
+    console.log("  برای جزئیات بیشتر اجرا کن: node debug/apiWatcher.js --summary");
+  }
+} catch (e) {
+  console.log("  (ApiWatchSample در دسترس نیست: " + e.message + ")");
+}
+
+console.log("\n✔ Done");
   await mongoose.connection.close();
   process.exit(0);
 }

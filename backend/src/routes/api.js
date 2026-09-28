@@ -9,6 +9,7 @@ var DebugTick = require("../models/DebugTick");
 var { runCycle, getCache, getHealth } = require("../services/cycleRunner");
 var { isMarketOpen, todayKeyTehran, pruneOldHolidays } = require("../services/marketHours");
 var { fetchRawDataOnce, parseContracts, dedupeAndFlagBuyable } = require("../services/dataSource");
+var apiWatcher = require("../services/apiWatcher");
 var crypto = require("crypto");
 
 function requireApiKey(req, res, next) {
@@ -350,6 +351,54 @@ router.get("/debug/api-freshness", async function (req, res) {
     uniqueHashCount: Object.keys(uniqueHashes).length,
     transitions: transitions
   });
+});
+
+// ---------- API Watcher (پایش خودکار تازگی API) ----------
+router.get("/watcher/status", async function (req, res) {
+  try {
+    var status = apiWatcher.getStatus();
+    var summary = await apiWatcher.getSummary();
+    res.json(Object.assign({ ok: true }, status, { summary: summary }));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.post("/watcher/start", requireApiKey, async function (req, res) {
+  try {
+    var body = req.body || {};
+    var r = await apiWatcher.start({ intervalSec: body.intervalSec });
+    res.json(Object.assign({ ok: true }, r, { status: apiWatcher.getStatus() }));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.post("/watcher/stop", requireApiKey, function (req, res) {
+  try {
+    var r = apiWatcher.stop();
+    res.json(Object.assign({ ok: true }, r, { status: apiWatcher.getStatus() }));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.get("/watcher/samples", async function (req, res) {
+  try {
+    var list = await apiWatcher.getSamples(req.query.limit);
+    res.json({ ok: true, samples: list });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+router.delete("/watcher/samples", requireApiKey, async function (req, res) {
+  try {
+    var r = await apiWatcher.clearSamples();
+    res.json({ ok: true, deleted: r.deleted });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 module.exports = router;
