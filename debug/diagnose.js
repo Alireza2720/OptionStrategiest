@@ -7,9 +7,9 @@ var path = require("path");
 var crypto = require("crypto");
 var mongoose = require("mongoose");
 
-var { connectDB } = require("../db");
-var CacheSnapshot = require("../models/CacheSnapshot");
-var DebugTick = require("../models/DebugTick");
+var { connectDB } = require("../backend/src/db");
+var CacheSnapshot = require("../backend/src/models/CacheSnapshot");
+var DebugTick = require("../backend/src/models/DebugTick");
 
 var TARGET_URL = "https://s3.optionschool24.com/last?type=3";
 

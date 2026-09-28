@@ -2681,8 +2681,8 @@ function DebugOverlay(props){
   var stTickDetail=useState(null),tickDetail=stTickDetail[0],setTickDetail=stTickDetail[1];
   var stTickDetailLoading=useState(false),tickDetailLoading=stTickDetailLoading[0],setTickDetailLoading=stTickDetailLoading[1];
 
-  var stFresh=useState(null),fresh=fresh[0]||null,setFresh=stFresh[1];
-  var stFreshLoading=useState(false),freshLoading=freshLoading[0],setFreshLoading=stFreshLoading[1];
+  var stFresh=useState(null);var fresh=stFresh[0];var setFresh=stFresh[1];
+  var stFreshLoading=useState(false);var freshLoading=stFreshLoading[0];var setFreshLoading=stFreshLoading[1];
 
   useEffect(function(){
     if(!open)return;
