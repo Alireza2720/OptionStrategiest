@@ -266,7 +266,8 @@ function calcStrangleSell(calls, puts, steps) {
 function calcCallSpread(calls, steps, bull) {
   var byGroup = {};
   calls.forEach(function (c) {
-    var key = c.basis_name + "|" + c.dte;
+    // ✅ گروه‌بندی بر اساس expiry (نه dte)
+    var key = c.basis_name + "|" + c.expiry;
     if (!byGroup[key]) byGroup[key] = [];
     byGroup[key].push(c);
   });
@@ -278,16 +279,22 @@ function calcCallSpread(calls, steps, bull) {
         if (i === j) continue;
         var buy = arr[i], sell = arr[j];
         if (buy.strike === sell.strike) continue;
+        // ✅ چک یکسانی سررسید و اندازه
+        if (buy.expiry !== sell.expiry) continue;
+        if (buy.size !== sell.size) continue;
         var isBull = buy.strike < sell.strike;
         if (isBull !== bull) continue;
         if (!canBuyOpt(buy) || !canSellOpt(sell)) continue;
         var sz = buy.size;
         var netCost = buy.ask_price - sell.bid_price;
         var width = Math.abs(buy.strike - sell.strike);
+        // ✅ آربیتراژ credit spread را دیگر فیلتر نمی‌کنیم
+        var isArbitrage = netCost < 0 && Math.abs(netCost) > width;
         // اسپرد بدهی (netCost > 0): مبنا = بدهی پرداختی
-        // اسپرد اعتباری (netCost <= 0): مبنا = حداکثر زیان = عرض − اعتبار
-        var base = netCost > 0 ? netCost * sz : (width + netCost) * sz;
-        if (base <= 0) continue;
+        // اسپرد اعتباری (netCost < 0، معمول): مبنا = حداکثر زیان = عرض − |credit|
+        // آربیتراژ: هیچ capital درگیری نیست؛ از width استفاده می‌کنیم
+        var rawBase = netCost > 0 ? netCost * sz : Math.abs((width + netCost)) * sz;
+        var base = rawBase > 0 ? rawBase : width * sz;
         (function (buy, sell, sz, netCost, base) {
           function payoff(pct) {
             var future = buy.spot * (1 + pct / 100);
@@ -302,6 +309,8 @@ function calcCallSpread(calls, steps, bull) {
             sell_bid_vol: sell.bid_vol, sell_bid_price: sell.bid_price, sell_tvalue: Math.round(sell.tvalue),
             expiry: buy.expiry, dte: buy.dte, size: sz, spot: buy.spot,
             base: Math.round(base), roi_zero: Math.round(zero * 100) / 100,
+            net_cost: Math.round(netCost * sz),
+            is_arbitrage: isArbitrage,
             scenariosAdjusted: steps.map(function (p) { return adjustRoi(payoff(p), buy.dte); }),
             scenariosRaw: steps.map(function (p) { return payoff(p); }),
             basis_buyable: (buy.basis_buyable !== false) && (sell.basis_buyable !== false),
@@ -319,7 +328,8 @@ function calcCallSpread(calls, steps, bull) {
 function calcPutSpread(puts, steps, bull) {
   var byGroup = {};
   puts.forEach(function (c) {
-    var key = c.basis_name + "|" + c.dte;
+    // ✅ گروه‌بندی بر اساس expiry (نه dte)
+    var key = c.basis_name + "|" + c.expiry;
     if (!byGroup[key]) byGroup[key] = [];
     byGroup[key].push(c);
   });
@@ -331,16 +341,17 @@ function calcPutSpread(puts, steps, bull) {
         if (i === j) continue;
         var buy = arr[i], sell = arr[j];
         if (buy.strike === sell.strike) continue;
+        if (buy.expiry !== sell.expiry) continue;
+        if (buy.size !== sell.size) continue;
         var isBull = buy.strike < sell.strike;
         if (isBull !== bull) continue;
         if (!canBuyOpt(buy) || !canSellOpt(sell)) continue;
         var sz = buy.size;
         var netCost = buy.ask_price - sell.bid_price;
         var width = Math.abs(buy.strike - sell.strike);
-        // اسپرد بدهی (netCost > 0): مبنا = بدهی پرداختی
-        // اسپرد اعتباری (netCost <= 0): مبنا = حداکثر زیان = عرض − اعتبار
-        var base = netCost > 0 ? netCost * sz : (width + netCost) * sz;
-        if (base <= 0) continue;
+        var isArbitrage = netCost < 0 && Math.abs(netCost) > width;
+        var rawBase = netCost > 0 ? netCost * sz : Math.abs((width + netCost)) * sz;
+        var base = rawBase > 0 ? rawBase : width * sz;
         (function (buy, sell, sz, netCost, base) {
           function payoff(pct) {
             var future = buy.spot * (1 + pct / 100);
@@ -355,6 +366,8 @@ function calcPutSpread(puts, steps, bull) {
             sell_bid_vol: sell.bid_vol, sell_bid_price: sell.bid_price, sell_tvalue: Math.round(sell.tvalue),
             expiry: buy.expiry, dte: buy.dte, size: sz, spot: buy.spot,
             base: Math.round(base), roi_zero: Math.round(zero * 100) / 100,
+            net_cost: Math.round(netCost * sz),
+            is_arbitrage: isArbitrage,
             scenariosAdjusted: steps.map(function (p) { return adjustRoi(payoff(p), buy.dte); }),
             scenariosRaw: steps.map(function (p) { return payoff(p); }),
             basis_buyable: (buy.basis_buyable !== false) && (sell.basis_buyable !== false),
@@ -457,9 +470,13 @@ function calcBox(calls, puts, direction) {
           if (sellProfit > 0) {
             // محافظه‌کارانه: فرض می‌کنیم کارگزاری دو اسپرد را جدا حساب می‌کند
             var sellMargin = Math.max(0, 2 * width - sellTotalCredit);
-            var sellBase = Math.abs(sellTotalCredit) > 0 ? Math.abs(sellTotalCredit) : sz;
+            // ✅ مبنای ROI = margin واقعی (نه credit)
+            //    اگر margin صفر باشه (آربیتراژ خالص)، از width استفاده می‌کنیم
+            var sellBase = sellMargin > 0 ? sellMargin : width;
             var sellRoi = roiCalc(sellProfit, sellBase);
             var sellRoiOnMargin = sellMargin > 0 ? roiCalc(sellProfit, sellMargin) : null;
+            // ✅ ROI روی width هم به‌عنوان بازده «بازارساز» محاسبه و ذخیره کن
+            var sellRoiOnWidth = width > 0 ? roiCalc(sellProfit, width) : sellRoi;
             var sellAdjRoi = adjustRoi(sellRoi, dteVal);
             results.push({
               call_buy_name: callK2.name, call_sell_name: callK1.name,
