@@ -122,9 +122,10 @@ function calcCollar(calls, puts, steps) {
 
 function calcConversion(calls, puts) {
   var byGroup = {};
+  // ✅ تغییر ۱: گروه‌بندی بر اساس expiry به جای dte
   calls.forEach(function (c) {
     if (canSellOpt(c)) {
-      var key = c.basis_name + "|" + c.dte + "|" + c.strike;
+      var key = c.basis_name + "|" + c.expiry + "|" + c.strike;
       if (!byGroup[key]) byGroup[key] = [];
       byGroup[key].push(c);
     }
@@ -132,13 +133,19 @@ function calcConversion(calls, puts) {
   var results = [];
   puts.forEach(function (put) {
     if (!canBuyOpt(put) || put.dte <= 0) return;
-    var group = byGroup[put.basis_name + "|" + put.dte + "|" + put.strike];
+    var group = byGroup[put.basis_name + "|" + put.expiry + "|" + put.strike];
     if (!group) return;
     group.forEach(function (call) {
+      // ✅ تغییر ۲: بررسی یکسانی سررسید و اندازه قرارداد
+      if (call.expiry !== put.expiry) return;
+      if (call.size !== put.size) return;
       var sz = call.size, perShareCost = call.spot + bp(put) - sp(call), total = perShareCost * sz;
-      if (total <= 0) return;
+      // ✅ تغییر ۳: دیگر total <= 0 حذف نمی‌شود — این هم آربیتراژ خالص است
+      //    پول می‌گیری AND در سررسید strike × sz نصیبت می‌شود
+      var isArbitrage = total <= 0;
       var pnl = (call.strike - perShareCost) * sz;
-      var roi = roiCalc(pnl, total);
+      var base = total > 0 ? total : Math.max(Math.abs(total), sz);
+      var roi = roiCalc(pnl, base);
       function payoff() { return roi; }
       results.push({
         call_name: call.name, put_name: put.name, basis_name: call.basis_name,
@@ -148,6 +155,8 @@ function calcConversion(calls, puts) {
         spot: call.spot, trade_value_put: Math.round(put.tvalue), trade_value_call: Math.round(call.tvalue),
         margin: 0, break_even: Math.round(perShareCost), max_profit: Math.round(pnl), max_loss: null,
         roi_zero: Math.round(roi * 100) / 100,
+        is_arbitrage: isArbitrage,
+        net_cost: Math.round(total),
         scenariosAdjusted: [adjustRoi(roi, call.dte)],
         scenariosRaw: [roi],
         basis_buyable: (call.basis_buyable !== false) && (put.basis_buyable !== false),
@@ -362,14 +371,15 @@ function calcPutSpread(puts, steps, bull) {
 
 function calcBox(calls, puts) {
   var callMap = {}, putMap = {}, groupStrikes = {};
+  // ✅ تغییر ۱: گروه‌بندی بر اساس expiry (نه dte) برای جلوگیری از قاطی شدن سررسیدها
   calls.forEach(function (c) {
-    var gk = c.basis_name + "|" + c.dte;
+    var gk = c.basis_name + "|" + c.expiry;
     callMap[gk + "|" + c.strike] = c;
     if (!groupStrikes[gk]) groupStrikes[gk] = [];
     if (groupStrikes[gk].indexOf(c.strike) === -1) groupStrikes[gk].push(c.strike);
   });
   puts.forEach(function (p) {
-    putMap[p.basis_name + "|" + p.dte + "|" + p.strike] = p;
+    putMap[p.basis_name + "|" + p.expiry + "|" + p.strike] = p;
   });
   var results = [];
   Object.keys(groupStrikes).forEach(function (gk) {
@@ -385,12 +395,28 @@ function calcBox(calls, puts) {
         var putSell = putMap[gk + "|" + k1];
         if (!callBuy || !callSell || !putBuy || !putSell) continue;
         if (!canBuyOpt(callBuy) || !canSellOpt(callSell) || !canBuyOpt(putBuy) || !canSellOpt(putSell)) continue;
+        // ✅ تغییر ۲: همه‌ی چهار leg باید از یک سررسید و یک size باشند
+        if (callBuy.expiry !== callSell.expiry ||
+            callBuy.expiry !== putBuy.expiry ||
+            callBuy.expiry !== putSell.expiry) continue;
+        if (callBuy.size !== callSell.size ||
+            callBuy.size !== putBuy.size ||
+            callBuy.size !== putSell.size) continue;
         var sz = callBuy.size;
         var netCost = (callBuy.ask_price - callSell.bid_price) + (putBuy.ask_price - putSell.bid_price);
         var totalCost = netCost * sz;
-        if (totalCost <= 0) continue;
+        // ✅ تغییر ۳: دیگر totalCost <= 0 حذف نمی‌شود — این حالت «آربیتراژ خالص» است
+        //    در آربیتراژ، پول می‌گیری AND در سررسید (k2-k1)*sz هم نصیبت می‌شود
+        var isArbitrage = totalCost <= 0;
         var fixedProfit = (k2 - k1) * sz - totalCost;
-        var roi = roiCalc(fixedProfit, totalCost);
+        // ✅ تغییر ۵ (مشکل ۲): باکس یک استراتژی آربیتراژی است؛
+        //    اگر سود تضمینی مثبت نباشد، اصلاً سیگنال نیست و باید حذف شود.
+        //    توجه: در حالت آربیتراژ (totalCost <= 0)، همیشه fixedProfit > 0 است،
+        //    پس این فیلتر آربیتراژهای واقعی را از بین نمی‌برد.
+        if (fixedProfit <= 0) continue;
+        // ✅ تغییر ۴: برای آربیتراژ، مبنای ROI را قدر مطلق می‌گیریم تا نمایش منطقی باشد
+        var base = totalCost > 0 ? totalCost : Math.max(Math.abs(totalCost), sz);
+        var roi = roiCalc(fixedProfit, base);
         var adjRoi = adjustRoi(roi, callBuy.dte);
         results.push({
           call_buy_name: callBuy.name, call_sell_name: callSell.name,
@@ -401,7 +427,10 @@ function calcBox(calls, puts) {
           put_buy_ask_vol: putBuy.ask_vol, put_buy_ask_price: putBuy.ask_price, put_buy_tvalue: Math.round(putBuy.tvalue),
           put_sell_bid_vol: putSell.bid_vol, put_sell_bid_price: putSell.bid_price, put_sell_tvalue: Math.round(putSell.tvalue),
           expiry: callBuy.expiry, dte: callBuy.dte, size: sz, spot: callBuy.spot,
-          base: Math.round(totalCost), roi_zero: Math.round(roi * 100) / 100,
+          base: Math.round(base), roi_zero: Math.round(roi * 100) / 100,
+          is_arbitrage: isArbitrage,
+          net_cost: Math.round(totalCost),
+          fixed_profit: Math.round(fixedProfit),
           scenariosAdjusted: [adjRoi], scenariosRaw: [roi],
           basis_buyable: (callBuy.basis_buyable !== false) && (callSell.basis_buyable !== false) &&
             (putBuy.basis_buyable !== false) && (putSell.basis_buyable !== false),

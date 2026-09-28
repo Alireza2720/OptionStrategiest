@@ -494,6 +494,23 @@ function matchesGlobalSearch(row,term){
   return false;
 }
 function sanitizeFilename(name){return String(name).replace(/[\\\/:*?"<>|]/g,"_").trim()||"خروجی"}
+function contractNamesForRow(kind,row){
+  if(!row)return [];
+  var exp=row.expiry;
+  if(kind==="cc"||kind==="mp")return [{name:row.name,expiry:exp}];
+  if(kind==="co"||kind==="cv"||kind==="strangle"||kind==="strangleSell")
+    return [{name:row.call_name,expiry:exp},{name:row.put_name,expiry:exp}];
+  if(kind==="callspread"||kind==="callspreadbear"||kind==="putspread"||kind==="putspreadbull")
+    return [{name:row.buy_name,expiry:exp},{name:row.sell_name,expiry:exp}];
+  if(kind==="box")
+    return [
+      {name:row.call_buy_name,expiry:exp},
+      {name:row.call_sell_name,expiry:exp},
+      {name:row.put_buy_name,expiry:exp},
+      {name:row.put_sell_name,expiry:exp}
+    ];
+  return [];
+}
 function downloadXlsx(filename,aoa){
   var ws=XLSX.utils.aoa_to_sheet(aoa);
   var wb=XLSX.utils.book_new();
@@ -910,7 +927,7 @@ function renderWatchCell(c,row){
 }
 var StrategyRowMemo=React.memo(function StrategyRow(props){
   var row=props.row,cols=props.cols,stickyOffset=props.stickyOffset,trailingCols=props.trailingCols||EMPTY_ARR,
-    onOpenChart=props.onOpenChart;
+    onOpenChart=props.onOpenChart,onOpenRaw=props.onOpenRaw;
   function handleRowClick(){if(onOpenChart)onOpenChart(row)}
   return (
     <tr onClick={onOpenChart?handleRowClick:undefined} style={onOpenChart?{cursor:"pointer"}:undefined} title={onOpenChart?"برای مشاهده نمودار سود/زیان کلیک کنید":undefined}>
@@ -931,6 +948,10 @@ var StrategyRowMemo=React.memo(function StrategyRow(props){
         var val=row[c.k];
         return <td key={c.k} className="sv">{c.r?c.r(val):(val!=null?String(val):"—")}</td>;
       })}
+      {onOpenRaw?(<td key="__raw_btn" className="sv" style={{width:40,padding:"4px 6px"}}>
+        <button type="button" className="cbtn cbtn-acc" style={{padding:"2px 7px",fontSize:11,lineHeight:1.3}}
+          onClick={function(e){e.stopPropagation();onOpenRaw(row)}} title="مشاهده داده خام API">🔍</button>
+      </td>):null}
     </tr>
   );
 });
@@ -1296,6 +1317,42 @@ function FloatFallback(props2){
   );
 }
 
+function StrategyRawModal(props){
+  var ctx=props.ctx,onClose=props.onClose;
+  var row=ctx.row||{},kind=ctx.kind,contracts=ctx.contracts||[];
+  var title=(row.primary_name||row.name||row.call_name||row.buy_name||"");
+  return (
+    <Modal title={"داده خام API — "+kind+" — "+title} onClose={onClose} width="min(880px,96vw)">
+      <div style={{padding:"10px 14px"}}>
+        {contracts.length===0?(
+          <div className="step-hint" style={{padding:10}}>
+            قراردادهای این استراتژی در کش دیده‌بان پیدا نشد. لطفاً ابتدا یک‌بار تب «دیده‌بان» را باز کنید تا داده‌ها بارگذاری شوند.
+          </div>
+        ):null}
+        {contracts.map(function(c,idx){
+          var parsed=Object.assign({},c);
+          delete parsed._raw;
+          return (
+            <div key={(c.name||"")+"|"+(c.expiry||"")} style={{marginBottom: idx<contracts.length-1 ? 22 : 0}}>
+              <div className="msec-t" style={{marginBottom:6,fontSize:12}}>
+                قرارداد {idx+1} از {contracts.length}: <code>{c.name}</code>
+              </div>
+              <div style={{fontSize:11,color:"var(--mut)",marginBottom:4}}>پارامترهای پارس‌شده (داخلی):</div>
+              <pre style={{maxHeight:"30vh",overflow:"auto",background:"var(--sur2)",padding:8,borderRadius:6,fontSize:11,direction:"ltr",textAlign:"left",whiteSpace:"pre-wrap"}}>
+                {JSON.stringify(parsed,null,2)}
+              </pre>
+              <div style={{fontSize:11,color:"var(--mut)",marginTop:10,marginBottom:4}}>داده خام منبع (Raw API):</div>
+              <pre style={{maxHeight:"45vh",overflow:"auto",background:"var(--sur3)",padding:8,borderRadius:6,fontSize:11,direction:"ltr",textAlign:"left",whiteSpace:"pre-wrap"}}>
+                {c._raw?JSON.stringify(c._raw,null,2):"داده خام موجود نیست (شاید از snapshot بازیابی شده؛ بعد از بروزرسانی بعدی در دسترس است)"}
+              </pre>
+            </div>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+}
+
 /* =========================================================
    نمودار سود/زیان تکی (PayoffPanel) — حالا داخل Modal ساده
    ========================================================= */
@@ -1543,7 +1600,7 @@ function StrategyTable(props){
     dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
     store=props.store,storeKey=props.storeKey,globalSearch=props.globalSearch,
     trailingCols=props.trailingCols||EMPTY_ARR,note=props.note,exportTitle=props.exportTitle,
-    onOpenChart=props.onOpenChart;
+    onOpenChart=props.onOpenChart,onOpenRaw=props.onOpenRaw;
 
   var isSingle=!!ISSINGLE_SCENARIO_KINDS[kind];
   var scenAdjArr=isSingle?[SINGLE_SCEN_LABEL_ADJ]:steps;
@@ -1587,7 +1644,7 @@ function StrategyTable(props){
   },[cols,colW.widths]);
 
   var twRef=useRef(null);
-  var totalColsCount=cols.length+scenAdjArr.length+scenRawArr.length+trailingCols.length;
+  var totalColsCount=cols.length+scenAdjArr.length+scenRawArr.length+trailingCols.length+1;
   var vw=useVirtualWindow(twRef,final.length,ROW_H_STRAT,HEADER_H_STRAT,VIRT_OVERSCAN);
   var visibleRows=final.length>VIRTUALIZE_THRESHOLD?final.slice(vw.start,vw.end):final;
   var topPad=final.length>VIRTUALIZE_THRESHOLD?vw.start*ROW_H_STRAT:0;
@@ -1613,6 +1670,7 @@ function StrategyTable(props){
               {scenAdjArr.map(function(_,i){return <col key={"csc"+i} style={{width:isSingle?120:54}} />})}
               {scenRawArr.map(function(_,i){return <col key={"craw"+i} style={{width:isSingle?120:54}} />})}
               {trailingCols.map(function(_,i){return <col key={"ct"+i} style={{width:80}} />})}
+              <col key="__raw_btn" style={{width:40}} />
             </colgroup>
             <thead>
               <tr className="grp">
@@ -1647,6 +1705,7 @@ function StrategyTable(props){
                 {trailingCols.map(function(c){
                   return <th key={c.k} className="svh" style={{minWidth:80}}>{typeof c.l==="function"?c.l(L):c.k}</th>;
                 })}
+                <th key="__raw_btn" className="svh" style={{minWidth:40}} title="مشاهده داده خام API">API</th>
               </tr>
               <tr className="fr">
                 {cols.map(function(c){
@@ -1665,6 +1724,7 @@ function StrategyTable(props){
                   return <td key={"raw"+i} className={i===0?"raw-divider":undefined}><input type="text" inputMode="decimal" placeholder="≥" value={f["raw"+i]||""} onChange={function(e){setF("raw"+i,e.target.value)}} style={{minWidth:44}} /></td>;
                 })}
                 {trailingCols.map(function(c){return <td key={c.k}></td>})}
+                <td key="__raw_btn"></td>
               </tr>
             </thead>
             <tbody>
@@ -1674,7 +1734,8 @@ function StrategyTable(props){
                 return (
                   <ErrorBoundary key={rk} fallback={RowErrorFallback}>
                     <StrategyRowMemo row={row} cols={cols} stickyOffset={stickyOffset} trailingCols={trailingCols}
-                      onOpenChart={onOpenChart?function(){onOpenChart(kind,row)}:undefined} />
+                      onOpenChart={onOpenChart?function(){onOpenChart(kind,row)}:undefined}
+                      onOpenRaw={onOpenRaw?function(){onOpenRaw(kind,row)}:undefined} />
                   </ErrorBoundary>
                 );
               })}
@@ -1715,7 +1776,8 @@ function CollapsibleWrap(props){
 
 function StrategySection(props){
   var kind=props.kind,data=props.data,steps=props.steps,dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
-    store=props.store,globalSearch=props.globalSearch,trailingCols=props.trailingCols,onOpenChart=props.onOpenChart;
+    store=props.store,globalSearch=props.globalSearch,trailingCols=props.trailingCols,onOpenChart=props.onOpenChart,
+    onOpenRaw=props.onOpenRaw;
   var meta=STRATEGY_META[kind];
   var groups=useMemo(function(){return splitBuyable(data)},[data]);
 
@@ -1729,7 +1791,7 @@ function StrategySection(props){
             <StrategyTable kind={kind} data={groups.buyable} allCols={meta.cols} steps={steps}
               dteFilterMin={dteFilterMin} dteFilterMax={dteFilterMax} store={store} storeKey={kind+"_buyable"}
               globalSearch={globalSearch} trailingCols={trailingCols} exportTitle={meta.countLabel+" - "+L.buyable}
-              onOpenChart={onOpenChart} />
+              onOpenChart={onOpenChart} onOpenRaw={onOpenRaw} />
           </CollapsibleWrap>
         </ErrorBoundary>
       ):null}
@@ -1739,7 +1801,7 @@ function StrategySection(props){
             <StrategyTable kind={kind} data={groups.notBuyable} allCols={meta.cols} steps={steps}
               dteFilterMin={dteFilterMin} dteFilterMax={dteFilterMax} store={store} storeKey={kind+"_notBuyable"}
               globalSearch={globalSearch} trailingCols={trailingCols} exportTitle={meta.countLabel+" - "+L.notBuyable}
-              onOpenChart={onOpenChart} />
+              onOpenChart={onOpenChart} onOpenRaw={onOpenRaw} />
           </CollapsibleWrap>
         </ErrorBoundary>
       ):null}
@@ -1752,7 +1814,7 @@ function StrategySection(props){
 
 function SimpleStrategySection(props){
   var kind=props.kind,data=props.data,steps=props.steps,dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,
-    store=props.store,globalSearch=props.globalSearch,onOpenChart=props.onOpenChart;
+    store=props.store,globalSearch=props.globalSearch,onOpenChart=props.onOpenChart,onOpenRaw=props.onOpenRaw;
   var meta=NEW_STRATEGY_META[kind];
   return (
     <ErrorBoundary fallback={function(){return <div className="error-box">خطا در نمایش این بخش</div>}}>
@@ -1760,7 +1822,7 @@ function SimpleStrategySection(props){
         dteFilterMin={dteFilterMin} dteFilterMax={dteFilterMax} store={store} storeKey={kind+"_main"}
         globalSearch={globalSearch} countLabel={meta.countLabel} exportTitle={NEW_STRATEGY_TITLE[kind]}
         note={MARGIN_NOTE_KINDS[kind]?MARGIN_APPROX_NOTE:null}
-        onOpenChart={onOpenChart} />
+        onOpenChart={onOpenChart} onOpenRaw={onOpenRaw} />
     </ErrorBoundary>
   );
 }
@@ -2592,6 +2654,7 @@ function App(){
   var stGlobalErr=useState(null);var globalError=stGlobalErr[0],setGlobalError=stGlobalErr[1];
 
   var stChart=useState(null);var chartCtx=stChart[0],setChartCtx=stChart[1];
+  var stRawStrategy=useState(null);var rawStrategyCtx=stRawStrategy[0],setRawStrategyCtx=stRawStrategy[1];
 
   var sectionStoreRef=useRef({});
   var watchStoreRef=useRef({});
@@ -2769,6 +2832,22 @@ function App(){
   function openChart(kind,row){setChartCtx({kind:kind,row:row})}
   function closeChart(){setChartCtx(null)}
 
+  /* ---------- داده خام API استراتژی ---------- */
+  function openStrategyRaw(kind,row){
+    var names=contractNamesForRow(kind,row);
+    var watchRows=(tabsData.watch&&tabsData.watch.rows)||EMPTY_ARR;
+    var contracts=[];
+    names.forEach(function(n){
+      if(!n||!n.name)return;
+      var found=watchRows.find(function(c){
+        return c.name===n.name&&(!n.expiry||c.expiry===n.expiry);
+      });
+      if(found)contracts.push(found);
+    });
+    setRawStrategyCtx({kind:kind,row:row,contracts:contracts});
+  }
+  function closeStrategyRaw(){setRawStrategyCtx(null)}
+
   var dotCls="dot"+((refreshing||applying)?" sp":(globalError?" er":""));
 
   var coTrailingCols=useMemo(function(){
@@ -2803,6 +2882,10 @@ function App(){
         <ErrorBoundary fallback={function(){return <FloatFallback onClose={closeChart} />}}>
           <PayoffPanel row={chartCtx.row} kind={chartCtx.kind} onClose={closeChart} />
         </ErrorBoundary>
+      ):null}
+
+      {rawStrategyCtx?(
+        <StrategyRawModal ctx={rawStrategyCtx} onClose={closeStrategyRaw} />
       ):null}
 
       <div className="top">
@@ -2883,12 +2966,12 @@ function App(){
                   dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
                   store={sectionStoreRef.current} globalSearch={globalSearch}
                   trailingCols={tab==="co"?coTrailingCols:EMPTY_ARR}
-                  onOpenChart={openChart} />
+                  onOpenChart={openChart} onOpenRaw={openStrategyRaw} />
               ):(
                 <SimpleStrategySection kind={tab} data={currentData.rows} steps={currentData.steps||[]}
                   dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
                   store={sectionStoreRef.current} globalSearch={globalSearch}
-                  onOpenChart={openChart} />
+                  onOpenChart={openChart} onOpenRaw={openStrategyRaw} />
               )}
             </div>
           ):(<div className="center"><div className="spinner" /></div>)
