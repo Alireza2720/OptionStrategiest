@@ -369,9 +369,8 @@ function calcPutSpread(puts, steps, bull) {
   return results;
 }
 
-function calcBox(calls, puts) {
+function calcBox(calls, puts, direction) {
   var callMap = {}, putMap = {}, groupStrikes = {};
-  // ✅ تغییر ۱: گروه‌بندی بر اساس expiry (نه dte) برای جلوگیری از قاطی شدن سررسیدها
   calls.forEach(function (c) {
     var gk = c.basis_name + "|" + c.expiry;
     callMap[gk + "|" + c.strike] = c;
@@ -389,54 +388,103 @@ function calcBox(calls, puts) {
         if (i === j) continue;
         var k1 = strikes[i], k2 = strikes[j];
         if (k1 >= k2) continue;
-        var callBuy = callMap[gk + "|" + k1];
-        var callSell = callMap[gk + "|" + k2];
-        var putBuy = putMap[gk + "|" + k2];
-        var putSell = putMap[gk + "|" + k1];
-        if (!callBuy || !callSell || !putBuy || !putSell) continue;
-        if (!canBuyOpt(callBuy) || !canSellOpt(callSell) || !canBuyOpt(putBuy) || !canSellOpt(putSell)) continue;
-        // ✅ تغییر ۲: همه‌ی چهار leg باید از یک سررسید و یک size باشند
-        if (callBuy.expiry !== callSell.expiry ||
-            callBuy.expiry !== putBuy.expiry ||
-            callBuy.expiry !== putSell.expiry) continue;
-        if (callBuy.size !== callSell.size ||
-            callBuy.size !== putBuy.size ||
-            callBuy.size !== putSell.size) continue;
-        var sz = callBuy.size;
-        var netCost = (callBuy.ask_price - callSell.bid_price) + (putBuy.ask_price - putSell.bid_price);
-        var totalCost = netCost * sz;
-        // ✅ تغییر ۳: دیگر totalCost <= 0 حذف نمی‌شود — این حالت «آربیتراژ خالص» است
-        //    در آربیتراژ، پول می‌گیری AND در سررسید (k2-k1)*sz هم نصیبت می‌شود
-        var isArbitrage = totalCost <= 0;
-        var fixedProfit = (k2 - k1) * sz - totalCost;
-        // ✅ تغییر ۵ (مشکل ۲): باکس یک استراتژی آربیتراژی است؛
-        //    اگر سود تضمینی مثبت نباشد، اصلاً سیگنال نیست و باید حذف شود.
-        //    توجه: در حالت آربیتراژ (totalCost <= 0)، همیشه fixedProfit > 0 است،
-        //    پس این فیلتر آربیتراژهای واقعی را از بین نمی‌برد.
-        if (fixedProfit <= 0) continue;
-        // ✅ تغییر ۴: برای آربیتراژ، مبنای ROI را قدر مطلق می‌گیریم تا نمایش منطقی باشد
-        var base = totalCost > 0 ? totalCost : Math.max(Math.abs(totalCost), sz);
-        var roi = roiCalc(fixedProfit, base);
-        var adjRoi = adjustRoi(roi, callBuy.dte);
-        results.push({
-          call_buy_name: callBuy.name, call_sell_name: callSell.name,
-          put_buy_name: putBuy.name, put_sell_name: putSell.name,
-          basis_name: callBuy.basis_name, k1: k1, k2: k2,
-          call_buy_ask_vol: callBuy.ask_vol, call_buy_ask_price: callBuy.ask_price, call_buy_tvalue: Math.round(callBuy.tvalue),
-          call_sell_bid_vol: callSell.bid_vol, call_sell_bid_price: callSell.bid_price, call_sell_tvalue: Math.round(callSell.tvalue),
-          put_buy_ask_vol: putBuy.ask_vol, put_buy_ask_price: putBuy.ask_price, put_buy_tvalue: Math.round(putBuy.tvalue),
-          put_sell_bid_vol: putSell.bid_vol, put_sell_bid_price: putSell.bid_price, put_sell_tvalue: Math.round(putSell.tvalue),
-          expiry: callBuy.expiry, dte: callBuy.dte, size: sz, spot: callBuy.spot,
-          base: Math.round(base), roi_zero: Math.round(roi * 100) / 100,
-          is_arbitrage: isArbitrage,
-          net_cost: Math.round(totalCost),
-          fixed_profit: Math.round(fixedProfit),
-          scenariosAdjusted: [adjRoi], scenariosRaw: [roi],
-          basis_buyable: (callBuy.basis_buyable !== false) && (callSell.basis_buyable !== false) &&
-            (putBuy.basis_buyable !== false) && (putSell.basis_buyable !== false),
-          spot_overridden: callBuy.spot_overridden, spot_original: callBuy.spot_original,
-          _payoff: (function (v) { return function () { return v; }; })(roi)
-        });
+        var callK1 = callMap[gk + "|" + k1];
+        var callK2 = callMap[gk + "|" + k2];
+        var putK1  = putMap[gk + "|" + k1];
+        var putK2  = putMap[gk + "|" + k2];
+        if (!callK1 || !callK2 || !putK1 || !putK2) continue;
+        var sz = callK1.size;
+        if (callK2.size !== sz || putK1.size !== sz || putK2.size !== sz) continue;
+        if (callK1.expiry !== callK2.expiry ||
+            callK1.expiry !== putK1.expiry ||
+            callK1.expiry !== putK2.expiry) continue;
+
+        var width = (k2 - k1) * sz;
+        var basisBuyable = (callK1.basis_buyable !== false) && (callK2.basis_buyable !== false) &&
+                            (putK1.basis_buyable !== false) && (putK2.basis_buyable !== false);
+        var spotOverridden = callK1.spot_overridden;
+        var spotOriginal = callK1.spot_original;
+        var dteVal = callK1.dte;
+        var expiryVal = callK1.expiry;
+        var spotVal = callK1.spot;
+        var basisName = callK1.basis_name;
+
+        // ====== Buy Box (Long Box) ======
+        // Bull Call Spread + Bear Put Spread → هر دو debit → margin = 0
+        if (direction === "buy" &&
+            canBuyOpt(callK1) && canSellOpt(callK2) && canBuyOpt(putK2) && canSellOpt(putK1)) {
+          var buyNetCost = (callK1.ask_price - callK2.bid_price) + (putK2.ask_price - putK1.bid_price);
+          var buyTotalCost = buyNetCost * sz;
+          var buyProfit = width - buyTotalCost;
+          if (buyProfit > 0) {
+            var buyBase = buyTotalCost > 0 ? buyTotalCost : Math.max(Math.abs(buyTotalCost), sz);
+            var buyRoi = roiCalc(buyProfit, buyBase);
+            var buyAdjRoi = adjustRoi(buyRoi, dteVal);
+            results.push({
+              call_buy_name: callK1.name, call_sell_name: callK2.name,
+              put_buy_name: putK2.name, put_sell_name: putK1.name,
+              basis_name: basisName, k1: k1, k2: k2,
+              call_buy_ask_vol: callK1.ask_vol, call_buy_ask_price: callK1.ask_price, call_buy_tvalue: Math.round(callK1.tvalue),
+              call_sell_bid_vol: callK2.bid_vol, call_sell_bid_price: callK2.bid_price, call_sell_tvalue: Math.round(callK2.tvalue),
+              put_buy_ask_vol: putK2.ask_vol, put_buy_ask_price: putK2.ask_price, put_buy_tvalue: Math.round(putK2.tvalue),
+              put_sell_bid_vol: putK1.bid_vol, put_sell_bid_price: putK1.bid_price, put_sell_tvalue: Math.round(putK1.tvalue),
+              expiry: expiryVal, dte: dteVal, size: sz, spot: spotVal,
+              net_cost: Math.round(buyTotalCost),
+              net_credit: null,
+              base: Math.round(buyBase),
+              fixed_profit: Math.round(buyProfit),
+              margin: 0,
+              rom: null,
+              roi_zero: Math.round(buyRoi * 100) / 100,
+              is_arbitrage: buyTotalCost <= 0,
+              scenariosAdjusted: [buyAdjRoi], scenariosRaw: [buyRoi],
+              basis_buyable: basisBuyable,
+              spot_overridden: spotOverridden, spot_original: spotOriginal,
+              _payoff: (function (v) { return function () { return v; }; })(buyRoi)
+            });
+          }
+        }
+
+        // ====== Sell Box (Short Box) ======
+        // Bear Call Spread + Bull Put Spread → هر دو credit spread → margin لازم است
+        // margin بدترین حالت (اگر کارگزاری دو اسپرد را جدا حساب کند): 2W − C'
+        // margin بهترین حالت (اگر باکس را به‌عنوان یک ترکیب واحد بشناسد): max(0, W − C')
+        if (direction === "sell" &&
+            canSellOpt(callK1) && canBuyOpt(callK2) && canSellOpt(putK2) && canBuyOpt(putK1)) {
+          var sellNetCredit = (callK1.bid_price - callK2.ask_price) + (putK2.bid_price - putK1.ask_price);
+          var sellTotalCredit = sellNetCredit * sz;
+          var sellProfit = sellTotalCredit - width;
+          if (sellProfit > 0) {
+            // محافظه‌کارانه: فرض می‌کنیم کارگزاری دو اسپرد را جدا حساب می‌کند
+            var sellMargin = Math.max(0, 2 * width - sellTotalCredit);
+            var sellBase = Math.abs(sellTotalCredit) > 0 ? Math.abs(sellTotalCredit) : sz;
+            var sellRoi = roiCalc(sellProfit, sellBase);
+            var sellRoiOnMargin = sellMargin > 0 ? roiCalc(sellProfit, sellMargin) : null;
+            var sellAdjRoi = adjustRoi(sellRoi, dteVal);
+            results.push({
+              call_buy_name: callK2.name, call_sell_name: callK1.name,
+              put_buy_name: putK1.name, put_sell_name: putK2.name,
+              basis_name: basisName, k1: k1, k2: k2,
+              call_buy_ask_vol: callK2.ask_vol, call_buy_ask_price: callK2.ask_price, call_buy_tvalue: Math.round(callK2.tvalue),
+              call_sell_bid_vol: callK1.bid_vol, call_sell_bid_price: callK1.bid_price, call_sell_tvalue: Math.round(callK1.tvalue),
+              put_buy_ask_vol: putK1.ask_vol, put_buy_ask_price: putK1.ask_price, put_buy_tvalue: Math.round(putK1.tvalue),
+              put_sell_bid_vol: putK2.bid_vol, put_sell_bid_price: putK2.bid_price, put_sell_tvalue: Math.round(putK2.tvalue),
+              expiry: expiryVal, dte: dteVal, size: sz, spot: spotVal,
+              net_cost: null,
+              net_credit: Math.round(sellTotalCredit),
+              base: Math.round(sellBase),
+              fixed_profit: Math.round(sellProfit),
+              margin: Math.round(sellMargin),
+              rom: sellRoiOnMargin == null ? null : Math.round(sellRoiOnMargin * 100) / 100,
+              roi_zero: Math.round(sellRoi * 100) / 100,
+              is_arbitrage: sellTotalCredit > width,
+              scenariosAdjusted: [sellAdjRoi], scenariosRaw: [sellRoi],
+              basis_buyable: basisBuyable,
+              spot_overridden: spotOverridden, spot_original: spotOriginal,
+              _payoff: (function (v) { return function () { return v; }; })(sellRoi)
+            });
+          }
+        }
       }
     }
   });
@@ -456,7 +504,8 @@ function computeAll(calls, puts, steps) {
     callspreadbear: calcCallSpread(calls, steps, false),
     putspread: calcPutSpread(puts, steps, false),
     putspreadbull: calcPutSpread(puts, steps, true),
-    box: calcBox(calls, puts)
+    box: calcBox(calls, puts, "buy"),
+    boxSell: calcBox(calls, puts, "sell")
   };
 }
 

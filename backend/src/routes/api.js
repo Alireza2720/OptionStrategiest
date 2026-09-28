@@ -54,7 +54,7 @@ router.get("/watch", function (req, res) {
 
 // ---------- هر استراتژی ----------
 var VALID_KINDS = ["cc", "mp", "co", "cv", "strangle", "strangleSell",
-  "callspread", "callspreadbear", "putspread", "putspreadbull", "box"];
+  "callspread", "callspreadbear", "putspread", "putspreadbull", "box", "boxSell"];
 
 router.get("/strategy/:kind", function (req, res) {
   var kind = req.params.kind;

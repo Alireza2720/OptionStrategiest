@@ -2,7 +2,7 @@
 var mongoose = require("mongoose");
 
 var HUNT_STRATEGY_TYPES = ["cc", "mp", "co", "cv", "strangle", "strangleSell",
-  "callspread", "callspreadbear", "putspread", "putspreadbull", "box"];
+  "callspread", "callspreadbear", "putspread", "putspreadbull", "box", "boxSell"];
 
 var StrangleScenarioCfgSchema = new mongoose.Schema({
   profitRate: { type: Number, default: 0.35 },

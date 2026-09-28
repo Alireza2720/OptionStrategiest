@@ -5,9 +5,9 @@ var LABELS = {
   strangle: "استرانگل خرید", strangleSell: "استرانگل فروش",
   callspread: "کال اسپرد صعودی", callspreadbear: "کال اسپرد نزولی",
   putspread: "پوت اسپرد نزولی", putspreadbull: "پوت اسپرد صعودی",
-  box: "باکس"
+  box: "خرید باکس", boxSell: "فروش باکس"
 };
-var NO_SHOCK_TYPES = { cv: true, box: true };
+var NO_SHOCK_TYPES = { cv: true, box: true, boxSell: true };
 var BUYABLE_CHECK_TYPES = { cc: true, mp: true, co: true, cv: true };
 var SHOCK_INF_THRESHOLD = 99999;
 

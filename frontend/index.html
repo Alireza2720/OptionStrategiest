@@ -322,7 +322,7 @@ var L={
   buyCall:"خرید کال",sellPut:"فروش پوت",dteRemain:"مانده روز",
   strangleBuy:"استرانگل خرید",strangleSell:"استرانگل فروش",
   callSpread:"کال اسپرد صعودی",putSpread:"پوت اسپرد نزولی",
-  callSpreadBear:"کال اسپرد نزولی",putSpreadBull:"پوت اسپرد صعودی",box:"باکس",
+  callSpreadBear:"کال اسپرد نزولی",putSpreadBull:"پوت اسپرد صعودی",box:"خرید باکس",boxSell:"فروش باکس",
   maxProfit:"حداکثر سود",maxLoss:"حداکثر زیان",close:"بستن",
   scenarioStepHint:"درصد فاصله هر ستون نسبت به ستون کناری",
   scenarioNote:"ستون‌های قبل از خط‌چین: بازده تعدیل‌شده به ۳۰ روز | بعد از خط‌چین: بازده واقعی تا سررسید.",
@@ -381,8 +381,8 @@ var VIRT_OVERSCAN=IS_TOUCH?6:12;
 var EMPTY_ARR=[];
 var SHOCK_INF_THRESHOLD=99999;
 
-var HUNT_STRATEGY_TYPES=["cc","mp","co","cv","strangle","strangleSell","callspread","callspreadbear","putspread","putspreadbull","box"];
-var HUNT_NO_SHOCK_TYPES={cv:true,box:true};
+var HUNT_STRATEGY_TYPES=["cc","mp","co","cv","strangle","strangleSell","callspread","callspreadbear","putspread","putspreadbull","box","boxSell"];
+var HUNT_NO_SHOCK_TYPES={cv:true,box:true,boxSell:true};
 var BUYABLE_CHECK_TYPES={cc:true,mp:true,co:true,cv:true};
 var HUNT_STRATEGY_DEFAULT={
   shockRate:0.5,shockMode:"rate",shockFloor:5,
@@ -860,6 +860,15 @@ var StrangleTypeR=function(v){
   var cls=v==="استرادل"?"bdg-itm":v==="استرانگل"?"bdg-rev":"bdg-q1";
   return <span className={"bdg "+cls}>{v}</span>;
 };
+var BoxMarginR=function(v,row){
+  if(v==null||isNaN(v))return "—";
+  if(v===0)return <span className="gain">آربیتراژ (۰)</span>;
+  return n(v,0);
+};
+var BoxRomR=function(v){
+  if(v==null||isNaN(v))return <span className="mut">—</span>;
+  return <span className={v>=0?"gain":"loss"}>{(v>0?"+":"")+n(v,1)+"٪"}</span>;
+};
 
 var COL_TOOLTIPS={
   name:"نماد قرارداد اختیار معامله",
@@ -909,7 +918,10 @@ var COL_TOOLTIPS={
   k1:"قیمت اعمال پایین‌تر",k2:"قیمت اعمال بالاتر",base:"هزینه یا اعتبار خالص کل معامله",
   margin:"وجه تضمین لازم برای این موقعیت",
   put_margin:"وجه تضمین لازم برای پایه پوت فروخته‌شده",
-  call_margin:"وجه تضمین لازم برای پایه کال فروخته‌شده"
+  call_margin:"وجه تضمین لازم برای پایه کال فروخته‌شده",
+  box_direction:"جهت فرصت باکس: «خرید باکس» = چهار پایه از جهت خرید (خرید کال K1، فروش کال K2، خرید پوت K2، فروش پوت K1). «فروش باکس» = عکس این چهار پایه.",
+  margin:"وجه تضمین تخمینی (بدترین حالت). برای «خرید باکس» = ۰ چون دو اسپرد بدهی است. برای «فروش باکس» = max(0, 2×(K2−K1)×size − credit) که فرض می‌کند کارگزاری دو اسپرد اعتباری را جدا حساب می‌کند.",
+  rom:"Return on Margin: بازده نسبت به وجه تضمین (فقط برای باکس فروش معنی دارد)"
 };
 
 var NUMERIC_PLAIN_KEYS=["premium","strike","dte"];
@@ -1171,7 +1183,9 @@ var BOX_COLS=[
   {k:"k2",l:function(){return "اعمال بالا"},r:N,numeric:true,w:80,mw:8},
   {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
   {k:"dte",l:function(l){return l.dteRemain},r:N,numeric:true,w:75,mw:8},
-  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8}
+  {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"margin",l:function(){return "وجه تضمین"},r:BoxMarginR,numeric:true,w:110,mw:8},
+  {k:"rom",l:function(){return "ROM"},r:BoxRomR,numeric:true,w:80,mw:8}
 ];
 
 var WATCH_COLS=[
@@ -1241,7 +1255,8 @@ var BASE_TABS=[
   {id:"callspreadbear",l:"callSpreadBear"},
   {id:"putspread",l:"putSpread"},
   {id:"putspreadbull",l:"putSpreadBull"},
-  {id:"box",l:"box"}
+  {id:"box",l:"box"},
+  {id:"boxSell",l:"boxSell"}
 ];
 
 var STRATEGY_META={
@@ -1258,13 +1273,14 @@ var NEW_STRATEGY_META={
   callspreadbear:{cols:CALL_SPREAD_COLS,countLabel:"موقعیت کال اسپرد نزولی"},
   putspread:{cols:PUT_SPREAD_COLS,countLabel:"موقعیت پوت اسپرد نزولی"},
   putspreadbull:{cols:PUT_SPREAD_COLS,countLabel:"موقعیت پوت اسپرد صعودی"},
-  box:{cols:BOX_COLS,countLabel:"موقعیت باکس"}
+  box:{cols:BOX_COLS,countLabel:"موقعیت خرید باکس"},
+  boxSell:{cols:BOX_COLS,countLabel:"موقعیت فروش باکس"}
 };
 var NEW_STRATEGY_TITLE={
   strangle:L.strangleBuy,strangleSell:L.strangleSell,
   callspread:L.callSpread,callspreadbear:L.callSpreadBear,
   putspread:L.putSpread,putspreadbull:L.putSpreadBull,
-  box:L.box
+  box:L.box,boxSell:L.boxSell
 };
 var MARGIN_APPROX_NOTE="به دلیل تفاوت در نحوهٔ محاسبهٔ وجه تضمین میان کارگزاری‌های مختلف، بازده‌های نمایش‌داده‌شده در این جدول تقریبی هستند؛ برای سود و زیان دقیق این استراتژی حتماً به سامانهٔ معاملاتی کارگزاری خود مراجعه کنید.";
 var MARGIN_NOTE_KINDS={strangleSell:true};
@@ -1569,7 +1585,7 @@ function buildWatchAoa(rows,cols){
   return [headers].concat(lines);
 }
 var BEST_STRATEGY_LABELS={cc:L.cc,mp:L.mp,co:L.co,cv:L.cv,strangle:L.strangleBuy,strangleSell:L.strangleSell,
-  callspread:L.callSpread,callspreadbear:L.callSpreadBear,putspread:L.putSpread,putspreadbull:L.putSpreadBull,box:L.box};
+  callspread:L.callSpread,callspreadbear:L.callSpreadBear,putspread:L.putSpread,putspreadbull:L.putSpreadBull,box:L.box,boxSell:L.boxSell};
 
 function buildBestAoa(rows,steps){
   var typeLbl=BEST_STRATEGY_LABELS;
