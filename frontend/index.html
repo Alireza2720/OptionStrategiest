@@ -860,10 +860,22 @@ var StrangleTypeR=function(v){
   var cls=v==="استرادل"?"bdg-itm":v==="استرانگل"?"bdg-rev":"bdg-q1";
   return <span className={"bdg "+cls}>{v}</span>;
 };
-var BoxMarginR=function(v,row){
+var MarginR=function(v,row){
   if(v==null||isNaN(v))return "—";
-  if(v===0)return <span className="gain">آربیتراژ (۰)</span>;
+  if(v===0){
+    if(row&&row.is_arbitrage)return <span className="gain">آربیتراژ (۰)</span>;
+    return <span className="mut">—</span>;
+  }
   return n(v,0);
+};
+var NetCreditR=function(v){
+  if(v==null||isNaN(v))return <span className="mut">—</span>;
+  return <span className="gain">+{n(v,0)}</span>;
+};
+var BoxMarginR=MarginR;
+var BoxRomR=function(v){
+  if(v==null||isNaN(v))return <span className="mut">—</span>;
+  return <span className={v>=0?"gain":"loss"}>{(v>0?"+":"")+n(v,1)+"٪"}</span>;
 };
 var BoxRomR=function(v){
   if(v==null||isNaN(v))return <span className="mut">—</span>;
@@ -915,8 +927,9 @@ var COL_TOOLTIPS={
   call_sell_bid_vol:"حجم تقاضا کال فروخته‌شده",call_sell_bid_price:"سرخط تقاضا کال فروخته‌شده",
   put_buy_ask_vol:"حجم عرضه پوت خریداری‌شده",put_buy_ask_price:"سرخط عرضه پوت خریداری‌شده",
   put_sell_bid_vol:"حجم تقاضا پوت فروخته‌شده",put_sell_bid_price:"سرخط تقاضا پوت فروخته‌شده",
-  k1:"قیمت اعمال پایین‌تر",k2:"قیمت اعمال بالاتر",base:"هزینه یا اعتبار خالص کل معامله",
-  margin:"وجه تضمین لازم برای این موقعیت",
+  k1:"قیمت اعمال پایین‌تر",k2:"قیمت اعمال بالاتر",base:"هزینه یا اعتبار خالص کل معامله (مبنای محاسبه ROI)",
+  net_credit:"مبلغ اعتباری که در لحظهٔ بستن پوزیشن دریافت می‌کنید (فقط برای اسپردهای فروش)",
+  margin:"وجه تضمین تخمینی. برای اسپرد بدهی (خرید) صفر است. برای اسپرد اعتباری (فروش) = عرض × اندازه − اعتبار. این عدد را با مقدار واقعی کارگزاری مقایسه کنید.",
   put_margin:"وجه تضمین لازم برای پایه پوت فروخته‌شده",
   call_margin:"وجه تضمین لازم برای پایه کال فروخته‌شده",
   box_direction:"جهت فرصت باکس: «خرید باکس» = چهار پایه از جهت خرید (خرید کال K1، فروش کال K2، خرید پوت K2، فروش پوت K1). «فروش باکس» = عکس این چهار پایه.",
@@ -1142,6 +1155,8 @@ var CALL_SPREAD_COLS=[
   {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
   {k:"dte",l:function(l){return l.dteRemain},r:N,numeric:true,w:75,mw:8},
   {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"net_credit",l:function(){return "اعتبار دریافتی"},r:NetCreditR,numeric:true,w:110,mw:8},
+  {k:"margin",l:function(){return "وجه تضمین"},r:MarginR,numeric:true,w:110,mw:8},
   {k:"base",l:function(){return "مبنای محاسبه بازده"},r:N,numeric:true,w:110,mw:8}
 ];
 
@@ -1159,6 +1174,8 @@ var PUT_SPREAD_COLS=[
   {k:"expiry",l:function(l){return l.expiry},cls:"mut",w:95,mw:8},
   {k:"dte",l:function(l){return l.dteRemain},r:N,numeric:true,w:75,mw:8},
   {k:"spot",l:function(l){return l.spot},r:SpotR,numeric:true,w:80,mw:8},
+  {k:"net_credit",l:function(){return "اعتبار دریافتی"},r:NetCreditR,numeric:true,w:110,mw:8},
+  {k:"margin",l:function(){return "وجه تضمین"},r:MarginR,numeric:true,w:110,mw:8},
   {k:"base",l:function(){return "مبنای محاسبه بازده"},r:N,numeric:true,w:110,mw:8}
 ];
 

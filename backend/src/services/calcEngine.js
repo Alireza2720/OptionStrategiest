@@ -295,7 +295,10 @@ function calcCallSpread(calls, steps, bull) {
         // آربیتراژ: هیچ capital درگیری نیست؛ از width استفاده می‌کنیم
         var rawBase = netCost > 0 ? netCost * sz : Math.abs((width + netCost)) * sz;
         var base = rawBase > 0 ? rawBase : width * sz;
-        (function (buy, sell, sz, netCost, base) {
+        // ✅ وجه تضمین: برای اسپرد اعتباری (netCost < 0) = max loss = width − credit
+        //    برای اسپرد بدهی (netCost > 0) = صفر
+        var margin = netCost < 0 ? Math.max(0, (width + netCost) * sz) : 0;
+        (function (buy, sell, sz, netCost, base, margin) {
           function payoff(pct) {
             var future = buy.spot * (1 + pct / 100);
             var val = (Math.max(future - buy.strike, 0) - Math.max(future - sell.strike, 0)) * sz;
@@ -309,6 +312,8 @@ function calcCallSpread(calls, steps, bull) {
             sell_bid_vol: sell.bid_vol, sell_bid_price: sell.bid_price, sell_tvalue: Math.round(sell.tvalue),
             expiry: buy.expiry, dte: buy.dte, size: sz, spot: buy.spot,
             base: Math.round(base), roi_zero: Math.round(zero * 100) / 100,
+            margin: Math.round(margin),
+            net_credit: netCost < 0 ? Math.round(-netCost * sz) : null,
             net_cost: Math.round(netCost * sz),
             is_arbitrage: isArbitrage,
             scenariosAdjusted: steps.map(function (p) { return adjustRoi(payoff(p), buy.dte); }),
@@ -317,7 +322,7 @@ function calcCallSpread(calls, steps, bull) {
             spot_overridden: buy.spot_overridden, spot_original: buy.spot_original,
             _payoff: payoff
           });
-        })(buy, sell, sz, netCost, base);
+        })(buy, sell, sz, netCost, base, margin);
       }
     }
   });
@@ -352,7 +357,10 @@ function calcPutSpread(puts, steps, bull) {
         var isArbitrage = netCost < 0 && Math.abs(netCost) > width;
         var rawBase = netCost > 0 ? netCost * sz : Math.abs((width + netCost)) * sz;
         var base = rawBase > 0 ? rawBase : width * sz;
-        (function (buy, sell, sz, netCost, base) {
+        // ✅ وجه تضمین: برای اسپرد اعتباری (netCost < 0) = max loss = width − credit
+        //    برای اسپرد بدهی (netCost > 0) = صفر
+        var margin = netCost < 0 ? Math.max(0, (width + netCost) * sz) : 0;
+        (function (buy, sell, sz, netCost, base, margin) {
           function payoff(pct) {
             var future = buy.spot * (1 + pct / 100);
             var val = (Math.max(buy.strike - future, 0) - Math.max(sell.strike - future, 0)) * sz;
@@ -366,6 +374,8 @@ function calcPutSpread(puts, steps, bull) {
             sell_bid_vol: sell.bid_vol, sell_bid_price: sell.bid_price, sell_tvalue: Math.round(sell.tvalue),
             expiry: buy.expiry, dte: buy.dte, size: sz, spot: buy.spot,
             base: Math.round(base), roi_zero: Math.round(zero * 100) / 100,
+            margin: Math.round(margin),
+            net_credit: netCost < 0 ? Math.round(-netCost * sz) : null,
             net_cost: Math.round(netCost * sz),
             is_arbitrage: isArbitrage,
             scenariosAdjusted: steps.map(function (p) { return adjustRoi(payoff(p), buy.dte); }),
@@ -374,7 +384,7 @@ function calcPutSpread(puts, steps, bull) {
             spot_overridden: buy.spot_overridden, spot_original: buy.spot_original,
             _payoff: payoff
           });
-        })(buy, sell, sz, netCost, base);
+        })(buy, sell, sz, netCost, base, margin);
       }
     }
   });
