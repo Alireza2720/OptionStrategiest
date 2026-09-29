@@ -125,6 +125,13 @@ function parseContracts(raw) {
       var bidVol = bVolumes[0] || 0;
       var askPrice = sPrices[0] || 0;
       var askVol = sVolumes[0] || 0;
+      // ✅ محافظت: هرگز bid نباید بزرگ‌تر از ask باشد.
+      // اگر API داده‌ی ناسازگار فرستاد (bid > ask)، جای دو طرف را عوض می‌کنیم
+      // تا از سیگنال نادرست در استراتژی‌های آربیتراژ مثل باکس جلوگیری شود.
+      if (askPrice > 0 && bidPrice > 0 && bidPrice > askPrice) {
+        var tmpP = bidPrice; bidPrice = askPrice; askPrice = tmpP;
+        var tmpV = bidVol; bidVol = askVol; askVol = tmpV;
+      }
       var spread = askPrice > 0 && bidPrice > 0 ? askPrice - bidPrice : 0;
 
       var tradingDays = si(firstNumber(row, [

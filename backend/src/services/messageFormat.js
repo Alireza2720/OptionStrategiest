@@ -49,6 +49,10 @@ function formatRow(r, steps, opts) {
   });
   lines.push("   • سهم پایه: <b>" + escapeHtml(r.basis_name || "") + "</b>");
   lines.push("   • سررسید: " + escapeHtml(String(r.expiry || "")) + "  ·  " + (r.dte != null ? r.dte + " روز" : "—"));
+  if (r.dataAgeSec != null && r.dataAgeSec >= 0) {
+    var ageTag = r.dataAgeSec <= 45 ? "🟢" : r.dataAgeSec <= 90 ? "🟡" : "🔴";
+    lines.push("   • " + ageTag + " سن داده: <b>" + Math.round(r.dataAgeSec) + "</b> ثانیه قبل");
+  }
 
   // برای استراتژی‌های سهم‌محور، درصد آخرین و پایانی سهم پایه
   if (["cc", "mp", "co", "cv"].indexOf(r.strategy_type) !== -1) {

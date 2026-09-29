@@ -310,7 +310,8 @@ async function runCycle(opts) {
             var bp = basisPctMap[row.basis_name] || {};
             var enrichedRow = Object.assign({}, row, {
               basis_last_percent: bp.last != null ? bp.last : null,
-              basis_close_percent: bp.close != null ? bp.close : null
+              basis_close_percent: bp.close != null ? bp.close : null,
+              dataAgeSec: cache.updatedAt ? (Date.now() - new Date(cache.updatedAt).getTime()) / 1000 : null
             });
             var text = formatRow(enrichedRow, steps);
             var result = await sendLongMessage(token, chatId, text);
@@ -339,7 +340,8 @@ async function runCycle(opts) {
                 var ebp = basisPctMap[er.basis_name] || {};
                 var enrichedEr = Object.assign({}, er, {
                   basis_last_percent: ebp.last != null ? ebp.last : null,
-                  basis_close_percent: ebp.close != null ? ebp.close : null
+                  basis_close_percent: ebp.close != null ? ebp.close : null,
+                  dataAgeSec: cache.updatedAt ? (Date.now() - new Date(cache.updatedAt).getTime()) / 1000 : null
                 });
                 var elapsedSec = null;
                 if (existing.lastNotifiedAt) {
