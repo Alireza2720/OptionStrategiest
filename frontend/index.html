@@ -445,7 +445,13 @@ var Api={
   watcherStart:function(intervalSec){return apiSend("POST","/api/watcher/start",{intervalSec:intervalSec})},
   watcherStop:function(){return apiSend("POST","/api/watcher/stop")},
   watcherSamples:function(limit){return apiGet("/api/watcher/samples?limit="+(limit||100))},
-  watcherClear:function(){return apiSend("DELETE","/api/watcher/samples")}
+  watcherClear:function(){return apiSend("DELETE","/api/watcher/samples")},
+  signalsSent:function(days){return apiGet("/api/signals/sent?days="+(days||7))},
+  signalsFollowed:function(status){return apiGet("/api/signals/followed?status="+(status||"active"))},
+  signalsFollow:function(body){return apiSend("POST","/api/signals/followed",body)},
+  signalsUpdate:function(id,body){return apiSend("PATCH","/api/signals/followed/"+id,body)},
+  signalsClose:function(id,body){return apiSend("POST","/api/signals/followed/"+id+"/close",body||{})},
+  signalsDelete:function(id){return apiSend("DELETE","/api/signals/followed/"+id)}
 };
 /* =========================================================
    توابع کمکی عمومی
@@ -2335,7 +2341,7 @@ function HamMenu(props){
     basisNames=props.basisNames,basisSpotMap=props.basisSpotMap,
     refreshSec=props.refreshSec,setRefreshSec=props.setRefreshSec,
     autoRefreshEnabled=props.autoRefreshEnabled,setAutoRefreshEnabled=props.setAutoRefreshEnabled,
-    onOpenHunt=props.onOpenHunt,onOpenDebug=props.onOpenDebug,
+    onOpenHunt=props.onOpenHunt,onOpenDebug=props.onOpenDebug,onOpenSignals=props.onOpenSignals,
     holidayStatus=props.holidayStatus,onToggleHoliday=props.onToggleHoliday,holidayBusy=props.holidayBusy;
 
   var stHuntOpen=useState(false);
@@ -2363,6 +2369,11 @@ function HamMenu(props){
             onClick={function(){onClose();onOpenDebug()}}
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenDebug()}}}>
             <span>🔍 دیباگ API و سرخطی</span><span>›</span>
+          </div>
+          <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--gain)", background:"var(--gain-t)", color:"var(--gain)"}}
+            onClick={function(){onClose();onOpenSignals()}}
+            onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenSignals()}}}>
+            <span>📡 پیگیری سیگنال‌ها</span><span>›</span>
           </div>
           <div className="hunt-settings-toggle" role="button" tabIndex={0}
             onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}
@@ -3113,6 +3124,426 @@ function WatcherTab(props){
   );
 }
 
+// ============================================================
+//  پیگیری سیگنال‌ها
+// ============================================================
+function signalNeedsStock(strategyType){
+  return ["cc","mp","co","cv"].indexOf(strategyType)!==-1;
+}
+function signalNeedsMargin(strategyType){
+  return ["strangleSell","callspreadbear","putspread","boxSell"].indexOf(strategyType)!==-1;
+}
+
+function SignalFollowForm(props){
+  var signal=props.signal;
+  var initial=props.initial||{};
+  var submitLabel=props.submitLabel||"شروع پیگیری";
+  var onSubmit=props.onSubmit;
+  var onCancel=props.onCancel;
+  var busy=props.busy||false;
+  var errMsg=props.errMsg;
+
+  var snapshot=signal.snapshot||{};
+  var strategyType=snapshot.strategy_type;
+  var legs=snapshot.legs||[];
+  var needsStock=signalNeedsStock(strategyType);
+  var needsMargin=signalNeedsMargin(strategyType);
+
+  var stStock=useState(initial.stockEntry!=null?String(initial.stockEntry):"");
+  var stockEntry=stStock[0],setStockEntry=stStock[1];
+  var stLegs=useState(function(){
+    return legs.map(function(_,i){
+      var v=initial.legEntries&&initial.legEntries[i];
+      return v!=null?String(v):"";
+    });
+  });
+  var legEntries=stLegs[0],setLegEntries=stLegs[1];
+  var stMargin=useState(initial.margin!=null?String(initial.margin):"");
+  var margin=stMargin[0],setMargin=stMargin[1];
+  var stNote=useState(initial.entryNote||"");
+  var note=stNote[0],setNote=stNote[1];
+  var stTargets=useState(initial.targets&&initial.targets.length>0
+    ? initial.targets.map(function(t){return {kind:t.kind,value:t.value}})
+    : [{kind:"profit",value:20},{kind:"profit",value:50},{kind:"loss",value:-20}]);
+  var targets=stTargets[0],setTargets=stTargets[1];
+  var stErr=useState(null);
+  var localErr=stErr[0],setLocalErr=stErr[1];
+
+  function submit(){
+    setLocalErr(null);
+    if(needsStock && !(parseFloat(stockEntry)>0)){
+      setLocalErr("قیمت خرید سهم پایه را وارد کنید");
+      return;
+    }
+    for(var i=0;i<legs.length;i++){
+      if(!(parseFloat(legEntries[i])>=0)){
+        setLocalErr("قیمت پای «"+(legs[i].label||legs[i].name)+"» را وارد کنید");
+        return;
+      }
+    }
+    if(needsMargin && margin===""){
+      setLocalErr("وجه تضمین را وارد کنید (اگر نگرفتید، صفر بگذارید)");
+      return;
+    }
+    var entries={
+      stockEntry: needsStock?parseFloat(stockEntry):null,
+      legEntries: legEntries.map(function(v){return parseFloat(v)||0;}),
+      margin: needsMargin?(parseFloat(margin)||0):null
+    };
+    onSubmit({
+      entries:entries,
+      entryNote:note,
+      targets:targets
+    });
+  }
+
+  return (
+    <div style={{padding:14}}>
+      {(localErr||errMsg)?<div className="error-box" style={{marginBottom:10}}><div className="desc">{localErr||errMsg}</div></div>:null}
+
+      <div className="msec">
+        <div className="msec-t">سیگنال</div>
+        <div className="gcard-p" style={{fontSize:12}}>
+          <div>استراتژی: <b>{strategyType}</b></div>
+          <div>موقعیت: <b>{snapshot.primary_name||""}</b></div>
+          <div>سهم پایه: <b>{snapshot.basis_name||""}</b> · سررسید: <b>{snapshot.expiry||""}</b></div>
+        </div>
+      </div>
+
+      {needsStock?(
+        <div className="msec">
+          <div className="msec-t">قیمت خرید سهم پایه ({snapshot.basis_name})</div>
+          <input type="text" inputMode="decimal" className="ov-input-price"
+            value={stockEntry} onChange={function(e){setStockEntry(e.target.value)}}
+            placeholder="مثلاً 71313" />
+        </div>
+      ):null}
+
+      <div className="msec">
+        <div className="msec-t">قیمت اجرای هر پای (سرِ هر سهم)</div>
+        {legs.map(function(leg,i){
+          return (
+            <div key={i} style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
+              <span className="step-hint" style={{minWidth:90}}>{leg.label||("پای "+(i+1))}:</span>
+              <code style={{fontSize:11,flex:1,overflow:"hidden",textOverflow:"ellipsis"}}>{leg.name}</code>
+              <input type="text" inputMode="decimal" className="ov-input-price"
+                value={legEntries[i]||""}
+                onChange={function(e){
+                  var arr=legEntries.slice();
+                  arr[i]=e.target.value;
+                  setLegEntries(arr);
+                }} placeholder="قیمت" />
+            </div>
+          );
+        })}
+      </div>
+
+      {needsMargin?(
+        <div className="msec">
+          <div className="msec-t">وجه تضمین (اگر کارگزاری نگرفت، صفر بگذارید)</div>
+          <input type="text" inputMode="decimal" className="ov-input-price"
+            value={margin} onChange={function(e){setMargin(e.target.value)}}
+            placeholder="مثلاً 2000000" />
+        </div>
+      ):null}
+
+      <div className="msec">
+        <div className="msec-t">یادداشت (اختیاری)</div>
+        <input type="text" className="ov-input-name"
+          value={note} onChange={function(e){setNote(e.target.value)}} />
+      </div>
+
+      <div className="msec">
+        <div className="msec-t">اهداف (هر هدف یک بار اعلان می‌دهد)</div>
+        {targets.map(function(t,i){
+          return (
+            <div key={i} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
+              <select value={t.kind} onChange={function(e){
+                var arr=targets.slice();arr[i]=Object.assign({},arr[i],{kind:e.target.value});setTargets(arr);
+              }} style={{padding:"4px 6px",borderRadius:5,border:"1px solid var(--bor)",background:"var(--sur)",color:"var(--txt)",fontFamily:"var(--f)",fontSize:11}}>
+                <option value="profit">سود</option>
+                <option value="loss">ضرر</option>
+              </select>
+              <input type="text" inputMode="decimal" className="ov-input-price sm"
+                value={t.value} onChange={function(e){
+                  var arr=targets.slice();
+                  arr[i]=Object.assign({},arr[i],{value:parseFloat(e.target.value)||0});
+                  setTargets(arr);
+                }} />
+              <span className="step-hint">٪</span>
+              <button className="ov-remove" onClick={function(){
+                var arr=targets.slice();arr.splice(i,1);setTargets(arr);
+              }}>✕</button>
+            </div>
+          );
+        })}
+        <button className="cbtn cbtn-acc" onClick={function(){
+          setTargets(targets.concat([{kind:"profit",value:100}]));
+        }}>+ افزودن هدف</button>
+      </div>
+
+      <div style={{display:"flex",gap:8,marginTop:14}}>
+        <button className="ov-add-btn" onClick={submit} disabled={busy}>
+          {busy?"...":submitLabel}
+        </button>
+        <button className="cbtn" onClick={onCancel}>انصراف</button>
+      </div>
+    </div>
+  );
+}
+
+function FollowedSignalRow(props){
+  var f=props.item;
+  var onUpdate=props.onUpdate;
+  var onClose=props.onClose;
+  var onDelete=props.onDelete;
+  var onEdit=props.onEdit;
+
+  var roi=f.currentROI;
+  var roiCls=roi>0?"gain":roi<0?"loss":"mut";
+  var roiStr=roi==null?"—":((roi>0?"+":"")+n(roi,2)+"٪");
+  var pnlStr=f.currentPnL==null?"—":n(Math.round(f.currentPnL));
+
+  return (
+    <div className="gcard" style={{marginBottom:10}}>
+      <div className="gcard-t" style={{justifyContent:"space-between",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+        <span>
+          <span className="bdg bdg-itm" style={{marginLeft:6}}>{f.snapshot.strategy_type}</span>
+          <b>{f.snapshot.primary_name}</b>
+          <span className="tb" style={{marginRight:6}}>{f.snapshot.basis_name}</span>
+          <span className="mut">{f.snapshot.expiry}</span>
+        </span>
+        <span className={"bdg "+(f.currentROI>=0?"bdg-itm":"bdg-q1")} style={{fontSize:13}}>
+          {roiStr}
+        </span>
+      </div>
+
+      <div className="gcard-p" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+        <div>💰 P&L: <b className={roiCls}>{pnlStr}</b></div>
+        <div>📊 مبنا: <b>{f.base==null?"—":n(Math.round(f.base))}</b></div>
+        <div>📈 Peak: <b className="gain">{(f.peakROI==null?"—":n(f.peakROI,2)+"٪")}</b></div>
+        <div>📉 Trough: <b className="loss">{(f.troughROI==null?"—":n(f.troughROI,2)+"٪")}</b></div>
+        {f.lastUpdated?<div style={{gridColumn:"1 / -1",fontSize:11,color:"var(--mut)"}}>
+          آخرین بروزرسانی: {new Date(f.lastUpdated).toLocaleString("fa-IR")}
+        </div>:null}
+      </div>
+
+      <div className="gcard-p" style={{marginTop:6,fontSize:11.5,lineHeight:1.9}}>
+        <div><b>پای‌ها و ورود:</b></div>
+        {(f.snapshot.legs||[]).map(function(leg,i){
+          var entry=(f.entries&&f.entries.legEntries)?f.entries.legEntries[i]:null;
+          return (
+            <div key={i}>
+              • {leg.label} <code>{leg.name}</code> → ورود: <b>{entry==null?"—":n(entry,0)}</b>
+            </div>
+          );
+        })}
+        {f.entries&&f.entries.stockEntry!=null?<div>• سهم پایه ({f.snapshot.basis_name}) → ورود: <b>{n(f.entries.stockEntry,0)}</b></div>:null}
+        {f.entries&&f.entries.margin!=null?<div>• وجه تضمین: <b>{n(f.entries.margin,0)}</b></div>:null}
+        {f.entryNote?<div style={{color:"var(--mut)"}}>یادداشت: {f.entryNote}</div>:null}
+      </div>
+
+      <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+        {(f.targets||[]).map(function(t,i){
+          var cls=t.kind==="profit"?"gain":"loss";
+          return (
+            <span key={i} className={"bdg "+(t.hit?(t.kind==="profit"?"bdg-itm":"bdg-q1"):"bdg-otm")} style={{fontSize:10}}>
+              {t.hit?"✓":"○"} {t.kind==="profit"?"+":""}{t.value}٪
+            </span>
+          );
+        })}
+      </div>
+
+      <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
+        <button className="cbtn cbtn-acc" onClick={function(){onEdit(f)}}>✎ ویرایش قیمت‌ها و اهداف</button>
+        <button className="cbtn" onClick={function(){
+          if(!window.confirm("پیگیری این سیگنال بسته شود؟"))return;
+          onClose(f._id);
+        }}>⏹ بستن</button>
+        <button className="cbtn" onClick={function(){
+          if(!window.confirm("پیگیری حذف شود؟"))return;
+          onDelete(f._id);
+        }} style={{borderColor:"var(--loss)",color:"var(--loss)",background:"var(--loss-t)"}}>🗑 حذف</button>
+      </div>
+    </div>
+  );
+}
+
+function SignalsOverlay(props){
+  var open=props.open,onClose=props.onClose;
+  var stTab=useState("followed");
+  var tab=stTab[0],setTab=stTab[1];
+  var stSent=useState([]);
+  var sent=stSent[0],setSent=stSent[1];
+  var stFollowed=useState([]);
+  var followed=stFollowed[0],setFollowed=stFollowed[1];
+  var stLoading=useState(false);
+  var loading=stLoading[0],setLoading=stLoading[1];
+  var stErr=useState(null);
+  var err=stErr[0],setErr=stErr[1];
+  var stFollowCtx=useState(null);
+  var followCtx=stFollowCtx[0],setFollowCtx=stFollowCtx[1];
+  var stEditCtx=useState(null);
+  var editCtx=stEditCtx[0],setEditCtx=stEditCtx[1];
+  var stSubmitting=useState(false);
+  var submitting=stSubmitting[0],setSubmitting=stSubmitting[1];
+
+  function reload(){
+    if(!open)return Promise.resolve();
+    setLoading(true);
+    return Promise.all([
+      Api.signalsSent(7).catch(function(){return {signals:[]}}),
+      Api.signalsFollowed("active").catch(function(){return {followed:[]}})
+    ]).then(function(r){
+      setSent(r[0].signals||[]);
+      setFollowed(r[1].followed||[]);
+      setErr(null);
+    }).catch(function(e){setErr(e.message)})
+      .finally(function(){setLoading(false)});
+  }
+
+  useEffect(function(){
+    if(!open)return;
+    reload();
+    var t=setInterval(reload,10000);
+    return function(){clearInterval(t)};
+  },[open]);
+
+  if(!open)return null;
+
+  var activeKeys={};
+  followed.forEach(function(f){activeKeys[f.signalKey]=true});
+
+  function handleFollowSubmit(body){
+    if(!followCtx)return;
+    setSubmitting(true);
+    Api.signalsFollow(Object.assign({signalKey:followCtx.key},body)).then(function(){
+      setFollowCtx(null);
+      return reload();
+    }).catch(function(e){
+      setErr(e.message);
+    }).finally(function(){setSubmitting(false)});
+  }
+
+  function handleEditSubmit(body){
+    if(!editCtx)return;
+    setSubmitting(true);
+    Api.signalsUpdate(editCtx._id,body).then(function(){
+      setEditCtx(null);
+      return reload();
+    }).catch(function(e){
+      setErr(e.message);
+    }).finally(function(){setSubmitting(false)});
+  }
+
+  return (
+    <div className="fs-overlay" role="dialog" aria-label="پیگیری سیگنال‌ها">
+      <div className="fs-head">
+        <b>📡 پیگیری سیگنال‌ها</b>
+        {loading?<span className="tab-spin-dot" />:null}
+        <div className="sp1" />
+        <button className="ib" onClick={reload} title="بروزرسانی">↻</button>
+        <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
+      </div>
+
+      <div className="msub-tabs">
+        <button className={"msub-tab "+(tab==="followed"?"on":"")} onClick={function(){setTab("followed")}}>
+          در حال پیگیری ({followed.length})
+        </button>
+        <button className={"msub-tab "+(tab==="sent"?"on":"")} onClick={function(){setTab("sent")}}>
+          سیگنال‌های ارسال‌شده ({sent.length})
+        </button>
+      </div>
+
+      <div className="fs-body" style={{padding:14,overflowY:"auto"}}>
+        {err?<div className="error-box" style={{marginBottom:10}}><div className="desc">{err}</div></div>:null}
+
+        {tab==="sent"?
+          (sent.length===0?
+            <div className="step-hint" style={{padding:12}}>هنوز سیگنالی ارسال نشده (یا هیچ‌کدام در ۷ روز گذشته نبوده).</div>
+            :
+            sent.map(function(s){
+              var already=activeKeys[s.key];
+              return (
+                <div key={s._id} className="gcard" style={{marginBottom:8}}>
+                  <div className="gcard-t" style={{justifyContent:"space-between",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span>
+                      <span className="bdg bdg-itm" style={{marginLeft:6}}>{s.strategy_type}</span>
+                      <b>{s.primary_name}</b>
+                      <span className="tb" style={{marginRight:6}}>{s.basis_name}</span>
+                      <span className="mut">{s.expiry}</span>
+                    </span>
+                    <span className="mut" style={{fontSize:11}}>{new Date(s.sentAt).toLocaleString("fa-IR")}</span>
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:8,alignItems:"center",flexWrap:"wrap"}}>
+                    {already?
+                      <span className="bdg bdg-itm">✓ در حال پیگیری</span>
+                      :
+                      <button className="ov-add-btn" onClick={function(){
+                        setFollowCtx({key:s.key,signal:s});
+                      }}>▶ شروع پیگیری</button>
+                    }
+                  </div>
+                </div>
+              );
+            })
+          )
+        :
+          (followed.length===0?
+            <div className="step-hint" style={{padding:12}}>هیچ سیگنالی در حال پیگیری نیست.</div>
+            :
+            followed.map(function(f){
+              return (
+                <FollowedSignalRow key={f._id} item={f}
+                  onUpdate={reload}
+                  onEdit={function(item){setEditCtx(item)}}
+                  onClose={function(id){
+                    Api.signalsClose(id,{}).then(reload).catch(function(e){setErr(e.message)});
+                  }}
+                  onDelete={function(id){
+                    Api.signalsDelete(id).then(reload).catch(function(e){setErr(e.message)});
+                  }}
+                />
+              );
+            })
+          )
+        }
+      </div>
+
+      {followCtx?(
+        <Modal title={"شروع پیگیری — "+(followCtx.signal.snapshot.primary_name||"")} onClose={function(){setFollowCtx(null)}}>
+          <SignalFollowForm
+            signal={followCtx.signal}
+            submitLabel="شروع پیگیری"
+            onSubmit={handleFollowSubmit}
+            onCancel={function(){setFollowCtx(null)}}
+            busy={submitting}
+          />
+        </Modal>
+      ):null}
+
+      {editCtx?(
+        <Modal title={"ویرایش پیگیری — "+(editCtx.snapshot.primary_name||"")} onClose={function(){setEditCtx(null)}}>
+          <SignalFollowForm
+            signal={{snapshot:editCtx.snapshot}}
+            initial={{
+              stockEntry:editCtx.entries?editCtx.entries.stockEntry:null,
+              legEntries:editCtx.entries?editCtx.entries.legEntries:[],
+              margin:editCtx.entries?editCtx.entries.margin:null,
+              entryNote:editCtx.entryNote||"",
+              targets:editCtx.targets||[]
+            }}
+            submitLabel="ذخیره تغییرات"
+                        onSubmit={handleEditSubmit}
+            onCancel={function(){setEditCtx(null)}}
+            busy={submitting}
+          />
+        </Modal>
+      ):null}
+    </div>
+  );
+}
+
 function TickDetailView(props){
   var tick=props.tick;
   var rows=tick.parsedContracts||tick.cacheContracts||[];
@@ -3212,6 +3643,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
 
   var stMenu=useState(false);var menuOpen=stMenu[0],setMenuOpen=stMenu[1];
   var stTab=useState("watch");var tab=stTab[0],setTab=stTab[1];
+  var stSignalsOpen=useState(false);var signalsOpen=stSignalsOpen[0],setSignalsOpen=stSignalsOpen[1];
   var stSearch=useState("");var globalSearch=stSearch[0],setGlobalSearch=stSearch[1];
 
   var stRefreshing=useState(false);var refreshing=stRefreshing[0],setRefreshing=stRefreshing[1];
@@ -3443,12 +3875,15 @@ function handleTabClick(id){
         autoRefreshEnabled={autoRefreshEnabled} setAutoRefreshEnabled={setAutoRefreshEnabled}
         onOpenHunt={function(){setHuntOpen(true)}}
         onOpenDebug={function(){setDebugOpen(true)}}
+        onOpenSignals={function(){setSignalsOpen(true)}}
         holidayStatus={holidayStatus} onToggleHoliday={handleToggleHoliday} holidayBusy={holidayBusy}
       />
 
       <BestPositionsOverlay open={huntOpen} onClose={function(){setHuntOpen(false)}}
         huntData={huntData} huntLoading={huntLoading} huntError={huntError}
         onRetry={loadHunt} globalSearch={globalSearch} onOpenChart={openChart} />
+
+      <SignalsOverlay open={signalsOpen} onClose={function(){setSignalsOpen(false)}} />
 
       <DebugOverlay open={debugOpen} onClose={function(){setDebugOpen(false)}} />
 

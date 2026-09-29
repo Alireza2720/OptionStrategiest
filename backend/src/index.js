@@ -7,6 +7,7 @@ var rateLimit = require("express-rate-limit");
 var { connectDB } = require("./db");
 var Settings = require("./models/Settings");
 var apiRouter = require("./routes/api");
+var signalsRouter = require("./routes/signals");
 var { runCycle, restoreFromSnapshot } = require("./services/cycleRunner");
 var { isMarketOpen } = require("./services/marketHours");
 var apiWatcher = require("./services/apiWatcher");
@@ -45,6 +46,7 @@ app.use("/api", function (req, res, next) {
   if (req.method === "GET") return readLimiter(req, res, next);
   return writeLimiter(req, res, next);
 }, apiRouter);
+app.use("/api", signalsRouter);
 
 app.get("/", function (req, res) {
   res.json({ ok: true, service: "option-hunter-backend" });

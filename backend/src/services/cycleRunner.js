@@ -11,6 +11,8 @@ var { getFreshRows, markNotified, getNotificationByKey } = require("./notifyGate
 var { sendLongMessage, editTelegramMessage } = require("./telegram");
 var { formatRow } = require("./messageFormat");
 var { isMarketOpen } = require("./marketHours");
+var SignalLog = require("../models/SignalLog");
+var signalTracker = require("./signalTracker");
 
 var HUNT_CACHE_CAP = 300;
 var FAILURE_ALERT_THRESHOLD = 3;
@@ -310,14 +312,30 @@ async function runCycle(opts) {
             var bp = basisPctMap[row.basis_name] || {};
             var enrichedRow = Object.assign({}, row, {
               basis_last_percent: bp.last != null ? bp.last : null,
-              basis_close_percent: bp.close != null ? bp.close : null,
-              dataAgeSec: cache.updatedAt ? (Date.now() - new Date(cache.updatedAt).getTime()) / 1000 : null
+              basis_close_percent: bp.close != null ? bp.close : null
             });
             var text = formatRow(enrichedRow, steps);
             var result = await sendLongMessage(token, chatId, text);
               var mid = result && result.result && result.result.message_id;
               if (mid != null) messageIds[key] = mid;
               sentRows.push(row);
+              // ✅ ذخیره‌ی سیگنال ارسالی برای پیگیری (TTL ۷ روز)
+              try {
+                await SignalLog.create({
+                  ownerId: "default",
+                  key: key,
+                  strategy_type: row.strategy_type,
+                  primary_name: row.primary_name,
+                  basis_name: row.basis_name,
+                  expiry: row.expiry,
+                  dte: row.dte,
+                  snapshot: row,
+                  sentAt: new Date(),
+                  telegramMessageId: mid != null ? mid : null
+                });
+              } catch (eLog) {
+                console.error("[cycle] خطا در ذخیره SignalLog برای " + key + ": " + eLog.message);
+              }
             } catch (e) {
               console.error("[cycle] خطا در ارسال تلگرام برای " + key + ": " + e.message);
             }
@@ -360,6 +378,15 @@ async function runCycle(opts) {
           }
         }
       }
+    }
+
+    // ✅ پیگیری سیگنال‌های فعال: محاسبه‌ی P&L و ارسال اعلان اهداف
+    try {
+      var shouldNotifyFollowed = notify && token && chatId
+        && isMarketOpen(new Date(), settings.manualHolidays);
+      await signalTracker.checkFollowedSignals(token, chatId, shouldNotifyFollowed, cache);
+    } catch (eFollow) {
+      console.error("[cycle] خطا در پیگیری سیگنال‌ها:", eFollow.message);
     }
 
     console.log("[cycle] اجرا کامل شد در " + cache.updatedAt.toLocaleString());
