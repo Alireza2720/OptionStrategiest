@@ -20,7 +20,7 @@ jobs:
             set -e
             cd ~/apps/OptionStrategiest
             git pull origin main
-            npm install
+            npm install --omit=dev
             chmod -R o+rX frontend
             pm2 restart optionstrategiest --update-env
             pm2 save

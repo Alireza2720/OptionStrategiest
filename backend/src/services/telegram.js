@@ -1,7 +1,11 @@
 "use strict";
 
+// Base URL: پیشفرض api.telegram.org؛ روی سرور ایران از tapi.bale.ai استفاده میکنیم
+// با تنظیم TELEGRAM_API_BASE در .env قابل تغییر است
+var API_BASE = (process.env.TELEGRAM_API_BASE || "https://api.telegram.org").replace(/\/+$/, "");
+
 async function sendTelegramMessage(token, chatId, text) {
-  var url = "https://api.telegram.org/bot" + token + "/sendMessage";
+  var url = API_BASE + "/bot" + token + "/sendMessage";
   var res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -20,7 +24,7 @@ async function sendTelegramMessage(token, chatId, text) {
 }
 
 async function editTelegramMessage(token, chatId, messageId, text) {
-  var url = "https://api.telegram.org/bot" + token + "/editMessageText";
+  var url = API_BASE + "/bot" + token + "/editMessageText";
   var res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -39,7 +43,6 @@ async function editTelegramMessage(token, chatId, messageId, text) {
   return json;
 }
 
-// تلگرام هر پیام را حداکثر ۴۰۹۶ کاراکتر می‌پذیرد؛ اگر طولانی بود تکه‌تکه می‌فرستیم
 async function sendLongMessage(token, chatId, text) {
   var LIMIT = 3500;
   if (text.length <= LIMIT) {
