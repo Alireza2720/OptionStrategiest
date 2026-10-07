@@ -90,7 +90,9 @@ function parseContracts(raw) {
       var size = si(row.size || 1000);
       if (spot <= 0 || strike <= 0 || dte <= 0) continue;
 
-      var isCall = (row.isCall === true) || (type === 1);
+      var isCall = (row.isCall === true)
+                   || (row.isCall !== false && type === 1)
+                   || (row.isCall === undefined && !String(row.fname || '').startsWith('اخت'));
       var lastPrice = sf(row.close || row.last || 0);
       var lastPct = sf(row.close_c || 0);
       var finalPct = sf(row.final_c || 0);
