@@ -1,0 +1,17 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/collector/venv/bin/python",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/collector",
+        "${workspaceFolder}/collector/pipeline"
+    ],
+    "python.analysis.diagnosticMode": "openFilesOnly",
+    "python.analysis.typeCheckingMode": "off",
+    "code-runner.runInTerminal": true,
+    "code-runner.cwd": "${workspaceFolder}",
+    "code-runner.executorMap": {
+        "javascript": "cd $workspaceRoot && node $fullFileName"
+    },
+    "code-runner.clearPreviousOutput": true,
+    "code-runner.saveFileBeforeRun": true,
+    "code-runner.showExecutionMessage": true
+}

@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "📦 Pack All",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/pack.js",
+            "args": [],
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            "name": "📦 List Files",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/pack.js",
+            "args": ["--list"],
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        },
+        {
+            "name": "📦 Clean Packed",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/pack.js",
+            "args": ["--clean"],
+            "console": "integratedTerminal",
+            "skipFiles": ["<node_internals>/**"]
+        }
+    ]
+}

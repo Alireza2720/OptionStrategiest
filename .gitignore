@@ -1,3 +1,5 @@
 node_modules/
 .env
 *.log
+# پک پروژه (نباید توی گیت بره)
+PACKED.txt
