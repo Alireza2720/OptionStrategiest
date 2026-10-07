@@ -17,3 +17,5 @@ PACKED.txt
 servicepy-fix-backup-*/
 _*bk-*/
 _bak-*
+# Backup dirs (manual)
+_backup-*/

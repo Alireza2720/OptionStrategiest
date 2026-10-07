@@ -144,15 +144,27 @@ function saveDebugTick(settings, meta) {
 async function restoreFromSnapshot() {
   try {
     var doc = await CacheSnapshot.findOne({ ownerId: "default" }).lean();
-    if (doc) {
+    if (!doc) return;
+
+    var ageMs = Date.now() - new Date(doc.updatedAt || 0).getTime();
+    var ageMin = ageMs / 60000;
+
+    // ✅ فقط snapshot های کمتر از 5 دقیقه قدیمی رو بازیابی کن.
+    // snapshot های قدیمی‌تر نادیده گرفته می‌شن تا اولین چرخه، داده‌ی تازه بیاره.
+    if (ageMin < 5) {
       cache.watch = doc.watch || [];
       cache.strategies = doc.strategies || {};
       cache.steps = doc.steps || [];
       cache.huntLatest = doc.huntLatest || { at: null, rows: [] };
       cache.updatedAt = doc.updatedAt || null;
       cache.isSnapshot = true;
-      console.log("[cycle] کش از آخرین snapshot ذخیره‌شده در دیتابیس بازیابی شد (تاریخ: " +
-        (cache.updatedAt ? new Date(cache.updatedAt).toLocaleString() : "-") + ").");
+      console.log("[cycle] کش از snapshot تازه بازیابی شد (عمر " + ageMin.toFixed(1) + " دقیقه).");
+    } else {
+      console.log("[cycle] snapshot قدیمی (" + ageMin.toFixed(0) + " دقیقه) — نادیده گرفته شد.");
+      cache.watch = [];
+      cache.strategies = {};
+      cache.huntLatest = { at: null, rows: [] };
+      cache.isSnapshot = false;
     }
   } catch (e) {
     console.error("[cycle] خطا در بازیابی snapshot:", e.message);

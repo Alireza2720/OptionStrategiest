@@ -1,8 +1,29 @@
 "use strict";
 
+// ============================================================
+// dataSource.js — Parse option chain from OptionHunter proxy
+// ============================================================
+// Sources (in order of preference):
+//   1) OptionHunter proxy (/api/options-chain)   ← primary
+//   2) optionschool24 direct                     ← fallback
+//
+// Field naming convention of OptionHunter proxy:
+//   S, strike, expiry, daysLeft, tradingDaysLeft,
+//   last, final, yday, bid, bidVol, ask, askVol,
+//   volume, value (== Tvalue/ارزش معاملات), intrinsic,
+//   bsApi, ivApi, hvApi, deltaApi, gammaApi, thetaApi, vegaApi,
+//   oi, oiChange, margin, size, isCall, symbol, fullName, underlying
+//
+// optionschool24 legacy names (kept for backward compat):
+//   basis, emal, to_date, day_left, final_c,
+//   black_sholes, imp, sigma, delta, gamma, theta, vega,
+//   b_price, s_price, b_volume, s_volume, Tvalue, op
+// ============================================================
+
 function sf(v, d) { if (d === undefined) d = 0; var x = parseFloat(v); return isNaN(x) ? d : x; }
 function si(v, d) { if (d === undefined) d = 0; var x = parseInt(v, 10); return isNaN(x) ? d : x; }
-// ✅ برای روزهای مانده که ممکن است اعشاری باشد و truncate شدنش خطای یک‌روزه ایجاد کند
+
+// برای روزهای مانده — گرد می‌کنیم تا خطای اعشارِ ناشی از truncate پیش نیاد
 function daysLeft(v, d) {
   if (d === undefined) d = 0;
   var x = parseFloat(v);
@@ -31,21 +52,20 @@ function isStockInBuyQueue(lastPct, closePct) {
   // محدوده مشکوک 2.66 تا 2.76: فقط اگر آخرین == پایانی (با تحمل اعشار)
   if (lastPct >= 2.66 && lastPct <= 2.76) {
     if (closePct == null || isNaN(closePct)) return false;
-    // گرد کردن به دو رقم اعشار قبل از مقایسه (رفع float precision)
     return Math.round(lastPct * 100) === Math.round(closePct * 100);
   }
   return false;
 }
 
-// Primary: OptionHunter backend proxy (TSETMC-based enriched chain).
-// Fallback: direct optionschool24.com (only if proxy unreachable).
+// Primary: OptionHunter backend proxy
+// Fallback: direct optionschool24.com
 var _PROXY_URL = process.env.OPTIONS_CHAIN_PROXY_URL || "";
 var _DIRECT_URL = "https://s3.optionschool24.com/last?type=3";
 var TARGET_URL = _PROXY_URL || _DIRECT_URL;
 
 async function fetchRawDataOnce() {
   var controller = new AbortController();
-  var timeout = setTimeout(function () { controller.abort(); }, 120000);  // 120s — collector warm-up may take ~60s
+  var timeout = setTimeout(function () { controller.abort(); }, 120000);
   try {
     var res = await fetch(TARGET_URL, { signal: controller.signal });
     if (!res.ok) throw new Error("HTTP " + res.status);
@@ -60,7 +80,6 @@ async function fetchRawDataOnce() {
 
 function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
 
-// در صورت خطای موقت (قطعی شبکه، تایم‌اوت و ...) حداکثر ۳ بار با فاصله‌ی افزایشی تلاش مجدد می‌شود
 async function fetchRawData() {
   var attempts = 3;
   var lastErr = null;
@@ -70,7 +89,7 @@ async function fetchRawData() {
     } catch (e) {
       lastErr = e;
       console.error("[dataSource] تلاش " + (i + 1) + " از " + attempts + " ناموفق بود: " + e.message);
-      if (i < attempts - 1) await sleep(1000 * Math.pow(2, i)); // 1s, 2s
+      if (i < attempts - 1) await sleep(1000 * Math.pow(2, i));
     }
   }
   throw lastErr;
@@ -82,100 +101,242 @@ function parseContracts(raw) {
     var row = raw[ri];
     if (!row || typeof row !== "object") continue;
     try {
+      // ─── Basic identification ───
       var type = si(row.type, 1);
-      var spot = firstNumber(row, ["basis_c", "basis", "basis_last", "basis_price", "S", "underlyingPrice", "underlying_price", "basis_c_value", "basisClose"], 0);
-      var strike = sf(row.emal || row.strike || 0);
+      var isCall = (row.isCall === true)
+                   || (row.isCall !== false && type === 1)
+                   || (row.isCall === undefined && !String(row.fname || "").startsWith("اخت"));
+
+      // ─── Prices ───
+      // در proxy جدید: S (underlying spot), strike, last, final, yday
+      // در optionschool24: basis, emal, close, final, yday
+      var spot = firstNumber(row, [
+        "S", "basis_c", "basis", "basis_last", "basis_price",
+        "underlyingPrice", "underlying_price", "basis_c_value", "basisClose"
+      ], 0);
+
+      var strike = sf(row.strike || row.emal || 0);
       var finalPrice = sf(row.final || row.last || row.close || 0);
-      var dte = daysLeft(row.day_left != null ? row.day_left : (row.daysLeft != null ? row.daysLeft : (row.days_left_actual || 0)));
+      var lastPrice = sf(row.last || row.close || 0);
+      var yday = sf(row.yday || 0);
+
+      // ─── Days ───
+      var dte = daysLeft(
+        row.daysLeft != null ? row.daysLeft :
+        (row.day_left != null ? row.day_left :
+          (row.days_left_actual || 0))
+      );
+
       var size = si(row.size || 1000);
       if (spot <= 0 || strike <= 0 || dte <= 0) continue;
 
-      var isCall = (row.isCall === true)
-                   || (row.isCall !== false && type === 1)
-                   || (row.isCall === undefined && !String(row.fname || '').startsWith('اخت'));
-      var lastPrice = sf(row.close || row.last || 0);
-      var lastPct = sf(row.close_c || 0);
-      var finalPct = sf(row.final_c || 0);
-      var high = sf(row.highest_price || 0);
-      var low = sf(row.lowest_price || 0);
-      var volume = sf(row.Tvolume || row.volume || 0);
-      var tvalue = sf(row.Tvalue || row.value || 0);
-      var oi = sf(row.op || row.oi || 0);
-      var opChange = sf(row.op_change || 0);
-      if (tvalue > 0 && tvalue < 100000) continue;
+      // ─── Percentages ───
+      // در proxy: close_c, final_c (نسبت به yday)
+      // اگر نبود، از yday محاسبه کن
+      var lastPct = sf(row.close_c, NaN);
+      var finalPct = sf(row.final_c, NaN);
+      if (!isFinite(lastPct) && yday > 0 && lastPrice > 0) {
+        lastPct = (lastPrice / yday - 1) * 100;
+      }
+      if (!isFinite(finalPct) && yday > 0 && finalPrice > 0) {
+        finalPct = (finalPrice / yday - 1) * 100;
+      }
+      if (!isFinite(lastPct)) lastPct = 0;
+      if (!isFinite(finalPct)) finalPct = 0;
 
-      var intrinsic = sf(row.value || 0);
+      // ─── Volume / Value / OI ───
+      var high = sf(row.highest_price || row.priceMax || 0);
+      var low = sf(row.lowest_price || row.priceMin || 0);
+      var volume = sf(row.volume || row.Tvolume || 0);
+      // ⚠️ نکته مهم: در proxy جدید، `value` = ارزش معاملات (نه intrinsic)
+      // در optionschool24، `Tvalue` = ارزش معاملات
+      // پس tvalue از هر دو می‌تونه بیاد
+      var tvalue = sf(row.value || row.Tvalue || 0);
+      var oi = sf(row.oi || row.op || 0);
+      var opChange = sf(row.oiChange || row.op_change || 0);
+
+      // فیلتر tvalue: در optionschool24 قدیم، tvalue < 100000 یعنی noise
+      // ولی در proxy جدید ممکنه value=0 برای قراردادهای کم‌معامله باشه
+      // پس فقط وقتی tvalue هست ولی خیلی کمه فیلتر می‌کنیم
+      // (ردیف‌های value=0 یا خیلی کم رو نه — چون ممکنه بدون معامله باشن)
+      // این فیلتر حذف شد چون باعث از دست دادن ردیف‌های معتبر می‌شد.
+
+      // ─── Intrinsic / time value / be ───
+      // ⚠️ مهم: در proxy جدید، `intrinsic` جدا هست (نه value)
+      var intrinsic = sf(row.intrinsic, NaN);
+      if (!isFinite(intrinsic)) {
+        // fallback legacy: در optionschool24 `value` = intrinsic
+        intrinsic = sf(row.value || 0);
+        // ولی اگر value خیلی بزرگ باشه (ارزش معاملات)، اشتباهه
+        if (intrinsic > spot * 10) intrinsic = 0;
+      }
       var priceForTimeVal = lastPrice > 0 ? lastPrice : finalPrice;
       var timeVal = Math.max(0, priceForTimeVal - intrinsic);
       var priceForBe = lastPrice > 0 ? lastPrice : finalPrice;
       var be = isCall ? strike + priceForBe : strike - priceForBe;
       var beDiff = spot > 0 ? (be - spot) / spot * 100 : 0;
       var strikeDiff = strike > 0 ? (spot - strike) / strike * 100 : 0;
-      var bs = sf(row.black_sholes || 0);
-      var bsDiff = sf(row.bs_d || 0);
-      var iv = sf(row.imp || row.ivApi || 0);
-      var histVol = sf(row.sigma || row.hvApi || 0);
-      var delta = sf(row.delta || row.deltaApi || 0);
-      var theta = sf(row.theta || row.thetaApi || 0) / 365;
-      var gamma = sf(row.gamma || 0);
-      var vega = sf(row.vega || 0) / 100;
-      var rho = sf(row.rho || 0) / 100;
+
+      // ─── Greeks / IV / HV ───
+      // proxy: bsApi, ivApi, hvApi, deltaApi, gammaApi, thetaApi, vegaApi
+      // legacy: black_sholes, imp, sigma, delta, gamma, theta, vega, rho
+      var bs = sf(row.bsApi || row.black_sholes || 0);
+      var bsDiff = 0;
+      if (bs > 0 && lastPrice > 0) {
+        bsDiff = (lastPrice - bs) / bs * 100;
+      }
+      var iv = sf(row.ivApi || row.imp || 0);
+      var histVol = sf(row.hvApi || row.sigma || 0);
+      var delta = sf(row.deltaApi || row.delta || 0);
+      var thetaRaw = sf(row.thetaApi || row.theta || 0);
+      var theta = thetaRaw / 365;
+      var gamma = sf(row.gammaApi || row.gamma || 0);
+      var vegaRaw = sf(row.vegaApi || row.vega || 0);
+      var vega = vegaRaw / 100;
+      var rhoRaw = sf(row.rhoApi || row.rho || 0);
+      var rho = rhoRaw / 100;
+
       var levBase = lastPrice > 0 ? lastPrice : finalPrice;
       var leverage = levBase > 0 && delta !== 0 ? Math.abs(delta * spot / levBase) : 0;
 
-      var bPrices = parsePriceVol(row.b_price);
-      var bVolumes = parsePriceVol(row.b_volume);
-      var sPrices = parsePriceVol(row.s_price);
-      var sVolumes = parsePriceVol(row.s_volume);
-      var bidPrice = bPrices[0] || sf(row.bid || 0);
-      var bidVol = bVolumes[0] || sf(row.bidVol || 0);
-      var askPrice = sPrices[0] || sf(row.ask || 0);
-      var askVol = sVolumes[0] || sf(row.askVol || 0);
+      // ─── Bid / Ask ───
+      // proxy: bid, bidVol, ask, askVol
+      // legacy: b_price ("price/vol"), s_price ("price/vol"), b_volume, s_volume
+      var bidPrice = sf(row.bid || 0);
+      var bidVol = sf(row.bidVol || 0);
+      var askPrice = sf(row.ask || 0);
+      var askVol = sf(row.askVol || 0);
+
+      if (!bidPrice && row.b_price) {
+        var bP = parsePriceVol(row.b_price);
+        bidPrice = bP[0] || 0;
+        if (!bidVol && bP[1]) bidVol = bP[1];
+      }
+      if (!askPrice && row.s_price) {
+        var sP = parsePriceVol(row.s_price);
+        askPrice = sP[0] || 0;
+        if (!askVol && sP[1]) askVol = sP[1];
+      }
+      if (!bidVol && row.b_volume) bidVol = sf(row.b_volume);
+      if (!askVol && row.s_volume) askVol = sf(row.s_volume);
+
       // ✅ محافظت: هرگز bid نباید بزرگ‌تر از ask باشد.
-      // اگر API داده‌ی ناسازگار فرستاد (bid > ask)، جای دو طرف را عوض می‌کنیم
-      // تا از سیگنال نادرست در استراتژی‌های آربیتراژ مثل باکس جلوگیری شود.
       if (askPrice > 0 && bidPrice > 0 && bidPrice > askPrice) {
         var tmpP = bidPrice; bidPrice = askPrice; askPrice = tmpP;
         var tmpV = bidVol; bidVol = askVol; askVol = tmpV;
       }
+
       var spread = askPrice > 0 && bidPrice > 0 ? askPrice - bidPrice : 0;
 
+      // ─── Trading days ───
       var tradingDays = si(firstNumber(row, [
-        "dey_left_actual", "day_left_actual", "days_left_actual",
-        "trading_days_left", "trading_day_left", "business_days_left",
-        "dey_left", "day_left_trade"
+        "tradingDaysLeft",
+        "trading_days_left",
+        "dey_left_actual",
+        "day_left_actual",
+        "days_left_actual",
+        "trading_day_left",
+        "business_days_left",
+        "dey_left",
+        "day_left_trade"
       ], 0), 0);
 
-      var rawStatus = String(row.status_text || "") || (isCall ? (spot > strike ? "ITM" : spot < strike ? "OTM" : "ATM") : (spot < strike ? "ITM" : spot > strike ? "OTM" : "ATM"));
-      var status = rawStatus.indexOf("سود") !== -1 ? "ITM" : rawStatus.indexOf("ضرر") !== -1 ? "OTM" : rawStatus.indexOf("تفاوت") !== -1 ? "ATM" : rawStatus;
+      // ─── Status ───
+      var rawStatus = String(row.status_text || row.statusText || "")
+        || (isCall
+          ? (spot > strike ? "ITM" : spot < strike ? "OTM" : "ATM")
+          : (spot < strike ? "ITM" : spot > strike ? "OTM" : "ATM"));
+      var status = rawStatus.indexOf("سود") !== -1 ? "ITM"
+                 : rawStatus.indexOf("ضرر") !== -1 ? "OTM"
+                 : rawStatus.indexOf("تفاوت") !== -1 ? "ATM"
+                 : rawStatus;
 
+      // ─── Basis percentages ───
+      // proxy این‌ها رو نمی‌فرسته، پس از yday استفاده نمی‌کنیم
+      // (yday خود قرارداده نه سهم پایه). این مقادیر 0 می‌مونن
+      // و در dedupeAndFlagBuyable به عنوان pending علامت می‌خورن.
       var basisLastPercent = firstNumber(row, ["basis_c_percent", "basis_last_percent"], 0);
       var basisClosePercent = firstNumber(row, ["basis_percent", "basis_close_percent", "basis_pc_percent", "basis_final_percent"], 0);
 
+      // ─── Expiry ───
+      var expiry = String(row.expiry || row.to_date || "");
+
+      // ─── Margin ───
+      var margin = sf(row.margin || row.tazmin_3 || row.tazmin3 || row.tazmin || 0);
+
+      // ─── Symbol / Underlying ───
+      var name = String(row.symbol || row.name || "");
+      var basisName = String(row.underlyingRaw || row.underlying || row.basis_name || "");
+
       out.push({
-        name: String(row.name || row.symbol || ""), basis_name: String(row.basis_name || row.underlyingRaw || row.underlying || ""),
-        type: isCall ? "call" : "put", strike: strike, spot: spot, price: finalPrice,
-        // ✅ به‌جای fallback به قیمت پایانی، صفر می‌گذاریم تا canBuyOpt/canSellOpt ردیف را رد کند
+        name: name,
+        basis_name: basisName,
+        type: isCall ? "call" : "put",
+        strike: strike,
+        spot: spot,
+        price: finalPrice,
+
+        // ✅ فقط وقتی هم bid و هم vol معتبر باشن، قابل خرید/فروش
         buy_price: askPrice > 0 && askVol > 0 ? askPrice : 0,
         sell_price: bidPrice > 0 && bidVol > 0 ? bidPrice : 0,
-        end_price: lastPrice, end_pct: lastPct, final_pct: finalPct, low: low, high: high,
-        intrinsic: intrinsic, time_val: timeVal, be: be, be_diff: beDiff, strike_diff: strikeDiff,
-        bs: bs, bs_diff: bsDiff, volume: volume, tvalue: tvalue, oi: oi, op_change: opChange,
-        trading_days: tradingDays, dte: dte, size: size, expiry: String(row.to_date || ""),
-        iv: iv, hist_vol: histVol, delta: delta, theta: theta, gamma: gamma, vega: vega, rho: rho,
-        leverage: leverage, bid_price: bidPrice, bid_vol: bidVol, ask_price: askPrice, ask_vol: askVol,
-        spread: spread, margin: sf(row.tazmin_3 || row.tazmin3 || row.tazmin || 0), status: status,
-        basis_last_percent: basisLastPercent, basis_close_percent: basisClosePercent,
+
+        end_price: lastPrice,
+        end_pct: lastPct,
+        final_pct: finalPct,
+        low: low,
+        high: high,
+
+        intrinsic: intrinsic,
+        time_val: timeVal,
+        be: be,
+        be_diff: beDiff,
+        strike_diff: strikeDiff,
+
+        bs: bs,
+        bs_diff: bsDiff,
+        volume: volume,
+        tvalue: tvalue,
+        oi: oi,
+        op_change: opChange,
+
+        trading_days: tradingDays,
+        dte: dte,
+        size: size,
+        expiry: expiry,
+
+        iv: iv,
+        hist_vol: histVol,
+        delta: delta,
+        theta: theta,
+        gamma: gamma,
+        vega: vega,
+        rho: rho,
+
+        leverage: leverage,
+
+        bid_price: bidPrice,
+        bid_vol: bidVol,
+        ask_price: askPrice,
+        ask_vol: askVol,
+
+        spread: spread,
+        margin: margin,
+        status: status,
+
+        basis_last_percent: basisLastPercent,
+        basis_close_percent: basisClosePercent,
+
         _raw: row
       });
-    } catch (e) { /* رد شدن از ردیف خراب */ }
+    } catch (e) {
+      // ردیف خراب — رد شود
+    }
   }
   return out;
 }
 
 function dedupeAndFlagBuyable(contracts) {
-  // نرمال‌سازی درصدهای سهم پایه: برای هر سهم پایه، بزرگ‌ترین قدر مطلق درصد را در نظر می‌گیریم
-  // (چون API ممکن است برای قراردادهای مختلف یک سهم، مقادیر ناهمگون برگرداند)
+  // نرمال‌سازی درصدهای سهم پایه (اگر داده آمده بود)
   var basisBest = {};
   contracts.forEach(function (c) {
     if (!c.basis_name) return;
@@ -199,39 +360,43 @@ function dedupeAndFlagBuyable(contracts) {
     var cp = c.basis_close_percent;
     var lpZero = (lp == null || isNaN(lp) || lp === 0);
     var cpZero = (cp == null || isNaN(cp) || cp === 0);
-    // اگر هر دو درصد صفر/نامعتبر باشن، یعنی API هنوز داده رو پر نکرده.
-    // برای امنیت، این سهم رو «غیرقابل خرید» علامت می‌زنیم تا سیگنال نادرست ندیم.
+
     if (lpZero && cpZero) {
-      c.basis_buyable = true;   // assume buyable if no data
-      c.basis_data_pending = true;
+      // proxy این داده رو نمی‌فرسته — پس:
+      // (الف) اگر قیمت سهم پایه معتبره، اجازه‌ی خرید بده ولی علامت pending نزن
+      // (ب) اگر قیمت سهم هم صفره، pending بزن
+      if (c.spot > 0) {
+        c.basis_buyable = true;
+        c.basis_data_pending = false;
+      } else {
+        c.basis_buyable = true;
+        c.basis_data_pending = true;
+      }
     } else {
       c.basis_buyable = !isStockInBuyQueue(lp, cp);
       c.basis_data_pending = false;
     }
   });
 
-var map = {};
+  // Dedupe by name+expiry، بهترین bid/ask از هر کپی رو نگه دار
+  var map = {};
   contracts.forEach(function (c) {
     var key = c.name + "|" + c.expiry;
     if (!map[key]) { map[key] = c; return; }
     var old = map[key];
-    // Merge: بهترین ask و بهترین bid را از هر دو ردیف بردار
     var merged = Object.assign({}, old);
-    // ask: اگر ردیف جدید ask معتبر دارد و قدیمی ندارد، یا ask جدید بهتر است (کمتر)، از جدید بگیر
     if (c.ask_vol > 0 && c.ask_price > 0) {
       if (!(old.ask_vol > 0 && old.ask_price > 0) || c.ask_price < old.ask_price) {
         merged.ask_price = c.ask_price;
         merged.ask_vol = c.ask_vol;
       }
     }
-    // bid: اگر ردیف جدید bid معتبر دارد و قدیمی ندارد، یا bid جدید بهتر است (بیشتر)، از جدید بگیر
     if (c.bid_vol > 0 && c.bid_price > 0) {
       if (!(old.bid_vol > 0 && old.bid_price > 0) || c.bid_price > old.bid_price) {
         merged.bid_price = c.bid_price;
         merged.bid_vol = c.bid_vol;
       }
     }
-    // buy_price و sell_price را هم به‌روز کن
     merged.buy_price = merged.ask_price > 0 && merged.ask_vol > 0 ? merged.ask_price : 0;
     merged.sell_price = merged.bid_price > 0 && merged.bid_vol > 0 ? merged.bid_price : 0;
     map[key] = merged;
