@@ -45,7 +45,7 @@ var TARGET_URL = _PROXY_URL || _DIRECT_URL;
 
 async function fetchRawDataOnce() {
   var controller = new AbortController();
-  var timeout = setTimeout(function () { controller.abort(); }, 15000);
+  var timeout = setTimeout(function () { controller.abort(); }, 120000);  // 120s — collector warm-up may take ~60s
   try {
     var res = await fetch(TARGET_URL, { signal: controller.signal });
     if (!res.ok) throw new Error("HTTP " + res.status);
