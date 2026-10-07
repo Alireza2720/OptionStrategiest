@@ -83,9 +83,9 @@ function parseContracts(raw) {
     if (!row || typeof row !== "object") continue;
     try {
       var type = si(row.type, 1);
-      var spot = firstNumber(row, ["basis_c", "basis", "basis_last", "basis_price"], 0);
-      var strike = sf(row.emal || 0);
-      var finalPrice = sf(row.final || 0);
+      var spot = firstNumber(row, ["basis_c", "basis", "basis_last", "basis_price", "S", "underlyingPrice", "underlying_price", "basis_c_value", "basisClose"], 0);
+      var strike = sf(row.emal || row.strike || 0);
+      var finalPrice = sf(row.final || row.last || row.close || 0);
       var dte = daysLeft(row.day_left || 0);
       var size = si(row.size || 1000);
       if (spot <= 0 || strike <= 0 || dte <= 0) continue;
@@ -100,7 +100,7 @@ function parseContracts(raw) {
       var tvalue = sf(row.Tvalue || 0);
       var oi = sf(row.op || 0);
       var opChange = sf(row.op_change || 0);
-      if (tvalue < 100000) continue;
+      if (tvalue > 0 && tvalue < 100000) continue;
 
       var intrinsic = sf(row.value || 0);
       var priceForTimeVal = lastPrice > 0 ? lastPrice : finalPrice;
@@ -200,7 +200,7 @@ function dedupeAndFlagBuyable(contracts) {
     // اگر هر دو درصد صفر/نامعتبر باشن، یعنی API هنوز داده رو پر نکرده.
     // برای امنیت، این سهم رو «غیرقابل خرید» علامت می‌زنیم تا سیگنال نادرست ندیم.
     if (lpZero && cpZero) {
-      c.basis_buyable = false;
+      c.basis_buyable = true;   // assume buyable if no data
       c.basis_data_pending = true;
     } else {
       c.basis_buyable = !isStockInBuyQueue(lp, cp);
