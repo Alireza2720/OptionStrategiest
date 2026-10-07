@@ -86,19 +86,19 @@ function parseContracts(raw) {
       var spot = firstNumber(row, ["basis_c", "basis", "basis_last", "basis_price", "S", "underlyingPrice", "underlying_price", "basis_c_value", "basisClose"], 0);
       var strike = sf(row.emal || row.strike || 0);
       var finalPrice = sf(row.final || row.last || row.close || 0);
-      var dte = daysLeft(row.day_left || 0);
+      var dte = daysLeft(row.day_left != null ? row.day_left : (row.daysLeft != null ? row.daysLeft : (row.days_left_actual || 0)));
       var size = si(row.size || 1000);
       if (spot <= 0 || strike <= 0 || dte <= 0) continue;
 
-      var isCall = type === 1;
-      var lastPrice = sf(row.close || 0);
+      var isCall = (row.isCall === true) || (type === 1);
+      var lastPrice = sf(row.close || row.last || 0);
       var lastPct = sf(row.close_c || 0);
       var finalPct = sf(row.final_c || 0);
       var high = sf(row.highest_price || 0);
       var low = sf(row.lowest_price || 0);
-      var volume = sf(row.Tvolume || 0);
-      var tvalue = sf(row.Tvalue || 0);
-      var oi = sf(row.op || 0);
+      var volume = sf(row.Tvolume || row.volume || 0);
+      var tvalue = sf(row.Tvalue || row.value || 0);
+      var oi = sf(row.op || row.oi || 0);
       var opChange = sf(row.op_change || 0);
       if (tvalue > 0 && tvalue < 100000) continue;
 
@@ -111,10 +111,10 @@ function parseContracts(raw) {
       var strikeDiff = strike > 0 ? (spot - strike) / strike * 100 : 0;
       var bs = sf(row.black_sholes || 0);
       var bsDiff = sf(row.bs_d || 0);
-      var iv = sf(row.imp || 0);
-      var histVol = sf(row.sigma || 0);
-      var delta = sf(row.delta || 0);
-      var theta = sf(row.theta || 0) / 365;
+      var iv = sf(row.imp || row.ivApi || 0);
+      var histVol = sf(row.sigma || row.hvApi || 0);
+      var delta = sf(row.delta || row.deltaApi || 0);
+      var theta = sf(row.theta || row.thetaApi || 0) / 365;
       var gamma = sf(row.gamma || 0);
       var vega = sf(row.vega || 0) / 100;
       var rho = sf(row.rho || 0) / 100;
@@ -125,10 +125,10 @@ function parseContracts(raw) {
       var bVolumes = parsePriceVol(row.b_volume);
       var sPrices = parsePriceVol(row.s_price);
       var sVolumes = parsePriceVol(row.s_volume);
-      var bidPrice = bPrices[0] || 0;
-      var bidVol = bVolumes[0] || 0;
-      var askPrice = sPrices[0] || 0;
-      var askVol = sVolumes[0] || 0;
+      var bidPrice = bPrices[0] || sf(row.bid || 0);
+      var bidVol = bVolumes[0] || sf(row.bidVol || 0);
+      var askPrice = sPrices[0] || sf(row.ask || 0);
+      var askVol = sVolumes[0] || sf(row.askVol || 0);
       // ✅ محافظت: هرگز bid نباید بزرگ‌تر از ask باشد.
       // اگر API داده‌ی ناسازگار فرستاد (bid > ask)، جای دو طرف را عوض می‌کنیم
       // تا از سیگنال نادرست در استراتژی‌های آربیتراژ مثل باکس جلوگیری شود.
@@ -151,7 +151,7 @@ function parseContracts(raw) {
       var basisClosePercent = firstNumber(row, ["basis_percent", "basis_close_percent", "basis_pc_percent", "basis_final_percent"], 0);
 
       out.push({
-        name: String(row.name || ""), basis_name: String(row.basis_name || ""),
+        name: String(row.name || row.symbol || ""), basis_name: String(row.basis_name || row.underlyingRaw || row.underlying || ""),
         type: isCall ? "call" : "put", strike: strike, spot: spot, price: finalPrice,
         // ✅ به‌جای fallback به قیمت پایانی، صفر می‌گذاریم تا canBuyOpt/canSellOpt ردیف را رد کند
         buy_price: askPrice > 0 && askVol > 0 ? askPrice : 0,
