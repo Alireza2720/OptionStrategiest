@@ -2,7 +2,7 @@
 var crypto = require("crypto");
 var ApiWatchSample = require("../models/ApiWatchSample");
 
-var TARGET_URL = "https://s3.optionschool24.com/last?type=3";
+var TARGET_URL = process.env.OPTIONS_CHAIN_PROXY_URL || "https://s3.optionschool24.com/last?type=3";
 var DEFAULT_INTERVAL_SEC = 30;
 
 var state = {

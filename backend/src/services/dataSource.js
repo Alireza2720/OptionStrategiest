@@ -37,7 +37,11 @@ function isStockInBuyQueue(lastPct, closePct) {
   return false;
 }
 
-var TARGET_URL = "https://s3.optionschool24.com/last?type=3";
+// Primary: OptionHunter backend proxy (TSETMC-based enriched chain).
+// Fallback: direct optionschool24.com (only if proxy unreachable).
+var _PROXY_URL = process.env.OPTIONS_CHAIN_PROXY_URL || "";
+var _DIRECT_URL = "https://s3.optionschool24.com/last?type=3";
+var TARGET_URL = _PROXY_URL || _DIRECT_URL;
 
 async function fetchRawDataOnce() {
   var controller = new AbortController();
