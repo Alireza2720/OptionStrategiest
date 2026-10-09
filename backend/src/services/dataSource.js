@@ -145,8 +145,16 @@ function parseContracts(raw) {
       if (!isFinite(finalPct)) finalPct = 0;
 
       // ─── Volume / Value / OI ───
-      var high = sf(row.highest_price || row.priceMax || 0);
-      var low = sf(row.lowest_price || row.priceMin || 0);
+      var high = sf(row.highest_price || row.priceMax || row.high || 0);
+      var low  = sf(row.lowest_price  || row.priceMin  || row.low  || 0);
+      if (high <= 0) {
+        var _hiCands = [lastPrice, finalPrice].filter(function (x) { return x > 0; });
+        if (_hiCands.length) high = Math.max.apply(null, _hiCands);
+      }
+      if (low <= 0) {
+        var _loCands = [lastPrice, finalPrice].filter(function (x) { return x > 0; });
+        if (_loCands.length) low = Math.min.apply(null, _loCands);
+      }
       var volume = sf(row.volume || row.Tvolume || 0);
       // ⚠️ نکته مهم: در proxy جدید، `value` = ارزش معاملات (نه intrinsic)
       // در optionschool24، `Tvalue` = ارزش معاملات
@@ -258,6 +266,40 @@ function parseContracts(raw) {
       var basisLastPercent = firstNumber(row, ["basis_c_percent", "basis_last_percent"], 0);
       var basisClosePercent = firstNumber(row, ["basis_percent", "basis_close_percent", "basis_pc_percent", "basis_final_percent"], 0);
 
+      var _splitBasisPV = function (raw) {
+        if (raw == null || raw === "" || raw === "0") return [0, 0];
+        var s = String(raw);
+        if (s.indexOf("/") !== -1) { var p = s.split("/"); return [parseFloat(p[0])||0, parseFloat(p[1])||0]; }
+        return [parseFloat(s)||0, 0];
+      };
+      var _bbPV = _splitBasisPV(row.basis_b_price != null ? row.basis_b_price : row.basisBidPrice);
+      var _bsPV = _splitBasisPV(row.basis_s_price != null ? row.basis_s_price : row.basisAskPrice);
+      var basisBidPrice = firstNumber(row, ["basis_bid_price","basisBidPrice"], _bbPV[0]);
+      var basisBidVol   = firstNumber(row, ["basis_b_volume","basis_bid_volume","basisBidVol"], _bbPV[1]);
+      var basisAskPrice = firstNumber(row, ["basis_ask_price","basisAskPrice"], _bsPV[0]);
+      var basisAskVol   = firstNumber(row, ["basis_s_volume","basis_ask_volume","basisAskVol"], _bsPV[1]);
+      if (basisAskPrice > 0 && basisBidPrice > 0 && basisBidPrice > basisAskPrice) {
+        var _tp = basisBidPrice; basisBidPrice = basisAskPrice; basisAskPrice = _tp;
+        var _tv = basisBidVol;   basisBidVol   = basisAskVol;   basisAskVol   = _tv;
+      }
+
+      var _splitBasisPV = function (raw) {
+        if (raw == null || raw === "" || raw === "0") return [0, 0];
+        var s = String(raw);
+        if (s.indexOf("/") !== -1) { var p = s.split("/"); return [parseFloat(p[0])||0, parseFloat(p[1])||0]; }
+        return [parseFloat(s)||0, 0];
+      };
+      var _bbPV = _splitBasisPV(row.basis_b_price != null ? row.basis_b_price : row.basisBidPrice);
+      var _bsPV = _splitBasisPV(row.basis_s_price != null ? row.basis_s_price : row.basisAskPrice);
+      var basisBidPrice = firstNumber(row, ["basis_bid_price","basisBidPrice"], _bbPV[0]);
+      var basisBidVol   = firstNumber(row, ["basis_b_volume","basis_bid_volume","basisBidVol"], _bbPV[1]);
+      var basisAskPrice = firstNumber(row, ["basis_ask_price","basisAskPrice"], _bsPV[0]);
+      var basisAskVol   = firstNumber(row, ["basis_s_volume","basis_ask_volume","basisAskVol"], _bsPV[1]);
+      if (basisAskPrice > 0 && basisBidPrice > 0 && basisBidPrice > basisAskPrice) {
+        var _tp = basisBidPrice; basisBidPrice = basisAskPrice; basisAskPrice = _tp;
+        var _tv = basisBidVol;   basisBidVol   = basisAskVol;   basisAskVol   = _tv;
+      }
+
       // ─── Expiry ───
       var expiry = String(row.expiry || row.to_date || "");
 
@@ -325,6 +367,10 @@ function parseContracts(raw) {
 
         basis_last_percent: basisLastPercent,
         basis_close_percent: basisClosePercent,
+        basis_bid_price: basisBidPrice,
+        basis_bid_vol: basisBidVol,
+        basis_ask_price: basisAskPrice,
+        basis_ask_vol: basisAskVol,
 
         _raw: row
       });
@@ -340,42 +386,37 @@ function dedupeAndFlagBuyable(contracts) {
   var basisBest = {};
   contracts.forEach(function (c) {
     if (!c.basis_name) return;
-    var lp = c.basis_last_percent;
-    var cp = c.basis_close_percent;
+    var lp = c.basis_last_percent, cp = c.basis_close_percent;
+    var bbp = c.basis_bid_price, bbv = c.basis_bid_vol;
+    var bap = c.basis_ask_price, bav = c.basis_ask_vol;
     if (!basisBest[c.basis_name]) {
-      basisBest[c.basis_name] = { last: lp, close: cp };
+      basisBest[c.basis_name] = { last: lp, close: cp, bidPrice: bbp, bidVol: bbv, askPrice: bap, askVol: bav };
     } else {
       var b = basisBest[c.basis_name];
       if (lp != null && !isNaN(lp) && (b.last == null || isNaN(b.last) || Math.abs(lp) > Math.abs(b.last))) b.last = lp;
       if (cp != null && !isNaN(cp) && (b.close == null || isNaN(b.close) || Math.abs(cp) > Math.abs(b.close))) b.close = cp;
+      if (bbv > 0 && (!(b.bidVol > 0) || bbv > b.bidVol)) { b.bidVol = bbv; b.bidPrice = bbp; }
+      if (bav > 0 && (!(b.askVol > 0) || bav > b.askVol)) { b.askVol = bav; b.askPrice = bap; }
     }
   });
 
   contracts.forEach(function (c) {
     if (c.basis_name && basisBest[c.basis_name]) {
-      c.basis_last_percent = basisBest[c.basis_name].last;
-      c.basis_close_percent = basisBest[c.basis_name].close;
+      var b = basisBest[c.basis_name];
+      c.basis_last_percent = b.last;
+      c.basis_close_percent = b.close;
+      c.basis_bid_price = b.bidPrice || 0;
+      c.basis_bid_vol   = b.bidVol   || 0;
+      c.basis_ask_price = b.askPrice || 0;
+      c.basis_ask_vol   = b.askVol   || 0;
     }
-    var lp = c.basis_last_percent;
-    var cp = c.basis_close_percent;
-    var lpZero = (lp == null || isNaN(lp) || lp === 0);
-    var cpZero = (cp == null || isNaN(cp) || cp === 0);
-
-    if (lpZero && cpZero) {
-      // proxy این داده رو نمی‌فرسته — پس:
-      // (الف) اگر قیمت سهم پایه معتبره، اجازه‌ی خرید بده ولی علامت pending نزن
-      // (ب) اگر قیمت سهم هم صفره، pending بزن
-      if (c.spot > 0) {
-        c.basis_buyable = true;
-        c.basis_data_pending = false;
-      } else {
-        c.basis_buyable = true;
-        c.basis_data_pending = true;
-      }
-    } else {
-      c.basis_buyable = !isStockInBuyQueue(lp, cp);
-      c.basis_data_pending = false;
-    }
+    var hasAsk   = (c.basis_ask_vol > 0 && c.basis_ask_price > 0);
+    var hasBasis = (c.basis_ask_vol > 0 || c.basis_ask_price > 0 ||
+                    c.basis_bid_vol > 0 || c.basis_bid_price > 0 ||
+                    c.basis_last_percent != null || c.basis_close_percent != null);
+    if (hasAsk) { c.basis_buyable = true; c.basis_data_pending = false; }
+    else if (hasBasis) { c.basis_buyable = false; c.basis_data_pending = false; }
+    else { c.basis_buyable = true; c.basis_data_pending = true; }
   });
 
   // Dedupe by name+expiry، بهترین bid/ask از هر کپی رو نگه دار

@@ -7,6 +7,18 @@ function sp(c) { return c.sell_price || 0; }
 function canBuyOpt(c) { return c.ask_vol > 0 && c.ask_price > 0; }
 function canSellOpt(c) { return c.bid_vol > 0 && c.bid_price > 0; }
 
+function nakedOptionMargin(spot, premium, size) {
+  if (!(spot > 0) || !(size > 0)) return 0;
+  var p = (premium > 0) ? premium : 0;
+  return Math.max(0.25 * spot, 0.15 * spot + p) * size;
+}
+
+function nakedOptionMargin(spot, premium, size) {
+  if (!(spot > 0) || !(size > 0)) return 0;
+  var p = (premium > 0) ? premium : 0;
+  return Math.max(0.25 * spot, 0.15 * spot + p) * size;
+}
+
 function buildSteps(step) {
   var s = Math.abs(parseFloat(step));
   if (!s || isNaN(s)) s = 5;
@@ -243,10 +255,9 @@ function calcStrangleSell(calls, puts, steps) {
       if (call.size !== put.size) return;
       var sz = call.size;
       var totalPremium = call.bid_price * sz + put.bid_price * sz;
-      var m1 = call.margin || 0, m2 = put.margin || 0;
-      if (m1 <= 0 || m2 <= 0) return;
-      var pMinBasis = (m1 <= m2) ? call.price : put.price;
-      var margin = Math.max(m1, m2) + (pMinBasis || 0) * sz;
+      var m1 = nakedOptionMargin(call.spot, call.bid_price, sz);
+      var m2 = nakedOptionMargin(put.spot,  put.bid_price,  sz);
+      var margin = Math.max(m1, m2);
       if (margin <= 0) return;
       function payoff(pct) {
         var future = call.spot * (1 + pct / 100);
