@@ -13,12 +13,6 @@ function nakedOptionMargin(spot, premium, size) {
   return Math.max(0.25 * spot, 0.15 * spot + p) * size;
 }
 
-function nakedOptionMargin(spot, premium, size) {
-  if (!(spot > 0) || !(size > 0)) return 0;
-  var p = (premium > 0) ? premium : 0;
-  return Math.max(0.25 * spot, 0.15 * spot + p) * size;
-}
-
 function buildSteps(step) {
   var s = Math.abs(parseFloat(step));
   if (!s || isNaN(s)) s = 5;

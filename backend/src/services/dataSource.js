@@ -283,23 +283,6 @@ function parseContracts(raw) {
         var _tv = basisBidVol;   basisBidVol   = basisAskVol;   basisAskVol   = _tv;
       }
 
-      var _splitBasisPV = function (raw) {
-        if (raw == null || raw === "" || raw === "0") return [0, 0];
-        var s = String(raw);
-        if (s.indexOf("/") !== -1) { var p = s.split("/"); return [parseFloat(p[0])||0, parseFloat(p[1])||0]; }
-        return [parseFloat(s)||0, 0];
-      };
-      var _bbPV = _splitBasisPV(row.basis_b_price != null ? row.basis_b_price : row.basisBidPrice);
-      var _bsPV = _splitBasisPV(row.basis_s_price != null ? row.basis_s_price : row.basisAskPrice);
-      var basisBidPrice = firstNumber(row, ["basis_bid_price","basisBidPrice"], _bbPV[0]);
-      var basisBidVol   = firstNumber(row, ["basis_b_volume","basis_bid_volume","basisBidVol"], _bbPV[1]);
-      var basisAskPrice = firstNumber(row, ["basis_ask_price","basisAskPrice"], _bsPV[0]);
-      var basisAskVol   = firstNumber(row, ["basis_s_volume","basis_ask_volume","basisAskVol"], _bsPV[1]);
-      if (basisAskPrice > 0 && basisBidPrice > 0 && basisBidPrice > basisAskPrice) {
-        var _tp = basisBidPrice; basisBidPrice = basisAskPrice; basisAskPrice = _tp;
-        var _tv = basisBidVol;   basisBidVol   = basisAskVol;   basisAskVol   = _tv;
-      }
-
       // ─── Expiry ───
       var expiry = String(row.expiry || row.to_date || "");
 
