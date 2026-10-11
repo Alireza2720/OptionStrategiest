@@ -83,7 +83,7 @@ async function fetchStockMarket() {
       if (!s) return;
       var sym = s.Symbol || s.symbol || s.name || s.symbolName;
       if (!sym) return;
-      map[sym] = {
+      var entry = {
         price:  sf(s.Last != null ? s.Last : s.last),
         close:  sf(s.Close != null ? s.Close : s.close),
         open:   sf(s.Open != null ? s.Open : s.open),
@@ -92,6 +92,11 @@ async function fetchStockMarket() {
         volume: sf(s.Volume != null ? s.Volume : (s.volume || 0)),
         trades: sf(s.TradeCount != null ? s.TradeCount : 0)
       };
+      map[sym] = entry;
+      // نسخه نرمال‌شده (یکسان‌سازی ی/ي و ک/ك و trim فاصله)
+      var nrmSym = String(sym).trim()
+        .replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, " ");
+      if (nrmSym !== sym) map[nrmSym] = entry;
     });
     console.log("[dataSource] live-market: " + Object.keys(map).length + " symbols fetched");
     return map;
@@ -411,6 +416,11 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
   contracts.forEach(function (c) {
     if (!c.basis_name) return;
     var s = stockMarket[c.basis_name];
+    if (!s) {
+      var nrmBn = String(c.basis_name || "").trim()
+        .replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, " ");
+      s = stockMarket[nrmBn];
+    }
     if (!s || !(s.price > 0)) return;
 
     c.basis_price = s.price;
@@ -423,11 +433,23 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
       c.basis_close_percent = c.basis_last_percent;
     }
 
-    // وضعیت صف: Last == MaxAllowed → صف خرید → غیرقابل خرید
-    if (s.high > 0 && s.price >= s.high) {
+    // تشخیص صف با tolerance — Last باید **نزدیک** سقف/کف باشه (نه صرفاً >= یا <=)
+    // این کار از data quality issues (مثل MaxAllowed=200 برای سهم 6.7M ریالی) جلوگیری می‌کند
+    var highOk = s.high > 0 && s.high >= s.price * 0.5 && s.high <= s.price * 2;
+    var lowOk  = s.low  > 0 && s.low  >= s.price * 0.5 && s.low  <= s.price * 2;
+    var highLowValid = highOk && lowOk && s.high > s.low;
+
+    var atCeiling = false, atFloor = false;
+    if (highLowValid && s.price > 0) {
+      var tol = 0.005; // 0.5%
+      atCeiling = Math.abs(s.price - s.high) / s.high < tol;
+      atFloor   = Math.abs(s.price - s.low)  / s.low  < tol;
+    }
+
+    if (atCeiling) {
       c.basis_queue = "buy";
       c.basis_buyable = false;
-    } else if (s.low > 0 && s.price <= s.low) {
+    } else if (atFloor) {
       c.basis_queue = "sell";
       c.basis_buyable = true;
     } else {
