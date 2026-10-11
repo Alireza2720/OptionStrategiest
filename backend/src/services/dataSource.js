@@ -63,6 +63,46 @@ var _PROXY_URL = process.env.OPTIONS_CHAIN_PROXY_URL || "";
 var _DIRECT_URL = "https://s3.optionschool24.com/last?type=3";
 var TARGET_URL = _PROXY_URL || _DIRECT_URL;
 
+// منبع داده‌ی زنده سهم پایه (collector روی پورت 5000)
+var _LIVE_MARKET_URL = process.env.LIVE_MARKET_URL || "http://127.0.0.1:5000/live-market";
+
+// دریافت اطلاعات لحظه‌ای سهم‌های پایه از /live-market
+// خروجی: { "اهرم": { price, close, open, high, low, volume, trades }, ... }
+async function fetchStockMarket() {
+  var controller = new AbortController();
+  var timeout = setTimeout(function () { controller.abort(); }, 15000);
+  try {
+    var res = await fetch(_LIVE_MARKET_URL, { signal: controller.signal });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var json = await res.json();
+    var arr = [];
+    if (json && Array.isArray(json.data)) arr = json.data;
+    else if (Array.isArray(json)) arr = json;
+    var map = {};
+    arr.forEach(function (s) {
+      if (!s) return;
+      var sym = s.Symbol || s.symbol || s.name || s.symbolName;
+      if (!sym) return;
+      map[sym] = {
+        price:  sf(s.Last != null ? s.Last : s.last),
+        close:  sf(s.Close != null ? s.Close : s.close),
+        open:   sf(s.Open != null ? s.Open : s.open),
+        high:   sf(s.MaxAllowed != null ? s.MaxAllowed : (s.high || 0)),
+        low:    sf(s.MinAllowed != null ? s.MinAllowed : (s.low || 0)),
+        volume: sf(s.Volume != null ? s.Volume : (s.volume || 0)),
+        trades: sf(s.TradeCount != null ? s.TradeCount : 0)
+      };
+    });
+    console.log("[dataSource] live-market: " + Object.keys(map).length + " symbols fetched");
+    return map;
+  } catch (e) {
+    console.error("[dataSource] live-market fetch failed: " + e.message);
+    return {};
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function fetchRawDataOnce() {
   var controller = new AbortController();
   var timeout = setTimeout(function () { controller.abort(); }, 120000);
@@ -364,45 +404,54 @@ function parseContracts(raw) {
   return out;
 }
 
-function dedupeAndFlagBuyable(contracts) {
-  // نرمال‌سازی درصدهای سهم پایه (اگر داده آمده بود)
-  var basisBest = {};
+function dedupeAndFlagBuyable(contracts, stockMarket) {
+  stockMarket = stockMarket || {};
+
+  // ═══ مرحله ۱: ادغام داده‌ی زنده سهم پایه از live-market ═══
   contracts.forEach(function (c) {
     if (!c.basis_name) return;
-    var lp = c.basis_last_percent, cp = c.basis_close_percent;
-    var bbp = c.basis_bid_price, bbv = c.basis_bid_vol;
-    var bap = c.basis_ask_price, bav = c.basis_ask_vol;
-    if (!basisBest[c.basis_name]) {
-      basisBest[c.basis_name] = { last: lp, close: cp, bidPrice: bbp, bidVol: bbv, askPrice: bap, askVol: bav };
+    var s = stockMarket[c.basis_name];
+    if (!s || !(s.price > 0)) return;
+
+    c.basis_price = s.price;
+    c.basis_high  = s.high || 0;
+    c.basis_low   = s.low  || 0;
+    c.basis_volume = s.volume || 0;
+
+    if (s.close > 0) {
+      c.basis_last_percent  = ((s.price - s.close) / s.close) * 100;
+      c.basis_close_percent = c.basis_last_percent;
+    }
+
+    // وضعیت صف: Last == MaxAllowed → صف خرید → غیرقابل خرید
+    if (s.high > 0 && s.price >= s.high) {
+      c.basis_queue = "buy";
+      c.basis_buyable = false;
+    } else if (s.low > 0 && s.price <= s.low) {
+      c.basis_queue = "sell";
+      c.basis_buyable = true;
     } else {
-      var b = basisBest[c.basis_name];
-      if (lp != null && !isNaN(lp) && (b.last == null || isNaN(b.last) || Math.abs(lp) > Math.abs(b.last))) b.last = lp;
-      if (cp != null && !isNaN(cp) && (b.close == null || isNaN(b.close) || Math.abs(cp) > Math.abs(b.close))) b.close = cp;
-      if (bbv > 0 && (!(b.bidVol > 0) || bbv > b.bidVol)) { b.bidVol = bbv; b.bidPrice = bbp; }
-      if (bav > 0 && (!(b.askVol > 0) || bav > b.askVol)) { b.askVol = bav; b.askPrice = bap; }
+      c.basis_queue = null;
+      c.basis_buyable = true;
     }
+    c.basis_data_pending = false;
   });
 
+  // ═══ مرحله ۲: default مقدار برای موارد باقی‌مانده ═══
   contracts.forEach(function (c) {
-    if (c.basis_name && basisBest[c.basis_name]) {
-      var b = basisBest[c.basis_name];
-      c.basis_last_percent = b.last;
-      c.basis_close_percent = b.close;
-      c.basis_bid_price = b.bidPrice || 0;
-      c.basis_bid_vol   = b.bidVol   || 0;
-      c.basis_ask_price = b.askPrice || 0;
-      c.basis_ask_vol   = b.askVol   || 0;
-    }
-    var hasAsk   = (c.basis_ask_vol > 0 && c.basis_ask_price > 0);
-    var hasBasis = (c.basis_ask_vol > 0 || c.basis_ask_price > 0 ||
-                    c.basis_bid_vol > 0 || c.basis_bid_price > 0 ||
-                    c.basis_last_percent != null || c.basis_close_percent != null);
-    if (hasAsk) { c.basis_buyable = true; c.basis_data_pending = false; }
-    else if (hasBasis) { c.basis_buyable = false; c.basis_data_pending = false; }
-    else { c.basis_buyable = true; c.basis_data_pending = true; }
+    if (c.basis_last_percent == null) c.basis_last_percent = 0;
+    if (c.basis_close_percent == null) c.basis_close_percent = 0;
+    if (c.basis_bid_price == null) c.basis_bid_price = 0;
+    if (c.basis_bid_vol == null) c.basis_bid_vol = 0;
+    if (c.basis_ask_price == null) c.basis_ask_price = 0;
+    if (c.basis_ask_vol == null) c.basis_ask_vol = 0;
+    if (c.basis_buyable == null) c.basis_buyable = true;
+    if (c.basis_data_pending == null) c.basis_data_pending = false;
+    if (c.basis_volume == null) c.basis_volume = 0;
+    if (c.basis_queue === undefined) c.basis_queue = null;
   });
 
-  // Dedupe by name+expiry، بهترین bid/ask از هر کپی رو نگه دار
+  // ═══ مرحله ۳: حذف تکراری‌ها ═══
   var map = {};
   contracts.forEach(function (c) {
     var key = c.name + "|" + c.expiry;
@@ -430,7 +479,12 @@ function dedupeAndFlagBuyable(contracts) {
 
 async function loadContracts() {
   var t0 = Date.now();
-  var raw = await fetchRawData();
+  var results = await Promise.all([
+    fetchRawData(),
+    fetchStockMarket()
+  ]);
+  var raw = results[0];
+  var stockMarket = results[1];
   var t1 = Date.now();
   var crypto = require("crypto");
   var meta = {
@@ -445,7 +499,7 @@ async function loadContracts() {
     meta.hash = null;
   }
   var parsed = parseContracts(raw);
-  var deduped = dedupeAndFlagBuyable(parsed);
+  var deduped = dedupeAndFlagBuyable(parsed, stockMarket);
   var calls = deduped.filter(function (c) { return c.type === "call"; });
   var puts = deduped.filter(function (c) { return c.type === "put"; });
   return { calls: calls, puts: puts, all: deduped, meta: meta };
