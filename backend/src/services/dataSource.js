@@ -333,6 +333,10 @@ function parseContracts(raw) {
 
       // ─── Margin ───
       var margin = sf(row.margin || row.tazmin_3 || row.tazmin3 || row.tazmin || 0);
+      if (!margin && spot > 0 && size > 0) {
+        var _p = lastPrice > 0 ? lastPrice : finalPrice;
+        if (_p > 0) margin = Math.max(0.25 * spot, 0.15 * spot + _p) * size;
+      }
 
       // ─── Symbol / Underlying ───
       var name = String(row.symbol || row.name || "");

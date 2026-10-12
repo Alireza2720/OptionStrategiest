@@ -2500,7 +2500,7 @@ function HamMenu(props){
             </div>
             <div className="step-row" style={{marginBottom:8}}>
               <label className="toggle-switch">
-                <input type="checkbox" checked={settings.debugCollectEnabled!==false}
+                <input type="checkbox" checked={settings.debugCollectEnabled===true}
                   onChange={function(e){updateSettings({debugCollectEnabled:e.target.checked},false)}} />
                 جمع‌آوری داده‌های دیباگ
               </label>
