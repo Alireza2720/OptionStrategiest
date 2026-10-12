@@ -56,6 +56,14 @@ router.delete("/manual-trackers/:id", async function (req, res, next) {
     } catch (e) { next(e); }
 });
 
+router.patch("/manual-trackers/:id/legs/:idx/price", async function (req, res) {
+    try {
+        var price = (req.body || {}).price;
+        var t = await manualTracker.setLegManualPrice(req.params.id, req.params.idx, price);
+        res.json({ ok: true, tracker: t });
+    } catch (e) { res.status(400).json({ ok: false, error: e.message }); }
+});
+
 router.post("/manual-trackers/:id/close", async function (req, res) {
     try {
         var t = await manualTracker.close(req.params.id, req.body || {});

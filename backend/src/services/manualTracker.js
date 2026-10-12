@@ -64,7 +64,9 @@ function normalizeLeg(raw) {
         quantity: quantity,
         size: size,
         entryPrice: entryPrice,
-        margin: margin
+        margin: margin,
+        manualCurrentPrice: (Number(raw.manualCurrentPrice) > 0) ? Number(raw.manualCurrentPrice) : null,
+        manualPriceAt: raw.manualPriceAt ? new Date(raw.manualPriceAt) : null
     };
 }
 
@@ -191,6 +193,13 @@ function computeLive(legs, margin, contractMap, basisMap, fees) {
                     strike: c.strike, expiry: c.expiry
                 };
             }
+        }
+
+        // 🆕 manual price override from broker (takes priority for halted symbols)
+        if (leg.manualCurrentPrice != null && leg.manualCurrentPrice > 0) {
+            exitPrice = Number(leg.manualCurrentPrice);
+            if (detail) detail.manual = true;
+            else detail = { manual: true };
         }
 
         if (exitPrice == null || exitPrice <= 0) {
@@ -371,6 +380,42 @@ async function remove(id) {
     return r.deletedCount;
 }
 
+async function setLegManualPrice(id, legIdx, price) {
+    var doc = await getById(id);
+    if (!doc) throw new Error("tracker not found");
+    var idx = parseInt(legIdx, 10);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= doc.legs.length) {
+        throw new Error("leg index نامعتبر");
+    }
+    var p = parseFloat(price);
+    var leg = doc.legs[idx];
+    if (p > 0) {
+        leg.manualCurrentPrice = p;
+        leg.manualPriceAt = new Date();
+    } else {
+        leg.manualCurrentPrice = null;
+        leg.manualPriceAt = null;
+    }
+    doc.markModified("legs");
+    await doc.save();
+    // Immediate refresh
+    try {
+        var chain = deps.getChain ? (deps.getChain() || []) : [];
+        var maps = buildMaps(chain);
+        var fees = await _loadFees();
+        var live = computeLive(doc.legs, doc.margin, maps.contractMap, maps.basisMap, fees);
+        if (!live.missing) {
+            doc.currentPnL = live.pnl;
+            doc.currentROI = live.roi;
+            doc.base = live.base;
+            doc.lastLegsLive = live.legsLive;
+            doc.lastUpdated = new Date();
+            await doc.save();
+        }
+    } catch (_) {}
+    return doc;
+}
+
 async function close(id, payload) {
     var doc = await getById(id);
     if (!doc) throw new Error("tracker not found");
@@ -457,6 +502,7 @@ async function checkAll(opts) {
 module.exports = {
     init: init,
     invalidateFeesCache: _invalidateFeesCache,
+    setLegManualPrice: setLegManualPrice,
     create: create, list: list, getById: getById,
     update: update, remove: remove, close: close,
     calcOnce: calcOnce, checkAll: checkAll, computeLive: computeLive,
