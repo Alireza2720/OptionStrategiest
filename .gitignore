@@ -19,3 +19,7 @@ _*bk-*/
 _bak-*
 # Backup dirs (manual)
 _backup-*/
+
+# Patch script backups
+*.bak-*
+*.bak
