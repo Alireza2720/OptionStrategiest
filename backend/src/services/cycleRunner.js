@@ -15,7 +15,7 @@ var SignalLog = require("../models/SignalLog");
 var signalTracker = require("./signalTracker");
 var manualTracker = require("./manualTracker");
 
-var HUNT_CACHE_CAP = 300;
+var HUNT_CACHE_CAP = 800;
 var FAILURE_ALERT_THRESHOLD = 3;
 
 var HUNT_STATE_CAP = 2000;
