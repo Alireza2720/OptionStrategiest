@@ -13,6 +13,7 @@ var { formatRow } = require("./messageFormat");
 var { isMarketOpen } = require("./marketHours");
 var SignalLog = require("../models/SignalLog");
 var signalTracker = require("./signalTracker");
+var manualTracker = require("./manualTracker");
 
 var HUNT_CACHE_CAP = 300;
 var FAILURE_ALERT_THRESHOLD = 3;
@@ -399,6 +400,13 @@ async function runCycle(opts) {
       await signalTracker.checkFollowedSignals(token, chatId, shouldNotifyFollowed, cache);
     } catch (eFollow) {
       console.error("[cycle] خطا در پیگیری سیگنال‌ها:", eFollow.message);
+    }
+
+    // پیگیری دستی سبد — چک زنده + اعلان اهداف
+    try {
+      await manualTracker.checkAll();
+    } catch (e) {
+      console.error("[cycle] manualTracker checkAll: " + e.message);
     }
 
     console.log("[cycle] اجرا کامل شد در " + cache.updatedAt.toLocaleString());

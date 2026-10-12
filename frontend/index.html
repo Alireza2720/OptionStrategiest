@@ -451,7 +451,14 @@ var Api={
   signalsFollow:function(body){return apiSend("POST","/api/signals/followed",body)},
   signalsUpdate:function(id,body){return apiSend("PATCH","/api/signals/followed/"+id,body)},
   signalsClose:function(id,body){return apiSend("POST","/api/signals/followed/"+id+"/close",body||{})},
-  signalsDelete:function(id){return apiSend("DELETE","/api/signals/followed/"+id)}
+  signalsDelete:function(id){return apiSend("DELETE","/api/signals/followed/"+id)},
+  mtCalc:function(body){return apiSend("POST","/api/manual-trackers/calc",body)},
+  mtList:function(status){return apiGet("/api/manual-trackers?status="+(status||"active"))},
+  mtGet:function(id){return apiGet("/api/manual-trackers/"+id)},
+  mtCreate:function(body){return apiSend("POST","/api/manual-trackers",body)},
+  mtUpdate:function(id,body){return apiSend("PATCH","/api/manual-trackers/"+id,body)},
+  mtClose:function(id,body){return apiSend("POST","/api/manual-trackers/"+id+"/close",body||{})},
+  mtDelete:function(id){return apiSend("DELETE","/api/manual-trackers/"+id)}
 };
 /* =========================================================
    توابع کمکی عمومی
@@ -2353,7 +2360,7 @@ function HamMenu(props){
     basisNames=props.basisNames,basisSpotMap=props.basisSpotMap,
     refreshSec=props.refreshSec,setRefreshSec=props.setRefreshSec,
     autoRefreshEnabled=props.autoRefreshEnabled,setAutoRefreshEnabled=props.setAutoRefreshEnabled,
-    onOpenHunt=props.onOpenHunt,onOpenDebug=props.onOpenDebug,onOpenSignals=props.onOpenSignals,
+    onOpenHunt=props.onOpenHunt,onOpenDebug=props.onOpenDebug,onOpenSignals=props.onOpenSignals,onOpenManualTracker=props.onOpenManualTracker,
     holidayStatus=props.holidayStatus,onToggleHoliday=props.onToggleHoliday,holidayBusy=props.holidayBusy;
 
   var stHuntOpen=useState(false);
@@ -2386,6 +2393,11 @@ function HamMenu(props){
             onClick={function(){onClose();onOpenSignals()}}
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenSignals()}}}>
             <span>📡 پیگیری سیگنال‌ها</span><span>›</span>
+          </div>
+          <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--acc)", background:"var(--acc-t)", color:"var(--acc)"}}
+            onClick={function(){onClose();onOpenManualTracker()}}
+            onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenManualTracker()}}}>
+            <span>📝 پیگیری دستی سبد</span><span>›</span>
           </div>
           <div className="hunt-settings-toggle" role="button" tabIndex={0}
             onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}
@@ -3626,6 +3638,339 @@ function TickDetailView(props){
   );
 }
 
+
+/* =========================================================
+   ManualTrackerOverlay — پیگیری دستی سبد (کال/پوت/سهم)
+   ========================================================= */
+function ManualTrackerOverlay(props){
+  var open=props.open, onClose=props.onClose, globalSearch=props.globalSearch;
+  var stTab=useState("create");
+  var tab=stTab[0], setTab=stTab[1];
+
+  // لیست trackers
+  var stList=useState([]);
+  var list=stList[0], setList=stList[1];
+  var stLoading=useState(false);
+  var loading=stLoading[0], setLoading=stLoading[1];
+  var stErr=useState(null);
+  var err=stErr[0], setErr=stErr[1];
+
+  // فرم ایجاد
+  var stTitle=useState("");
+  var title=stTitle[0], setTitle=stTitle[1];
+  var stNote=useState("");
+  var note=stNote[0], setNote=stNote[1];
+  var stMargin=useState("");
+  var margin=stMargin[0], setMargin=stMargin[1];
+  var stLegs=useState([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000}]);
+  var legs=stLegs[0], setLegs=stLegs[1];
+  var stTargets=useState([{kind:"profit",value:20},{kind:"profit",value:50},{kind:"loss",value:-20}]);
+  var targets=stTargets[0], setTargets=stTargets[1];
+
+  // نتیجه‌ی محاسبه
+  var stCalc=useState(null);
+  var calc=stCalc[0], setCalc=stCalc[1];
+  var stSaving=useState(false);
+  var saving=stSaving[0], setSaving=stSaving[1];
+
+  function loadList(){
+    setLoading(true); setErr(null);
+    return Api.mtList("active").then(function(r){
+      setList((r&&r.trackers)||[]);
+    }).catch(function(e){ setErr(e.message); })
+    .finally(function(){ setLoading(false); });
+  }
+
+  useEffect(function(){ if(open) loadList(); },[open]);
+
+  function updateLeg(i,key,val){
+    var arr=legs.slice();
+    arr[i]=Object.assign({},arr[i],{[key]:val});
+    setLegs(arr);
+  }
+  function addLeg(){ setLegs(legs.concat([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000}])); }
+  function removeLeg(i){ var arr=legs.slice(); arr.splice(i,1); setLegs(arr); }
+
+  function updateTarget(i,key,val){
+    var arr=targets.slice();
+    arr[i]=Object.assign({},arr[i],{[key]:val});
+    setTargets(arr);
+  }
+  function addTarget(){ setTargets(targets.concat([{kind:"profit",value:100}])); }
+  function removeTarget(i){ var arr=targets.slice(); arr.splice(i,1); setTargets(arr); }
+
+  function buildPayload(){
+    var cleanLegs=legs.map(function(l){
+      return {
+        kind:l.kind, side:l.side,
+        contractName:String(l.contractName||"").trim(),
+        expiry:l.expiry?String(l.expiry):null,
+        strike:l.strike!==""&&l.strike!=null?parseFloat(l.strike):null,
+        entryPrice:parseFloat(l.entryPrice)||0,
+        quantity:parseInt(l.quantity,10)||1,
+        size:parseInt(l.size,10)||(l.kind==="stock"?1:1000)
+      };
+    }).filter(function(l){ return l.contractName && l.entryPrice>0; });
+    if(!cleanLegs.length) throw new Error("حداقل یک پای معتبر (نام + قیمت ورود) لازم است");
+    return {
+      title:title||"پیگیری دستی",
+      note:note,
+      margin:parseFloat(margin)||0,
+      legs:cleanLegs,
+      targets:targets.map(function(t){return {kind:t.kind,value:parseFloat(t.value)||0};})
+    };
+  }
+
+  function doCalc(){
+    setErr(null);
+    var payload;
+    try { payload=buildPayload(); } catch(e){ setErr(e.message); return; }
+    setSaving(true);
+    Api.mtCalc(payload).then(function(r){
+      setCalc(r);
+    }).catch(function(e){ setErr(e.message); })
+    .finally(function(){ setSaving(false); });
+  }
+
+  function doCreate(){
+    setErr(null);
+    var payload;
+    try { payload=buildPayload(); } catch(e){ setErr(e.message); return; }
+    setSaving(true);
+    Api.mtCreate(payload).then(function(r){
+      setCalc(null);
+      setTitle(""); setNote(""); setMargin("");
+      setLegs([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000}]);
+      setTargets([{kind:"profit",value:20},{kind:"profit",value:50},{kind:"loss",value:-20}]);
+      setTab("active");
+      return loadList();
+    }).catch(function(e){ setErr(e.message); })
+    .finally(function(){ setSaving(false); });
+  }
+
+  function doDelete(id){
+    if(!window.confirm("حذف شود؟")) return;
+    Api.mtDelete(id).then(loadList).catch(function(e){ setErr(e.message); });
+  }
+  function doCloseTracker(id){
+    if(!window.confirm("بستن پیگیری؟")) return;
+    Api.mtClose(id,{}).then(loadList).catch(function(e){ setErr(e.message); });
+  }
+
+  if(!open) return null;
+
+  var filteredList=list.filter(function(t){
+    if(!globalSearch) return true;
+    var s=String(globalSearch).toLowerCase();
+    return (t.title||"").toLowerCase().indexOf(s)!==-1
+      || (t.legs||[]).some(function(l){return String(l.contractName||"").toLowerCase().indexOf(s)!==-1;});
+  });
+
+  return (
+    <div className="fs-overlay" role="dialog" aria-label="پیگیری دستی سبد">
+      <div className="fs-head">
+        <b>📝 پیگیری دستی سبد</b>
+        <span className="tb">| کال/پوت/سهم</span>
+        <div className="sp1" />
+        <button className="ib" onClick={function(){ if(tab==="active") loadList(); }} title="بروزرسانی">↻</button>
+        <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
+      </div>
+
+      <div className="msub-tabs">
+        <button className={"msub-tab "+(tab==="create"?"on":"")} onClick={function(){setTab("create");}}>ایجاد / محاسبه</button>
+        <button className={"msub-tab "+(tab==="active"?"on":"")} onClick={function(){setTab("active");}}>پیگیری‌های فعال ({list.length})</button>
+      </div>
+
+      <div className="fs-body" style={{padding:14,overflowY:"auto"}}>
+        {err?<div className="error-box" style={{marginBottom:10}}><div className="desc">{err}</div></div>:null}
+
+        {tab==="create"?
+          <div>
+            <div className="msec">
+              <div className="msec-t">عنوان و یادداشت</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <input type="text" className="ov-input-name" style={{flex:"1 1 200px"}}
+                  value={title} placeholder="عنوان (مثلاً: استراتژی ۱)"
+                  onChange={function(e){setTitle(e.target.value);}} />
+                <input type="text" className="ov-input-name" style={{flex:"2 1 300px"}}
+                  value={note} placeholder="یادداشت (اختیاری)"
+                  onChange={function(e){setNote(e.target.value);}} />
+              </div>
+            </div>
+
+            <div className="msec">
+              <div className="msec-t" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span>پاهای سبد (قرارداد / سهم)</span>
+                <button className="cbtn cbtn-acc" onClick={addLeg}>+ افزودن پا</button>
+              </div>
+              {legs.map(function(l,i){
+                return (
+                  <div key={i} style={{border:"1px solid var(--bor)",borderRadius:6,padding:10,marginBottom:8,background:"var(--sur2)"}}>
+                    <div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap",alignItems:"center"}}>
+                      <span className="rlbl" style={{width:40}}>پای {i+1}</span>
+                      <select value={l.kind} onChange={function(e){updateLeg(i,"kind",e.target.value);}}
+                        style={{padding:"4px 8px",borderRadius:5,border:"1px solid var(--bor)",background:"var(--sur)",color:"var(--txt)",fontFamily:"var(--f)",fontSize:12}}>
+                        <option value="call">کال</option>
+                        <option value="put">پوت</option>
+                        <option value="stock">سهم</option>
+                      </select>
+                      <select value={l.side} onChange={function(e){updateLeg(i,"side",e.target.value);}}
+                        style={{padding:"4px 8px",borderRadius:5,border:"1px solid var(--bor)",background:"var(--sur)",color:"var(--txt)",fontFamily:"var(--f)",fontSize:12}}>
+                        <option value="buy">خرید</option>
+                        <option value="sell">فروش</option>
+                      </select>
+                      <input type="text" className="ov-input-name" style={{flex:"2 1 150px"}}
+                        value={l.contractName} placeholder={l.kind==="stock"?"نام سهم (مثلاً اهرم)":"نام قرارداد"}
+                        onChange={function(e){updateLeg(i,"contractName",e.target.value);}} />
+                      {l.kind!=="stock"?
+                        <input type="text" className="ov-input-name" style={{flex:"1 1 100px"}}
+                          value={l.expiry} placeholder="سررسید (2026-11-05)"
+                          onChange={function(e){updateLeg(i,"expiry",e.target.value);}} />
+                        :null}
+                      <input type="text" inputMode="decimal" className="ov-input-price sm"
+                        value={l.entryPrice} placeholder="قیمت ورود"
+                        onChange={function(e){updateLeg(i,"entryPrice",e.target.value);}} />
+                      <input type="text" inputMode="numeric" className="ov-input-price sm"
+                        value={l.quantity} placeholder="تعداد"
+                        onChange={function(e){updateLeg(i,"quantity",e.target.value);}} />
+                      <input type="text" inputMode="numeric" className="ov-input-price sm"
+                        value={l.size} placeholder="اندازه"
+                        onChange={function(e){updateLeg(i,"size",e.target.value);}} />
+                      {legs.length>1?
+                        <button className="ov-remove" onClick={function(){removeLeg(i);}} title="حذف">✕</button>
+                        :null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="msec">
+              <div className="msec-t">وجه تضمین (اختیاری — برای سبدهای اعتباری)</div>
+              <input type="text" inputMode="decimal" className="ov-input-price"
+                value={margin} placeholder="مثلاً 2000000"
+                onChange={function(e){setMargin(e.target.value);}} />
+            </div>
+
+            <div className="msec">
+              <div className="msec-t" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span>اهداف (اختیاری)</span>
+                <button className="cbtn cbtn-acc" onClick={addTarget}>+ افزودن هدف</button>
+              </div>
+              {targets.map(function(t,i){
+                return (
+                  <div key={i} style={{display:"flex",gap:6,alignItems:"center",marginBottom:6}}>
+                    <select value={t.kind} onChange={function(e){updateTarget(i,"kind",e.target.value);}}
+                      style={{padding:"4px 8px",borderRadius:5,border:"1px solid var(--bor)",background:"var(--sur)",color:"var(--txt)",fontFamily:"var(--f)",fontSize:12}}>
+                      <option value="profit">سود</option>
+                      <option value="loss">ضرر</option>
+                    </select>
+                    <input type="text" inputMode="decimal" className="ov-input-price sm"
+                      value={t.value} onChange={function(e){updateTarget(i,"value",e.target.value);}} />
+                    <span className="rlbl">٪</span>
+                    <button className="ov-remove" onClick={function(){removeTarget(i);}}>✕</button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{display:"flex",gap:8,marginTop:14,flexWrap:"wrap"}}>
+              <button className="ov-add-btn" onClick={doCalc} disabled={saving}>
+                {saving?"...":"🧮 محاسبه فوری"}
+              </button>
+              <button className="cbtn cbtn-acc" style={{padding:"8px 18px",fontSize:13}} onClick={doCreate} disabled={saving}>
+                {saving?"...":"▶ شروع پیگیری"}
+              </button>
+            </div>
+
+            {calc?
+              <div className="gcard" style={{marginTop:14}}>
+                <div className="gcard-t">📊 نتیجه محاسبه (با قیمت لحظه‌ای)</div>
+                <div className="gcard-p" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div>P&L: <b className={calc.pnl>=0?"gain":"loss"}>{n(Math.round(calc.pnl))}</b></div>
+                  <div>ROI: <b className={calc.roi>=0?"gain":"loss"}>{(calc.roi>=0?"+":"")+n(calc.roi,2)+"٪"}</b></div>
+                  <div>مبنای ROI: <b>{n(Math.round(calc.base))}</b></div>
+                  <div>جریان نقدی ورود: <b>{n(Math.round(calc.entryCF))}</b></div>
+                </div>
+                {calc.missing?
+                  <div className="warn" style={{marginTop:8,fontSize:12}}>⚠ برخی پاها قیمت لحظه‌ای ندارند</div>
+                  :null}
+                <div style={{marginTop:10}}>
+                  {calc.legsLive.map(function(l,i){
+                    return (
+                      <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--bor)",fontSize:12}}>
+                        <code style={{flex:"1 1 150px",overflow:"hidden",textOverflow:"ellipsis"}}>{l.contractName}</code>
+                        <span className="tb">{l.side==="buy"?"خرید":"فروش"}</span>
+                        <span>ورود: <b>{n(l.entryPrice)}</b></span>
+                        <span>{l.ok?<>خروج: <b>{n(l.currentExitPrice)}</b></>:"—"}</span>
+                        {l.ok?
+                          <b className={l.pnl>=0?"gain":"loss"}>{n(Math.round(l.pnl))} ({(l.pnlPct>=0?"+":"")+n(l.pnlPct,2)}٪)</b>
+                          :<span className="warn">قیمت نیست</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              :null}
+          </div>
+          :
+          <div>
+            {loading?<div className="center" style={{height:200}}><div className="spinner" /></div>:null}
+            {!loading&&filteredList.length===0?
+              <div className="step-hint" style={{padding:20,textAlign:"center"}}>هیچ پیگیری فعالی نیست</div>
+              :null}
+            {filteredList.map(function(t){
+              var roi=t.currentROI;
+              var roiCls=roi>0?"gain":roi<0?"loss":"mut";
+              var roiStr=roi==null?"—":((roi>0?"+":"")+n(roi,2)+"٪");
+              var pnlStr=t.currentPnL==null?"—":n(Math.round(t.currentPnL));
+              return (
+                <div key={t._id} className="gcard" style={{marginBottom:10}}>
+                  <div className="gcard-t" style={{display:"flex",justifyContent:"space-between"}}>
+                    <span><b>{t.title}</b></span>
+                    <span className={"bdg "+(roi>=0?"bdg-itm":"bdg-q1")}>{roiStr}</span>
+                  </div>
+                  <div className="gcard-p" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,fontSize:12}}>
+                    <div>💰 P&L: <b className={roiCls}>{pnlStr}</b></div>
+                    <div>📊 مبنا: <b>{t.base==null?"—":n(Math.round(t.base))}</b></div>
+                    <div>📈 Peak: <b className="gain">{(t.peakROI==null?"—":n(t.peakROI,2)+"٪")}</b></div>
+                    <div>📉 Trough: <b className="loss">{(t.troughROI==null?"—":n(t.troughROI,2)+"٪")}</b></div>
+                  </div>
+                  <div style={{marginTop:8,fontSize:11.5,lineHeight:1.9}}>
+                    {(t.legs||[]).map(function(l,i){
+                      return (
+                        <div key={i}>
+                          • {l.kind==="stock"?"سهم":l.kind==="call"?"کال":"پوت"} <code>{l.contractName}</code> — {l.side==="buy"?"خرید":"فروش"} @ <b>{n(l.entryPrice)}</b> × {l.quantity}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {(t.targets||[]).length?
+                    <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {t.targets.map(function(tg,i){
+                        return (
+                          <span key={i} className={"bdg "+(tg.hit?(tg.kind==="profit"?"bdg-itm":"bdg-q1"):"bdg-otm")} style={{fontSize:10}}>
+                            {tg.hit?"✓":"○"} {tg.kind==="profit"?"+":""}{tg.value}٪
+                          </span>
+                        );
+                      })}
+                    </div>
+                    :null}
+                  <div style={{marginTop:10,display:"flex",gap:6,flexWrap:"wrap"}}>
+                    <button className="cbtn cbtn-acc" onClick={function(){doCloseTracker(t._id);}}>⏹ بستن</button>
+                    <button className="cbtn" style={{borderColor:"var(--loss)",color:"var(--loss)",background:"var(--loss-t)"}}
+                      onClick={function(){doDelete(t._id);}}>🗑 حذف</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        }
+      </div>
+    </div>
+  );
+}
+
 /* =========================================================
    App اصلی
    ========================================================= */
@@ -3656,6 +4001,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
   var stMenu=useState(false);var menuOpen=stMenu[0],setMenuOpen=stMenu[1];
   var stTab=useState("watch");var tab=stTab[0],setTab=stTab[1];
   var stSignalsOpen=useState(false);var signalsOpen=stSignalsOpen[0],setSignalsOpen=stSignalsOpen[1];
+  var stMtOpen=useState(false);var mtOpen=stMtOpen[0],setMtOpen=stMtOpen[1];
   var stSearch=useState("");var globalSearch=stSearch[0],setGlobalSearch=stSearch[1];
 
   var stRefreshing=useState(false);var refreshing=stRefreshing[0],setRefreshing=stRefreshing[1];
@@ -3888,6 +4234,7 @@ function handleTabClick(id){
         onOpenHunt={function(){setHuntOpen(true)}}
         onOpenDebug={function(){setDebugOpen(true)}}
         onOpenSignals={function(){setSignalsOpen(true)}}
+        onOpenManualTracker={function(){setMtOpen(true)}}
         holidayStatus={holidayStatus} onToggleHoliday={handleToggleHoliday} holidayBusy={holidayBusy}
       />
 
@@ -3896,6 +4243,10 @@ function handleTabClick(id){
         onRetry={loadHunt} globalSearch={globalSearch} onOpenChart={openChart} />
 
       <SignalsOverlay open={signalsOpen} onClose={function(){setSignalsOpen(false)}} />
+
+      {typeof ManualTrackerOverlay!=="undefined"?(
+        <ManualTrackerOverlay open={mtOpen} onClose={function(){setMtOpen(false)}} globalSearch={globalSearch} />
+      ):null}
 
       <DebugOverlay open={debugOpen} onClose={function(){setDebugOpen(false)}} />
 

@@ -8,6 +8,8 @@ var { connectDB } = require("./db");
 var Settings = require("./models/Settings");
 var apiRouter = require("./routes/api");
 var signalsRouter = require("./routes/signals");
+var manualTrackerRouter = require("./routes/manualTracker");
+var manualTracker = require("./services/manualTracker");
 var { runCycle, restoreFromSnapshot } = require("./services/cycleRunner");
 var { isMarketOpen } = require("./services/marketHours");
 var apiWatcher = require("./services/apiWatcher");
@@ -47,6 +49,7 @@ app.use("/api", function (req, res, next) {
   return writeLimiter(req, res, next);
 }, apiRouter);
 app.use("/api", signalsRouter);
+app.use("/api", manualTrackerRouter);
 
 app.get("/", function (req, res) {
   res.json({ ok: true, service: "option-hunter-backend" });
@@ -86,6 +89,14 @@ async function main() {
 
   // بازیابی آخرین کش ذخیره‌شده (اگر سرویس تازه ری‌استارت شده، فرانت فوراً داده می‌بیند)
   await restoreFromSnapshot();
+
+  // راه‌اندازی پیگیری دستی سبد
+  manualTracker.init({
+    logger: console,
+    getChain: function() {
+      try { return getCache().watch || []; } catch (_) { return []; }
+    }
+  });
 
   // شروع خودکار Watcher (پایش تازگی API)
   // فاصله از متغیر محیطی WATCH_INTERVAL_SEC خوانده می‌شود (پیش‌فرض 30)
