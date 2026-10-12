@@ -88,7 +88,14 @@ var SettingsSchema = new mongoose.Schema({
   manualHolidays: { type: [String], default: [] },
 
   // فعال/غیرفعال کردن ذخیره‌ی داده‌های دیباگ در هر چرخه
-  debugCollectEnabled: { type: Boolean, default: true }
+  debugCollectEnabled: { type: Boolean, default: false },
+
+  // کارمزد خرید (نسبت درصدی) - default 0.0012 = 0.12%
+  feeBuy: { type: Number, default: 0.0012 },
+  // کارمزد فروش (نسبت درصدی) - default 0.0012 = 0.12%
+  feeSell: { type: Number, default: 0.0012 },
+  // مالیات فروش (نسبت درصدی از کارمزد فروش) - default 0.1 = 10% tax on fee
+  taxOnSellPct: { type: Number, default: 0.1 }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Settings", SettingsSchema);

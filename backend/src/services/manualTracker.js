@@ -4,6 +4,20 @@
 // ============================================================
 var ManualTracker = require("../models/ManualTracker");
 var { sendLongMessage } = require("./telegram");
+var Settings = require("../models/Settings");
+
+async function _loadFees() {
+    try {
+        var s = await Settings.findOne({ ownerId: "default" }).lean();
+        return {
+            buy: (s && Number.isFinite(s.feeBuy)) ? s.feeBuy : 0.0012,
+            sell: (s && Number.isFinite(s.feeSell)) ? s.feeSell : 0.0012,
+            taxPct: (s && Number.isFinite(s.taxOnSellPct)) ? s.taxOnSellPct : 0.1
+        };
+    } catch (_) {
+        return { buy: 0.0012, sell: 0.0012, taxPct: 0.1 };
+    }
+}
 
 var deps = {
     logger: null,
@@ -83,7 +97,8 @@ function buildMaps(chain) {
 }
 
 // ─── محاسبه‌ی P&L زنده ───
-function computeLive(legs, margin, contractMap, basisMap) {
+function computeLive(legs, margin, contractMap, basisMap, fees) {
+    fees = fees || { buy: 0.0012, sell: 0.0012, taxPct: 0.1 };
     var totalPnL = 0;
     var entryCF = 0;
     var missing = false;
@@ -139,13 +154,19 @@ function computeLive(legs, margin, contractMap, basisMap) {
 
         var pnl, pnlPct;
         if (leg.side === "sell") {
-            pnl = (entry - exitPrice) * mult;
+            // Sell: entry proceeds minus fee+sell tax; exit cost plus buy fee
+            var _sellFee = entry * mult * (fees.sell + fees.sell * fees.taxPct);
+            var _buyFee  = exitPrice * mult * fees.buy;
+            pnl = (entry * mult - exitPrice * mult) - _sellFee - _buyFee;
             entryCF -= entry * mult;
-            pnlPct = entry > 0 ? ((entry - exitPrice) / entry) * 100 : 0;
+            pnlPct = entry > 0 ? ((pnl) / (entry * mult)) * 100 : 0;
         } else {
-            pnl = (exitPrice - entry) * mult;
+            // Buy: entry cost plus buy fee; exit proceeds minus sell fee and tax
+            var _buyFeeIn  = entry * mult * fees.buy;
+            var _sellFeeOut = exitPrice * mult * (fees.sell + fees.sell * fees.taxPct);
+            pnl = (exitPrice * mult - entry * mult) - _buyFeeIn - _sellFeeOut;
             entryCF += entry * mult;
-            pnlPct = entry > 0 ? ((exitPrice - entry) / entry) * 100 : 0;
+            pnlPct = entry > 0 ? ((pnl) / (entry * mult)) * 100 : 0;
         }
         totalPnL += pnl;
 
@@ -248,7 +269,7 @@ async function create(payload) {
     try {
         var chain = deps.getChain ? (deps.getChain() || []) : [];
         var maps = buildMaps(chain);
-        var live = computeLive(doc.legs, doc.margin, maps.contractMap, maps.basisMap);
+        var live = computeLive(doc.legs, doc.margin, maps.contractMap, maps.basisMap, fees);
         if (!live.missing) {
             doc.currentPnL = live.pnl;
             doc.currentROI = live.roi;
@@ -314,7 +335,8 @@ async function calcOnce(payload) {
     if (!legs.length) throw new Error("حداقل یک پای معتبر لازم است");
     var chain = deps.getChain ? (deps.getChain() || []) : [];
     var maps = buildMaps(chain);
-    return computeLive(legs, payload.margin, maps.contractMap, maps.basisMap);
+    var fees = await _loadFees();
+    return computeLive(legs, payload.margin, maps.contractMap, maps.basisMap, await _loadFees());
 }
 
 // ─── چک دوره‌ای ───
@@ -328,6 +350,7 @@ async function checkAll() {
 
     var chain = deps.getChain ? (deps.getChain() || []) : [];
     var maps = buildMaps(chain);
+    var fees = await _loadFees();
 
     var token = process.env.TELEGRAM_BOT_TOKEN;
     var chatId = process.env.TELEGRAM_CHAT_ID;
@@ -335,7 +358,7 @@ async function checkAll() {
 
     for (var i = 0; i < active.length; i++) {
         var t = active[i];
-        var live = computeLive(t.legs, t.margin, maps.contractMap, maps.basisMap);
+        var live = computeLive(t.legs, t.margin, maps.contractMap, maps.basisMap, fees);
         if (live.missing) continue;
 
         if (t.peakROI == null || live.roi > t.peakROI) t.peakROI = live.roi;

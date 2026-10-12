@@ -101,7 +101,7 @@ router.get("/settings", async function (req, res) {
 
 router.post("/settings", requireApiKey, async function (req, res) {
   var body = req.body || {};
-  var allowed = ["scenStep", "dteFilterMin", "dteFilterMax", "checkIntervalSec",
+  var allowed = [\
     "huntOnlyBuyable", "huntTopN", "huntTopNUnlimited",
     "huntCooldownMinutes", "huntCooldownForever", "huntStrategies"];
   var update = {};
