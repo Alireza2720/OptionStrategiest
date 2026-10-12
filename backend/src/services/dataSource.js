@@ -511,12 +511,16 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
 
 async function loadContracts() {
   var t0 = Date.now();
-  var results = await Promise.all([
+  var results = await Promise.allSettled([
     fetchRawData(),
     fetchStockMarket()
   ]);
-  var raw = results[0];
-  var stockMarket = results[1];
+  if (results[0].status !== 'fulfilled' || !Array.isArray(results[0].value) || !results[0].value.length) {
+    var _re = results[0].reason;
+    throw new Error('Failed to fetch raw chain' + (_re ? ': ' + (_re.message || _re) : ''));
+  }
+  var raw = results[0].value;
+  var stockMarket = (results[1].status === 'fulfilled') ? results[1].value : {};
   var t1 = Date.now();
   var crypto = require("crypto");
   var meta = {

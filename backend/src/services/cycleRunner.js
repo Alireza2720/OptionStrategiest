@@ -404,7 +404,7 @@ async function runCycle(opts) {
 
     // پیگیری دستی سبد — چک زنده + اعلان اهداف
     try {
-      await manualTracker.checkAll();
+      await manualTracker.checkAll({ notify: !!(notify && isMarketOpen(new Date(), settings.manualHolidays)) });
     } catch (e) {
       console.error("[cycle] manualTracker checkAll: " + e.message);
     }
