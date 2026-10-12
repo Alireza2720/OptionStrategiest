@@ -24,6 +24,7 @@ var TargetSchema = new mongoose.Schema({
 var ManualTrackerSchema = new mongoose.Schema({
     ownerId: { type: String, default: "default", index: true },
     title: { type: String, default: "پیگیری دستی" },
+    strategyId: { type: String, default: null },
     note: { type: String, default: "" },
     legs: { type: [LegSchema], default: [] },
     margin: { type: Number, default: 0 },
@@ -36,6 +37,7 @@ var ManualTrackerSchema = new mongoose.Schema({
     peakROI: { type: Number, default: null },
     troughROI: { type: Number, default: null },
     lastUpdated: { type: Date, default: null },
+    lastLegsLive: { type: mongoose.Schema.Types.Mixed, default: null },
     closedAt: { type: Date, default: null },
     exitNote: { type: String, default: "" },
     finalPnL: { type: Number, default: null },

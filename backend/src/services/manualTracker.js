@@ -309,6 +309,7 @@ async function create(payload) {
     var doc = new ManualTracker({
         ownerId: "default",
         title: String(payload.title || "پیگیری دستی").slice(0, 200),
+        strategyId: payload.strategyId ? String(payload.strategyId).slice(0, 100) : null,
         note: String(payload.note || "").slice(0, 2000),
         legs: legs,
         margin: Number(payload.margin) > 0 ? Number(payload.margin) : 0,
@@ -329,6 +330,7 @@ async function create(payload) {
             doc.base = live.base;
             doc.peakROI = live.roi;
             doc.troughROI = live.roi;
+            doc.lastLegsLive = live.legsLive;
             doc.lastUpdated = new Date();
             await doc.save();
         }
@@ -429,6 +431,7 @@ async function checkAll(opts) {
         t.currentPnL = live.pnl;
         t.currentROI = live.roi;
         t.base = live.base;
+        t.lastLegsLive = live.legsLive;
         t.lastUpdated = new Date();
         await t.save();
 
