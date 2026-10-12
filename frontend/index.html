@@ -2385,11 +2385,7 @@ function HamMenu(props){
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenHunt()}}}>
             <span>{L.huntPositions}</span><span>›</span>
           </div>
-          <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--warn)", background:"var(--warn-t)", color:"var(--warn)"}}
-            onClick={function(){onClose();onOpenDebug()}}
-            onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenDebug()}}}>
-            <span>🔍 دیباگ API و سرخطی</span><span>›</span>
-          </div>
+
           <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--gain)", background:"var(--gain-t)", color:"var(--gain)"}}
             onClick={function(){onClose();onOpenSignals()}}
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenSignals()}}}>
