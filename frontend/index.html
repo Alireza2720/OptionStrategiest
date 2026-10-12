@@ -2391,11 +2391,6 @@ function HamMenu(props){
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenSignals()}}}>
             <span>📡 پیگیری سیگنال‌ها</span><span>›</span>
           </div>
-          <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--acc)", background:"var(--acc-t)", color:"var(--acc)"}}
-            onClick={function(){onClose();onOpenManualTracker()}}
-            onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenManualTracker()}}}>
-            <span>📝 پیگیری دستی سبد</span><span>›</span>
-          </div>
           <div className="hunt-settings-toggle" role="button" tabIndex={0}
             onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}
             onKeyDown={function(e){if(e.key==="Enter")setHuntSettingsOpen(!huntSettingsOpen)}}>
@@ -4345,11 +4340,8 @@ function handleTabClick(id){
         huntData={huntData} huntLoading={huntLoading} huntError={huntError}
         onRetry={loadHunt} globalSearch={globalSearch} onOpenChart={openChart} />
 
-      <SignalsOverlay open={signalsOpen} onClose={function(){setSignalsOpen(false)}} />
+      <SignalsOverlayV2 open={signalsOpen} onClose={function(){setSignalsOpen(false)}} />
 
-      {typeof ManualTrackerOverlay!=="undefined"?(
-        <ManualTrackerOverlay open={mtOpen} onClose={function(){setMtOpen(false)}} globalSearch={globalSearch} />
-      ):null}
 
       <DebugOverlay open={debugOpen} onClose={function(){setDebugOpen(false)}} />
 
@@ -4465,6 +4457,836 @@ function RootFallback(){
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════════════════
+//  SignalsOverlayV2 — Unified 3-tab overlay
+//  (create manual / active trackers / sent signals)
+// ═══════════════════════════════════════════════════════════
+
+var STRATEGY_LEGS = {
+  cc: { label: 'کاورد کال', legs: [
+    { kind: 'stock', side: 'buy', label: 'خرید سهم پایه' },
+    { kind: 'call', side: 'sell', label: 'فروش کال' }
+  ]},
+  mp: { label: 'مریدپوت', legs: [
+    { kind: 'stock', side: 'buy', label: 'خرید سهم پایه' },
+    { kind: 'put', side: 'buy', label: 'خرید پوت' }
+  ]},
+  co: { label: 'کلار', legs: [
+    { kind: 'stock', side: 'buy', label: 'خرید سهم پایه' },
+    { kind: 'put', side: 'buy', label: 'خرید پوت' },
+    { kind: 'call', side: 'sell', label: 'فروش کال' }
+  ]},
+  cv: { label: 'کانورژن', legs: [
+    { kind: 'stock', side: 'buy', label: 'خرید سهم پایه' },
+    { kind: 'put', side: 'buy', label: 'خرید پوت' },
+    { kind: 'call', side: 'sell', label: 'فروش کال' }
+  ]},
+  strangle: { label: 'استرانگل خرید', legs: [
+    { kind: 'put', side: 'buy', label: 'خرید پوت' },
+    { kind: 'call', side: 'buy', label: 'خرید کال' }
+  ]},
+  strangleSell: { label: 'استرانگل فروش', legs: [
+    { kind: 'put', side: 'sell', label: 'فروش پوت' },
+    { kind: 'call', side: 'sell', label: 'فروش کال' }
+  ]},
+  callspread: { label: 'کال اسپرد صعودی', legs: [
+    { kind: 'call', side: 'buy', label: 'خرید کال (اعمال پایین)' },
+    { kind: 'call', side: 'sell', label: 'فروش کال (اعمال بالا)' }
+  ]},
+  callspreadbear: { label: 'کال اسپرد نزولی', legs: [
+    { kind: 'call', side: 'buy', label: 'خرید کال (اعمال بالا)' },
+    { kind: 'call', side: 'sell', label: 'فروش کال (اعمال پایین)' }
+  ]},
+  putspread: { label: 'پوت اسپرد نزولی', legs: [
+    { kind: 'put', side: 'buy', label: 'خرید پوت (اعمال بالا)' },
+    { kind: 'put', side: 'sell', label: 'فروش پوت (اعمال پایین)' }
+  ]},
+  putspreadbull: { label: 'پوت اسپرد صعودی', legs: [
+    { kind: 'put', side: 'buy', label: 'خرید پوت (اعمال پایین)' },
+    { kind: 'put', side: 'sell', label: 'فروش پوت (اعمال بالا)' }
+  ]},
+  box: { label: 'خرید باکس', legs: [
+    { kind: 'call', side: 'buy', label: 'خرید کال (اعمال پایین)' },
+    { kind: 'call', side: 'sell', label: 'فروش کال (اعمال بالا)' },
+    { kind: 'put', side: 'buy', label: 'خرید پوت (اعمال بالا)' },
+    { kind: 'put', side: 'sell', label: 'فروش پوت (اعمال پایین)' }
+  ]},
+  boxSell: { label: 'فروش باکس', legs: [
+    { kind: 'call', side: 'sell', label: 'فروش کال (اعمال پایین)' },
+    { kind: 'call', side: 'buy', label: 'خرید کال (اعمال بالا)' },
+    { kind: 'put', side: 'sell', label: 'فروش پوت (اعمال بالا)' },
+    { kind: 'put', side: 'buy', label: 'خرید پوت (اعمال پایین)' }
+  ]},
+  stock: { label: 'سهم پایه', legs: [
+    { kind: 'stock', side: 'buy', label: 'خرید سهم پایه' }
+  ]}
+};
+
+function _mtNakedMargin(spot, premium, size) {
+  if (!(spot > 0) || !(size > 0)) return 0;
+  var p = (premium > 0) ? premium : 0;
+  return Math.max(0.25 * spot, 0.15 * spot + p) * size;
+}
+
+function _normLegV2(raw) {
+  if (!raw) return null;
+  return {
+    kind: raw.kind || 'call',
+    side: raw.side || 'buy',
+    contractName: String(raw.contractName || raw.name || ''),
+    expiry: raw.expiry || '',
+    strike: raw.strike != null ? raw.strike : '',
+    size: raw.size != null ? raw.size : (raw.kind === 'stock' ? 1 : 1000),
+    entryPrice: raw.entryPrice != null ? raw.entryPrice : '',
+    quantity: raw.quantity != null ? raw.quantity : 1,
+    margin: raw.margin != null ? raw.margin : ''
+  };
+}
+
+function _buildLegsForStrategy(sid) {
+  var def = STRATEGY_LEGS[sid];
+  if (!def) return [];
+  return def.legs.map(function(l) {
+    return _normLegV2({
+      kind: l.kind, side: l.side,
+      contractName: '', expiry: '', strike: '',
+      size: l.kind === 'stock' ? 1 : 1000,
+      entryPrice: '', quantity: 1, margin: ''
+    });
+  });
+}
+
+// ─── LegRowV2 ───
+function LegRowV2(props) {
+  var leg = props.leg, idx = props.idx, contracts = props.contracts || [], legLabel = props.legLabel || '';
+  var onChange = props.onChange, onRemove = props.onRemove;
+  var showMarginInput = (leg.side === 'sell' && leg.kind !== 'stock');
+  var stShowS = React.useState(false), stSugg = React.useState([]);
+  var showS = stShowS[0], setShowS = stShowS[1];
+  var sugg = stSugg[0], setSugg = stSugg[1];
+
+  React.useEffect(function() {
+    var q = String(leg.contractName || '').trim().toLowerCase();
+    if (q.length < 1) { setSugg([]); return; }
+    var qN = q.replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
+    var out = [], seen = {};
+    for (var i = 0; i < contracts.length; i++) {
+      var c = contracts[i];
+      if (leg.kind !== 'stock' && c.type !== leg.kind) continue;
+      var nN = String(c.name||'').toLowerCase().replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
+      if (nN.indexOf(qN) === 0 || nN.indexOf(qN) > 0 || String(c.basis_name||'').indexOf(qN) !== -1) {
+        if (!seen[c.name]) { out.push(c); seen[c.name] = true; }
+        if (out.length >= 12) break;
+      }
+    }
+    setSugg(out);
+  }, [leg.contractName, contracts, leg.kind]);
+
+  function pick(c) {
+    onChange(Object.assign({}, leg, {
+      contractName: c.name,
+      expiry: c.expiry || '',
+      strike: c.strike != null ? c.strike : '',
+      size: c.size || (leg.kind === 'stock' ? 1 : 1000),
+      margin: (leg.side === 'sell' && leg.kind !== 'stock')
+        ? String(_mtNakedMargin(c.spot, c.last || c.bid || c.ask, c.size))
+        : leg.margin
+    }));
+    setShowS(false);
+  }
+
+  return (
+    <div style={{border:'1px solid var(--bor)',borderRadius:6,padding:10,marginBottom:8,background:'var(--sur2)',position:'relative'}}>
+      <div style={{display:'flex',gap:6,marginBottom:6,flexWrap:'wrap',alignItems:'center'}}>
+        <span className="rlbl" style={{minWidth:50}}>پای {idx+1}</span>
+        <span className="badge" style={{padding:'2px 8px',background:'var(--acc-t)',color:'var(--acc)',borderRadius:4,fontSize:11,fontWeight:700}}>
+          {leg.kind === 'stock' ? 'سهم' : (leg.kind === 'call' ? 'کال' : 'پوت')} • {leg.side === 'buy' ? 'خرید' : 'فروش'}
+        </span>
+        <span className="mut" style={{fontSize:11,marginRight:'auto'}}>{legLabel}</span>
+        {onRemove ? <button className="cbtn" style={{padding:'2px 8px',fontSize:11}} onClick={function(e){e.stopPropagation();onRemove();}}>✕</button> : null}
+      </div>
+      <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+        <div style={{position:'relative',flex:'2 1 200px'}}>
+          <input type="text" className="ov-input-name" style={{width:'100%'}}
+            placeholder={leg.kind === 'stock' ? 'نام سهم (مثلاً اهرم)' : 'نام قرارداد'}
+            value={leg.contractName}
+            onChange={function(e){onChange(Object.assign({},leg,{contractName:e.target.value}));setShowS(true);}}
+            onFocus={function(){setShowS(true);}}
+            onBlur={function(){setTimeout(function(){setShowS(false);},250);}}
+          />
+          {showS && sugg.length > 0 ? (
+            <div style={{position:'absolute',top:'100%',right:0,left:0,zIndex:40,border:'1px solid var(--acc)',borderRadius:6,background:'var(--sur)',maxHeight:220,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,.12)'}}>
+              {sugg.map(function(c,i){
+                return (
+                  <div key={i} style={{padding:'6px 10px',cursor:'pointer',borderBottom:i<sugg.length-1?'1px solid var(--bor)':'none',fontSize:11.5}}
+                    onMouseDown={function(ev){ev.preventDefault();pick(c);}}>
+                    <div style={{display:'flex',justifyContent:'space-between',gap:8}}>
+                      <span><b>{c.name}</b><span className="mut" style={{fontSize:10,marginRight:6}}> ({c.basis_name})</span></span>
+                      <span className="mut" style={{fontSize:10}}>{c.expiry}</span>
+                    </div>
+                    <div style={{color:'var(--mut)',fontSize:10,marginTop:2}}>
+                      اعمال: {c.strike || '—'} • روز: {c.dte || '—'} • اندازه: {c.size || '—'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+        <input type="text" inputMode="decimal" className="ov-input-price sm" style={{flex:'0 0 80px'}}
+          placeholder="قیمت ورود" value={leg.entryPrice}
+          onChange={function(e){onChange(Object.assign({},leg,{entryPrice:e.target.value}));}}
+        />
+        <input type="text" inputMode="numeric" className="ov-input-price sm" style={{flex:'0 0 55px'}}
+          placeholder="تعداد" value={leg.quantity}
+          onChange={function(e){onChange(Object.assign({},leg,{quantity:e.target.value}));}}
+        />
+      </div>
+      {(leg.strike !== '' || leg.expiry || leg.size) ? (
+        <div style={{fontSize:11,color:'var(--mut)',marginTop:4}}>
+          {leg.strike !== '' ? 'اعمال: ' + leg.strike + '  ' : ''}
+          {leg.expiry ? 'سررسید: ' + leg.expiry + '  ' : ''}
+          {leg.size ? 'اندازه: ' + leg.size : ''}
+        </div>
+      ) : null}
+      {showMarginInput ? (
+        <div style={{marginTop:6,display:'flex',gap:6,alignItems:'center'}}>
+          <span className="rlbl" style={{fontSize:11}}>وجه تضمین:</span>
+          <input type="text" inputMode="decimal" className="ov-input-price sm" style={{flex:'0 0 110px'}}
+            placeholder="مبلغ" value={leg.margin}
+            onChange={function(e){onChange(Object.assign({},leg,{margin:e.target.value}));}}
+          />
+          <span style={{fontSize:10,color:'var(--mut)'}}>(خودکار — قابل تغییر)</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── CreateTab ───
+function CreateTabV2(props) {
+  var contracts = props.contracts || [];
+  var onCreated = props.onCreated;
+  var stStrat = React.useState('cc'), stStratV = stStrat[0], setStrat = stStrat[1];
+  var stLegs = React.useState(_buildLegsForStrategy('cc')), legs = stLegs[0], setLegs = stLegs[1];
+  var stTitle = React.useState(''), title = stTitle[0], setTitle = stTitle[1];
+  var stNote = React.useState(''), note = stNote[0], setNote = stNote[1];
+  var stTargets = React.useState([{kind:'profit',value:20},{kind:'profit',value:50},{kind:'loss',value:-20}]), targets = stTargets[0], setTargets = stTargets[1];
+  var stSaving = React.useState(false), saving = stSaving[0], setSaving = stSaving[1];
+  var stErr = React.useState(null), err = stErr[0], setErr = stErr[1];
+
+  function changeStrat(id) { setStrat(id); setLegs(_buildLegsForStrategy(id)); }
+  function updateLeg(i, nl) { var a=legs.slice(); a[i]=nl; setLegs(a); }
+  function addLeg() { setLegs(legs.concat([_normLegV2({kind:'call',side:'buy'})])); }
+  function removeLeg(i) { var a=legs.slice(); a.splice(i,1); setLegs(a); }
+  function updateTarget(i,k,v) { var a=targets.slice(); a[i]=Object.assign({},a[i],{[k]:v}); setTargets(a); }
+  function addTarget() { setTargets(targets.concat([{kind:'profit',value:100}])); }
+  function removeTarget(i) { var a=targets.slice(); a.splice(i,1); setTargets(a); }
+
+  function buildPayload() {
+    var cleanLegs = legs.map(function(l){
+      return {
+        kind: l.kind, side: l.side,
+        contractName: String(l.contractName||'').trim(),
+        expiry: l.expiry || null,
+        strike: l.strike !== '' && l.strike != null ? parseFloat(l.strike) : null,
+        entryPrice: parseFloat(l.entryPrice) || 0,
+        quantity: parseInt(l.quantity,10) || 1,
+        size: parseInt(l.size,10) || (l.kind === 'stock' ? 1 : 1000),
+        margin: l.margin !== '' ? parseFloat(l.margin) || 0 : 0
+      };
+    }).filter(function(l){ return l.contractName && l.entryPrice > 0; });
+    if (!cleanLegs.length) throw new Error('حداقل یک پای معتبر (نام + قیمت ورود) لازم است');
+    return {
+      title: title || (STRATEGY_LEGS[stStratV] ? STRATEGY_LEGS[stStratV].label : 'پیگیری دستی'),
+      note: note,
+      legs: cleanLegs,
+      targets: targets.map(function(t){ return {kind:t.kind,value:parseFloat(t.value)||0}; })
+    };
+  }
+
+  function doCreate() {
+    setErr(null);
+    var payload;
+    try { payload = buildPayload(); } catch(e) { setErr(e.message); return; }
+    setSaving(true);
+    Api.mtCreate(payload).then(function(r) {
+      setTitle(''); setNote('');
+      setLegs(_buildLegsForStrategy(stStratV));
+      onCreated && onCreated();
+      showAlert('پیگیری ایجاد شد', 'success', 4000);
+    }).catch(function(e){ setErr(e.message); }).finally(function(){ setSaving(false); });
+  }
+
+  function doCalc() {
+    setErr(null);
+    var payload;
+    try { payload = buildPayload(); } catch(e) { setErr(e.message); return; }
+    setSaving(true);
+    Api.mtCalc(payload).then(function(r) {
+      var msg = 'P&L: ' + Math.round(r.pnl).toLocaleString() + ' | ROI: ' + (r.roi >= 0 ? '+' : '') + r.roi.toFixed(2) + '٪';
+      showAlert(msg, r.pnl >= 0 ? 'success' : 'warn', 6000);
+    }).catch(function(e){ setErr(e.message); }).finally(function(){ setSaving(false); });
+  }
+
+  var stratOpts = Object.keys(STRATEGY_LEGS).map(function(sid){
+    return <option key={sid} value={sid}>{STRATEGY_LEGS[sid].label}</option>;
+  });
+
+  return (
+    <div style={{padding:14,overflowY:'auto'}}>
+      {err ? <div className="error-box" style={{marginBottom:10}}><div className="desc">{err}</div></div> : null}
+
+      <div className="msec">
+        <div className="msec-t">نوع استراتژی</div>
+        <select value={stStratV} onChange={function(e){changeStrat(e.target.value);}}
+          style={{width:'100%',padding:'8px 10px',border:'1px solid var(--bor)',borderRadius:6,background:'var(--sur)',color:'var(--txt)',fontFamily:'var(--f)',fontSize:13}}>
+          {stratOpts}
+        </select>
+      </div>
+
+      <div className="msec">
+        <div className="msec-t">عنوان و یادداشت</div>
+        <input type="text" className="ov-input-name" style={{width:'100%',marginBottom:6}}
+          placeholder="عنوان (مثلاً: باکس اهرم)" value={title}
+          onChange={function(e){setTitle(e.target.value);}}
+        />
+        <input type="text" className="ov-input-name" style={{width:'100%'}}
+          placeholder="یادداشت (اختیاری)" value={note}
+          onChange={function(e){setNote(e.target.value);}}
+        />
+      </div>
+
+      <div className="msec">
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+          <div className="msec-t">پاهای سبد ({legs.length})</div>
+          <button className="cbtn cbtn-acc" onClick={addLeg}>+ افزودن پا</button>
+        </div>
+        {legs.map(function(l,i){
+          var defaultLeg = STRATEGY_LEGS[stStratV] && STRATEGY_LEGS[stStratV].legs[i];
+          return <LegRowV2 key={i} idx={i} leg={l} contracts={contracts}
+            legLabel={defaultLeg ? defaultLeg.label : ''}
+            onChange={function(nl){updateLeg(i,nl);}}
+            onRemove={legs.length > 1 ? function(){removeLeg(i);} : null}
+          />;
+        })}
+      </div>
+
+      <div className="msec">
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+          <div className="msec-t">اهداف</div>
+          <button className="cbtn cbtn-acc" onClick={addTarget}>+ افزودن هدف</button>
+        </div>
+        {targets.map(function(t,i){
+          return (
+            <div key={i} style={{display:'flex',gap:6,alignItems:'center',marginBottom:6}}>
+              <select value={t.kind} onChange={function(e){updateTarget(i,'kind',e.target.value);}}
+                style={{padding:'4px 8px',borderRadius:5,border:'1px solid var(--bor)',background:'var(--sur)',color:'var(--txt)',fontFamily:'var(--f)',fontSize:12}}>
+                <option value="profit">سود</option>
+                <option value="loss">ضرر</option>
+              </select>
+              <input type="text" inputMode="decimal" className="ov-input-price sm" value={t.value}
+                onChange={function(e){updateTarget(i,'value',parseFloat(e.target.value)||0);}} />
+              <span className="rlbl">٪</span>
+              <button className="ov-remove" onClick={function(){removeTarget(i);}}>✕</button>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{display:'flex',gap:8,marginTop:14,flexWrap:'wrap'}}>
+        <button className="ov-add-btn" onClick={doCalc} disabled={saving}>{saving ? '...' : '🧮 محاسبه فوری'}</button>
+        <button className="cbtn cbtn-acc" style={{padding:'8px 18px',fontSize:13}} onClick={doCreate} disabled={saving}>
+          {saving ? '...' : '▶ شروع پیگیری'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── TrackerCard ───
+function TrackerCardV2(props) {
+  var item = props.item, type = props.type;
+  var onEdit = props.onEdit, onClose = props.onClose, onDelete = props.onDelete;
+  var roi = item.currentROI;
+  var roiCls = roi > 0 ? 'gain' : roi < 0 ? 'loss' : 'mut';
+  var roiStr = roi == null ? '—' : ((roi > 0 ? '+' : '') + Number(roi).toFixed(2) + '٪');
+  var pnlStr = item.currentPnL == null ? '—' : Math.round(item.currentPnL).toLocaleString();
+  var isManual = type === 'manual';
+  var title = isManual ? (item.title || 'پیگیری دستی') : (item.snapshot && item.snapshot.primary_name || '—');
+  var stratId = isManual ? null : (item.snapshot && item.snapshot.strategy_type);
+  var stratLabel = stratId && STRATEGY_LEGS[stratId] ? STRATEGY_LEGS[stratId].label : (stratId || 'دستی');
+
+  var legs = isManual ? (item.legs || []) : ((item.snapshot && item.snapshot.legs) || []).map(function(l,i){
+    return {
+      kind: l.kind || 'call', side: l.side,
+      contractName: l.name || l.contractName,
+      entryPrice: (item.entries && item.entries.legEntries && item.entries.legEntries[i]) != null ? item.entries.legEntries[i] : null,
+      quantity: 1, margin: null
+    };
+  });
+
+  return (
+    <div className="gcard" style={{marginBottom:10}}>
+      <div className="gcard-t" style={{display:'flex',justifyContent:'space-between',flexWrap:'wrap',gap:6}}>
+        <span>
+          <span className="badge bdg-itm" style={{marginLeft:6,fontSize:10}}>{stratLabel}</span>
+          <b>{title}</b>
+          {isManual ? <span className="badge" style={{marginRight:6,fontSize:9,background:'var(--acc-t)',color:'var(--acc)'}}>دستی</span> : null}
+        </span>
+        <span className={'badge ' + (roi >= 0 ? 'bdg-itm' : 'bdg-q1')} style={{fontSize:13}}>{roiStr}</span>
+      </div>
+      <div className="gcard-p" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,fontSize:12}}>
+        <div>💰 P&L: <b className={roiCls}>{pnlStr}</b></div>
+        <div>📊 مبنا: <b>{item.base == null ? '—' : Math.round(item.base).toLocaleString()}</b></div>
+        <div>📈 Peak: <b className="gain">{item.peakROI == null ? '—' : Number(item.peakROI).toFixed(2) + '٪'}</b></div>
+        <div>📉 Trough: <b className="loss">{item.troughROI == null ? '—' : Number(item.troughROI).toFixed(2) + '٪'}</b></div>
+      </div>
+      <div style={{marginTop:8,fontSize:11.5,lineHeight:1.9}}>
+        {legs.map(function(l,i){
+          var sideL = l.side === 'sell' ? 'فروش' : 'خرید';
+          var kindL = l.kind === 'stock' ? 'سهم' : (l.kind === 'call' ? 'کال' : 'پوت');
+          var price = l.entryPrice != null ? Number(l.entryPrice).toLocaleString() : '—';
+          return (
+            <div key={i}>
+              • {kindL} <code>{l.contractName || '-'}</code> — {sideL} @ <b>{price}</b>
+              {l.quantity ? <span className="mut"> ×{l.quantity}</span> : null}
+              {l.margin > 0 ? <span className="mut"> — تضمین: {Math.round(l.margin).toLocaleString()}</span> : null}
+            </div>
+          );
+        })}
+      </div>
+      {(item.targets && item.targets.length) ? (
+        <div style={{marginTop:8,display:'flex',gap:6,flexWrap:'wrap'}}>
+          {item.targets.map(function(tg,i){
+            var hitCls = tg.hit ? (tg.kind === 'profit' ? 'bdg-itm' : 'bdg-q1') : 'bdg-otm';
+            return (
+              <span key={i} className={'badge ' + hitCls} style={{fontSize:10}}>
+                {(tg.hit ? '✓' : '○') + ' ' + (tg.kind === 'profit' ? '+' : '') + tg.value + '٪'}
+              </span>
+            );
+          })}
+        </div>
+      ) : null}
+      <div style={{marginTop:10,display:'flex',gap:6,flexWrap:'wrap'}}>
+        <button className="cbtn cbtn-acc" onClick={function(){onEdit(item, type);}}>✎ ویرایش</button>
+        <button className="cbtn" onClick={function(){ if (!confirm('پیگیری بسته شود؟')) return; onClose(item, type); }}>⏹ بستن</button>
+        <button className="cbtn" style={{borderColor:'var(--loss)',color:'var(--loss)',background:'var(--loss-t)'}}
+          onClick={function(){ if (!confirm('حذف شود؟')) return; onDelete(item, type); }}>🗑 حذف</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── ActiveTab ───
+function ActiveTabV2(props) {
+  var manual = props.manual || [], signals = props.signals || [];
+  var items = [];
+  signals.forEach(function(s){ items.push(Object.assign({}, s, { _type: 'signal' })); });
+  manual.forEach(function(m){ items.push(Object.assign({}, m, { _type: 'manual' })); });
+
+  if (!items.length) {
+    return <div className="center" style={{height:300}}><span className="mut">هیچ پیگیری فعالی نیست</span></div>;
+  }
+  return (
+    <div style={{padding:14,overflowY:'auto'}}>
+      {items.map(function(it,i){
+        return <TrackerCardV2 key={(it._id || i) + '_' + it._type}
+          item={it} type={it._type}
+          onEdit={props.onEdit} onClose={props.onClose} onDelete={props.onDelete}
+        />;
+      })}
+    </div>
+  );
+}
+
+// ─── SentTab ───
+function SentTabV2(props) {
+  var sent = props.sent || [], followed = props.followed || [];
+  var activeKeys = {};
+  followed.forEach(function(f){ activeKeys[f.signalKey] = true; });
+
+  if (!sent.length) {
+    return <div className="center" style={{height:300}}><span className="mut">هنوز سیگنالی ارسال نشده</span></div>;
+  }
+  return (
+    <div style={{padding:14,overflowY:'auto'}}>
+      {sent.map(function(s,i){
+        var already = activeKeys[s.key];
+        return (
+          <div key={s._id || i} className="gcard" style={{marginBottom:8}}>
+            <div className="gcard-t" style={{display:'flex',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}>
+              <span>
+                <span className="badge bdg-itm" style={{marginLeft:6,fontSize:10}}>{s.strategy_type}</span>
+                <b>{s.primary_name}</b>
+                <span className="mut" style={{marginRight:6,fontSize:11}}>{s.basis_name}</span>
+                <span className="mut" style={{fontSize:11}}>{s.expiry}</span>
+              </span>
+              <span className="mut" style={{fontSize:11}}>{new Date(s.sentAt).toLocaleString('fa-IR')}</span>
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center',flexWrap:'wrap'}}>
+              {already ? <span className="badge bdg-itm">✓ در حال پیگیری</span>
+                : <button className="ov-add-btn" onClick={function(){props.onFollow(s);}}>▶ شروع پیگیری</button>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── EditTrackerModal ───
+function EditTrackerModal(props) {
+  var item = props.item, type = props.type, contracts = props.contracts || [];
+  var onClose = props.onClose, onSaved = props.onSaved;
+  var isManual = type === 'manual';
+
+  var initLegs = React.useMemo(function() {
+    if (!isManual) return [];
+    return (item.legs || []).map(_normLegV2);
+  }, [item, type]);
+
+  var initEntries = React.useMemo(function() {
+    if (isManual) return { stockEntry: null, legEntries: [] };
+    return item.entries || { stockEntry: null, legEntries: [] };
+  }, [item, type]);
+
+  var stLegs = React.useState(initLegs), legs = stLegs[0], setLegs = stLegs[1];
+  var stStock = React.useState(initEntries.stockEntry != null ? String(initEntries.stockEntry) : ''), stockV = stStock[0], setStock = stStock[1];
+  var stLegE = React.useState((initEntries.legEntries || []).map(function(v){ return v != null ? String(v) : ''; })), legE = stLegE[0], setLegE = stLegE[1];
+  var stMargin = React.useState(item.margin != null ? String(item.margin) : ''), marginV = stMargin[0], setMargin = stMargin[1];
+  var stNote = React.useState(item.note || item.entryNote || ''), noteV = stNote[0], setNote = stNote[1];
+  var stTargets = React.useState((item.targets && item.targets.length) ? item.targets.map(function(t){return {kind:t.kind,value:t.value};}) : [{kind:'profit',value:20},{kind:'profit',value:50},{kind:'loss',value:-20}]), targets = stTargets[0], setTargets = stTargets[1];
+  var stSaving = React.useState(false), saving = stSaving[0], setSaving = stSaving[1];
+  var stErr = React.useState(null), err = stErr[0], setErr = stErr[1];
+
+  function updateLeg(i, nl) { var a=legs.slice(); a[i]=nl; setLegs(a); }
+  function addLeg() { setLegs(legs.concat([_normLegV2({kind:'call',side:'buy'})])); }
+  function removeLeg(i) { var a=legs.slice(); a.splice(i,1); setLegs(a); }
+  function updateTarget(i,k,v) { var a=targets.slice(); a[i]=Object.assign({},a[i],{[k]:v}); setTargets(a); }
+  function addTarget() { setTargets(targets.concat([{kind:'profit',value:100}])); }
+  function removeTarget(i) { var a=targets.slice(); a.splice(i,1); setTargets(a); }
+
+  function save() {
+    setErr(null); setSaving(true);
+    if (isManual) {
+      var payload = {
+        title: item.title, note: noteV,
+        legs: legs.map(function(l){
+          return {
+            kind: l.kind, side: l.side,
+            contractName: String(l.contractName||'').trim(),
+            expiry: l.expiry || null,
+            strike: l.strike !== '' && l.strike != null ? parseFloat(l.strike) : null,
+            entryPrice: parseFloat(l.entryPrice) || 0,
+            quantity: parseInt(l.quantity,10) || 1,
+            size: parseInt(l.size,10) || (l.kind === 'stock' ? 1 : 1000),
+            margin: l.margin !== '' ? parseFloat(l.margin) || 0 : 0
+          };
+        }),
+        targets: targets.map(function(t){return {kind:t.kind,value:parseFloat(t.value)||0};})
+      };
+      Api.mtUpdate(item._id, payload)
+        .then(function(){ onSaved && onSaved(); onClose(); })
+        .catch(function(e){ setErr(e.message); })
+        .finally(function(){ setSaving(false); });
+    } else {
+      var payload2 = {
+        entries: {
+          stockEntry: stockV !== '' ? parseFloat(stockV) : null,
+          legEntries: legE.map(function(v){ return v !== '' ? parseFloat(v) : 0; }),
+          margin: marginV !== '' ? parseFloat(marginV) : null
+        },
+        entryNote: noteV,
+        targets: targets.map(function(t){return {kind:t.kind,value:parseFloat(t.value)||0};})
+      };
+      Api.signalsUpdate(item._id, payload2)
+        .then(function(){ onSaved && onSaved(); onClose(); })
+        .catch(function(e){ setErr(e.message); })
+        .finally(function(){ setSaving(false); });
+    }
+  }
+
+  var snapLegs = (item.snapshot && item.snapshot.legs) || [];
+
+  return (
+    <div className="modal-overlay" onMouseDown={function(e){if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box" style={{width:'min(760px,96vw)',height:'auto',maxHeight:'90vh'}} onMouseDown={function(e){e.stopPropagation();}}>
+        <div className="modal-head">
+          <div className="mtitle">ویرایش پیگیری — {isManual ? (item.title || 'دستی') : (item.snapshot && item.snapshot.primary_name)}</div>
+          <div style={{flex:1}} />
+          <button className="ib" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body" style={{padding:14}}>
+          {err ? <div className="error-box" style={{marginBottom:10}}><div className="desc">{err}</div></div> : null}
+
+          {isManual ? (
+            <div>
+              <div className="msec-t" style={{marginBottom:6}}>پاها</div>
+              {legs.map(function(l,i){
+                return <LegRowV2 key={i} idx={i} leg={l} contracts={contracts}
+                  onChange={function(nl){updateLeg(i,nl);}}
+                  onRemove={legs.length > 1 ? function(){removeLeg(i);} : null}
+                />;
+              })}
+              <button className="cbtn cbtn-acc" style={{marginBottom:12}} onClick={addLeg}>+ افزودن پا</button>
+            </div>
+          ) : (
+            <div>
+              <div className="msec-t" style={{marginBottom:6}}>قیمت‌های ورود</div>
+              <div className="hint" style={{marginBottom:8}}>در پیگیری سیگنال، فقط قیمت‌های ورود، اهداف و یادداشت قابل ویرایش هستند.</div>
+              {snapLegs.map(function(l,i){
+                return (
+                  <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
+                    <span style={{minWidth:90,fontSize:12}}>{(l.label || ('پای ' + (i+1))) + ':'}</span>
+                    <code style={{flex:1,fontSize:11}}>{l.name}</code>
+                    <input type="text" inputMode="decimal" className="ov-input-price sm"
+                      value={legE[i] || ''} onChange={function(e){var a=legE.slice();a[i]=e.target.value;setLegE(a);}} />
+                  </div>
+                );
+              })}
+              {item.snapshot && item.snapshot.basis_name ? (
+                <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
+                  <span style={{minWidth:90,fontSize:12}}>سهم پایه:</span>
+                  <code style={{flex:1,fontSize:11}}>{item.snapshot.basis_name}</code>
+                  <input type="text" inputMode="decimal" className="ov-input-price sm" value={stockV}
+                    onChange={function(e){setStock(e.target.value);}} />
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          <div className="msec-t" style={{marginTop:14,marginBottom:6}}>یادداشت</div>
+          <input type="text" className="ov-input-name" style={{width:'100%',marginBottom:14}} value={noteV}
+            onChange={function(e){setNote(e.target.value);}} />
+
+          <div className="msec-t" style={{marginBottom:6}}>اهداف</div>
+          {targets.map(function(t,i){
+            return (
+              <div key={i} style={{display:'flex',gap:6,alignItems:'center',marginBottom:6}}>
+                <select value={t.kind} onChange={function(e){updateTarget(i,'kind',e.target.value);}}
+                  style={{padding:'4px 8px',borderRadius:5,border:'1px solid var(--bor)',background:'var(--sur)',color:'var(--txt)',fontFamily:'var(--f)',fontSize:12}}>
+                  <option value="profit">سود</option>
+                  <option value="loss">ضرر</option>
+                </select>
+                <input type="text" inputMode="decimal" className="ov-input-price sm" value={t.value}
+                  onChange={function(e){updateTarget(i,'value',parseFloat(e.target.value)||0);}} />
+                <span className="rlbl">٪</span>
+                <button className="ov-remove" onClick={function(){removeTarget(i);}}>✕</button>
+              </div>
+            );
+          })}
+          <button className="cbtn cbtn-acc" style={{marginTop:6,marginBottom:14}} onClick={addTarget}>+ افزودن هدف</button>
+
+          <div style={{display:'flex',gap:8}}>
+            <button className="ov-add-btn" onClick={save} disabled={saving}>{saving ? '...' : '💾 ذخیره'}</button>
+            <button className="cbtn" onClick={onClose}>انصراف</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── FollowSignalModal ───
+function FollowSignalModalV2(props) {
+  var signal = props.signal, onClose = props.onClose, onFollowed = props.onFollowed;
+  var snapshot = signal.snapshot || {};
+  var stratType = snapshot.strategy_type;
+  var legs = snapshot.legs || [];
+  var needsStock = ['cc','mp','co','cv'].indexOf(stratType) !== -1;
+  var needsMargin = ['strangleSell','callspreadbear','putspread','boxSell'].indexOf(stratType) !== -1;
+
+  var stStock = React.useState(''), stockV = stStock[0], setStock = stStock[1];
+  var stLegE = React.useState(legs.map(function(){return '';})), legE = stLegE[0], setLegE = stLegE[1];
+  var stMargin = React.useState(''), marginV = stMargin[0], setMargin = stMargin[1];
+  var stNote = React.useState(''), noteV = stNote[0], setNote = stNote[1];
+  var stTargets = React.useState([{kind:'profit',value:20},{kind:'profit',value:50},{kind:'loss',value:-20}]), targets = stTargets[0], setTargets = stTargets[1];
+  var stSaving = React.useState(false), saving = stSaving[0], setSaving = stSaving[1];
+  var stErr = React.useState(null), err = stErr[0], setErr = stErr[1];
+
+  function updateTarget(i,k,v){ var a=targets.slice(); a[i]=Object.assign({},a[i],{[k]:v}); setTargets(a); }
+  function addTarget(){ setTargets(targets.concat([{kind:'profit',value:100}])); }
+  function removeTarget(i){ var a=targets.slice(); a.splice(i,1); setTargets(a); }
+
+  function submit() {
+    setErr(null);
+    if (needsStock && !(parseFloat(stockV) > 0)) { setErr('قیمت خرید سهم پایه را وارد کنید'); return; }
+    for (var i = 0; i < legs.length; i++) {
+      if (!(parseFloat(legE[i]) >= 0)) { setErr('قیمت پای ' + (legs[i].label || legs[i].name)); return; }
+    }
+    if (needsMargin && marginV === '') { setErr('وجه تضمین را وارد کنید'); return; }
+    setSaving(true);
+    Api.signalsFollow({
+      signalKey: signal.key,
+      entries: {
+        stockEntry: needsStock ? parseFloat(stockV) : null,
+        legEntries: legE.map(function(v){ return parseFloat(v)||0; }),
+        margin: needsMargin ? (parseFloat(marginV)||0) : null
+      },
+      entryNote: noteV,
+      targets: targets.map(function(t){return {kind:t.kind,value:parseFloat(t.value)||0};})
+    }).then(function(){ onFollowed && onFollowed(); onClose(); })
+      .catch(function(e){ setErr(e.message); })
+      .finally(function(){ setSaving(false); });
+  }
+
+  return (
+    <div className="modal-overlay" onMouseDown={function(e){if(e.target===e.currentTarget)onClose();}}>
+      <div className="modal-box" style={{width:'min(700px,96vw)',height:'auto',maxHeight:'90vh'}} onMouseDown={function(e){e.stopPropagation();}}>
+        <div className="modal-head">
+          <div className="mtitle">شروع پیگیری — {snapshot.primary_name}</div>
+          <div style={{flex:1}} />
+          <button className="ib" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body" style={{padding:14}}>
+          {err ? <div className="error-box" style={{marginBottom:10}}><div className="desc">{err}</div></div> : null}
+          <div className="gcard-p" style={{fontSize:12,marginBottom:14}}>
+            <div>استراتژی: <b>{stratType}</b></div>
+            <div>موقعیت: <b>{snapshot.primary_name}</b></div>
+            <div>سهم پایه: <b>{snapshot.basis_name}</b> — سررسید: <b>{snapshot.expiry}</b></div>
+          </div>
+          {needsStock ? (
+            <div className="msec">
+              <div className="msec-t">قیمت خرید سهم پایه</div>
+              <input type="text" inputMode="decimal" className="ov-input-price" value={stockV} onChange={function(e){setStock(e.target.value);}} />
+            </div>
+          ) : null}
+          <div className="msec">
+            <div className="msec-t">قیمت ورود پای‌ها</div>
+            {legs.map(function(l,i){
+              return (
+                <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}>
+                  <span style={{minWidth:90,fontSize:12}}>{(l.label||'') + ':'}</span>
+                  <code style={{flex:1,fontSize:11}}>{l.name}</code>
+                  <input type="text" inputMode="decimal" className="ov-input-price sm"
+                    value={legE[i] || ''} onChange={function(e){var a=legE.slice();a[i]=e.target.value;setLegE(a);}} />
+                </div>
+              );
+            })}
+          </div>
+          {needsMargin ? (
+            <div className="msec">
+              <div className="msec-t">وجه تضمین</div>
+              <input type="text" inputMode="decimal" className="ov-input-price" value={marginV} onChange={function(e){setMargin(e.target.value);}} />
+            </div>
+          ) : null}
+          <div className="msec-t" style={{marginBottom:6}}>یادداشت</div>
+          <input type="text" className="ov-input-name" style={{width:'100%',marginBottom:14}} value={noteV} onChange={function(e){setNote(e.target.value);}} />
+          <div className="msec-t" style={{marginBottom:6}}>اهداف</div>
+          {targets.map(function(t,i){
+            return (
+              <div key={i} style={{display:'flex',gap:6,alignItems:'center',marginBottom:6}}>
+                <select value={t.kind} onChange={function(e){updateTarget(i,'kind',e.target.value);}}
+                  style={{padding:'4px 8px',borderRadius:5,border:'1px solid var(--bor)',background:'var(--sur)',color:'var(--txt)',fontFamily:'var(--f)',fontSize:12}}>
+                  <option value="profit">سود</option>
+                  <option value="loss">ضرر</option>
+                </select>
+                <input type="text" inputMode="decimal" className="ov-input-price sm" value={t.value}
+                  onChange={function(e){updateTarget(i,'value',parseFloat(e.target.value)||0);}} />
+                <span className="rlbl">٪</span>
+                <button className="ov-remove" onClick={function(){removeTarget(i);}}>✕</button>
+              </div>
+            );
+          })}
+          <button className="cbtn cbtn-acc" style={{marginTop:6,marginBottom:14}} onClick={addTarget}>+ افزودن هدف</button>
+          <div style={{display:'flex',gap:8}}>
+            <button className="ov-add-btn" onClick={submit} disabled={saving}>{saving ? '...' : '▶ شروع پیگیری'}</button>
+            <button className="cbtn" onClick={onClose}>انصراف</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Overlay ───
+function SignalsOverlayV2(props) {
+  var open = props.open, onClose = props.onClose;
+  var stTab = React.useState('create'), tab = stTab[0], setTab = stTab[1];
+  var stManual = React.useState([]), manual = stManual[0], setManual = stManual[1];
+  var stSignals = React.useState([]), signals = stSignals[0], setSignals = stSignals[1];
+  var stSent = React.useState([]), sent = stSent[0], setSent = stSent[1];
+  var stContracts = React.useState([]), contracts = stContracts[0], setContracts = stContracts[1];
+  var stLoading = React.useState(false), loading = stLoading[0], setLoading = stLoading[1];
+  var stErr = React.useState(null), err = stErr[0], setErr = stErr[1];
+  var stEdit = React.useState(null), editCtx = stEdit[0], setEditCtx = stEdit[1];
+  var stFollow = React.useState(null), followCtx = stFollow[0], setFollowCtx = stFollow[1];
+
+  function reload() {
+    if (!open) return;
+    setLoading(true);
+    Promise.all([
+      Api.mtList('active').catch(function(){return {trackers:[]};}),
+      Api.signalsFollowed('active').catch(function(){return {followed:[]};}),
+      Api.signalsSent(7).catch(function(){return {signals:[]};}),
+      Api.mtContracts().catch(function(){return {contracts:[]};})
+    ]).then(function(r){
+      setManual(r[0].trackers || []);
+      setSignals(r[1].followed || []);
+      setSent(r[2].signals || []);
+      if ((r[3].contracts || []).length && contracts.length === 0) setContracts(r[3].contracts);
+      setErr(null);
+    }).catch(function(e){ setErr(e.message); })
+      .finally(function(){ setLoading(false); });
+  }
+
+  React.useEffect(function(){
+    if (!open) return;
+    reload();
+    var t = setInterval(reload, 15000);
+    return function(){ clearInterval(t); };
+  }, [open]);
+
+  if (!open) return null;
+
+  function handleEdit(item, type) { setEditCtx({ item: item, type: type }); }
+  function handleClose(item, type) {
+    var api = type === 'manual' ? Api.mtClose(item._id, {}) : Api.signalsClose(item._id, {});
+    api.then(reload).catch(function(e){ setErr(e.message); });
+  }
+  function handleDelete(item, type) {
+    var api = type === 'manual' ? Api.mtDelete(item._id) : Api.signalsDelete(item._id);
+    api.then(reload).catch(function(e){ setErr(e.message); });
+  }
+
+  var tabCls = function(id) { return 'msub-tab ' + (tab === id ? 'on' : ''); };
+
+  return (
+    <div className="fs-overlay" role="dialog">
+      <div className="fs-head">
+        <b>📡 پیگیری سیگنال‌ها</b>
+        {loading ? <span className="tab-spin-dot" /> : null}
+        <div style={{flex:1}} />
+        <button className="ib" onClick={reload} title="بروزرسانی">↻</button>
+        <button className="ib" onClick={onClose}>✕</button>
+      </div>
+      <div className="msub-tabs">
+        <button className={tabCls('create')} onClick={function(){setTab('create');}}>➕ ایجاد / محاسبه</button>
+        <button className={tabCls('active')} onClick={function(){setTab('active');}}>📊 در حال پیگیری ({manual.length + signals.length})</button>
+        <button className={tabCls('sent')} onClick={function(){setTab('sent');}}>📤 ارسال‌شده ({sent.length})</button>
+      </div>
+      <div className="fs-body" style={{overflow:'hidden'}}>
+        {err ? <div className="error-box" style={{margin:14}}><div className="desc">{err}</div></div> : null}
+        {tab === 'create' ? <CreateTabV2 contracts={contracts} onCreated={reload} /> : null}
+        {tab === 'active' ? <ActiveTabV2 manual={manual} signals={signals}
+          onEdit={handleEdit} onClose={handleClose} onDelete={handleDelete} /> : null}
+        {tab === 'sent' ? <SentTabV2 sent={sent} followed={signals}
+          onFollow={function(s){setFollowCtx(s);}} /> : null}
+      </div>
+      {editCtx ? <EditTrackerModal item={editCtx.item} type={editCtx.type} contracts={contracts}
+        onClose={function(){setEditCtx(null);}} onSaved={reload} /> : null}
+      {followCtx ? <FollowSignalModalV2 signal={followCtx}
+        onClose={function(){setFollowCtx(null);}}
+        onFollowed={function(){reload();setTab('active');}} /> : null}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// end SignalsOverlayV2
+// ═══════════════════════════════════════════════════════════
 
 var root=ReactDOM.createRoot(document.getElementById("root"));
 root.render(
