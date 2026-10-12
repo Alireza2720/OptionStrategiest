@@ -106,6 +106,46 @@ function buildMaps(chain) {
     return { contractMap: contractMap, basisMap: basisMap };
 }
 
+// ─── Helper: normalized key for lookup (handles ی/ي, ک/ك, ZWNJ, spaces) ───
+function _normKey(s) {
+    return String(s || '').trim()
+        .replace(/\u064a/g, 'ی').replace(/\u0643/g, 'ک')
+        .replace(/[\u200c\u200e\u200f\u00a0\s]+/g, '');
+}
+
+function _findBasis(basisMap, name) {
+    if (!name || !basisMap) return null;
+    var b = basisMap.get(name);
+    if (b) return b;
+    var n = _normKey(name);
+    if (!n) return null;
+    var it = basisMap.entries(), r = it.next();
+    while (!r.done) {
+        if (_normKey(r.value[0]) === n) return r.value[1];
+        r = it.next();
+    }
+    return null;
+}
+
+function _findContract(contractMap, name, expiry) {
+    if (!name || !contractMap) return null;
+    var c = expiry ? contractMap.get(name + "|" + expiry) : null;
+    if (c) return c;
+    c = contractMap.get(name);
+    if (c) return c;
+    var n = _normKey(name);
+    if (!n) return null;
+    var it = contractMap.entries(), r = it.next();
+    while (!r.done) {
+        var parts = String(r.value[0]).split("|");
+        if (_normKey(parts[0]) === n) {
+            if (!expiry || parts[1] === expiry) return r.value[1];
+        }
+        r = it.next();
+    }
+    return null;
+}
+
 // ─── محاسبه‌ی P&L زنده ───
 function computeLive(legs, margin, contractMap, basisMap, fees) {
     fees = fees || { buy: 0.0012, sell: 0.0012, taxPct: 0.1 };
@@ -125,28 +165,31 @@ function computeLive(legs, margin, contractMap, basisMap, fees) {
         var detail = null;
 
         if (leg.kind === "stock") {
-            var b = basisMap.get(leg.contractName);
-            if (b && b.spot > 0) {
-                // برای خرید با ask می‌فروشیم (یا spot اگر ask نداشتیم)
+            var b = _findBasis(basisMap, leg.contractName);
+            if (b && (b.spot > 0 || b.bid > 0 || b.ask > 0)) {
+                var refP = b.spot > 0 ? b.spot : (b.bid > 0 ? b.bid : b.ask);
                 exitPrice = leg.side === "sell"
-                    ? (b.ask > 0 ? b.ask : b.spot)
-                    : (b.bid > 0 ? b.bid : b.spot);
+                    ? (b.ask > 0 ? b.ask : refP)
+                    : (b.bid > 0 ? b.bid : refP);
                 detail = { spot: b.spot, bid: b.bid, ask: b.ask, queue: b.queue };
             }
         } else {
-            var c = leg.expiry
-                ? contractMap.get(leg.contractName + "|" + leg.expiry)
-                : null;
-            if (!c) c = contractMap.get(leg.contractName);
+            var c = _findContract(contractMap, leg.contractName, leg.expiry);
             if (c) {
                 var bid = Number(c.bid_price) || 0;
                 var ask = Number(c.ask_price) || 0;
                 var last = Number(c.price) || 0;
+                var bs = Number(c.bs) || 0;
+                var ref = last > 0 ? last : (bs > 0 ? bs : 0);
                 exitPrice = leg.side === "sell"
-                    ? (ask > 0 ? ask : last)
-                    : (bid > 0 ? bid : last);
+                    ? (ask > 0 ? ask : ref)
+                    : (bid > 0 ? bid : ref);
                 if (!(exitPrice > 0)) exitPrice = null;
-                detail = { bid: bid, ask: ask, last: last, strike: c.strike, expiry: c.expiry };
+                detail = {
+                    bid: bid, ask: ask, last: last, bs: bs,
+                    estimated: (bid <= 0 && ask <= 0),
+                    strike: c.strike, expiry: c.expiry
+                };
             }
         }
 
