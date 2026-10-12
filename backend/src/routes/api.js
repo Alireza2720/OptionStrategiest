@@ -101,9 +101,10 @@ router.get("/settings", async function (req, res) {
 
 router.post("/settings", requireApiKey, async function (req, res) {
   var body = req.body || {};
-  var allowed = [\
+  var allowed = ["scenStep", "dteFilterMin", "dteFilterMax", "checkIntervalSec",
     "huntOnlyBuyable", "huntTopN", "huntTopNUnlimited",
-    "huntCooldownMinutes", "huntCooldownForever", "huntStrategies"];
+    "huntCooldownMinutes", "huntCooldownForever", "huntStrategies",
+    "feeBuy", "feeSell", "taxOnSellPct"];
   var update = {};
   allowed.forEach(function (k) {
     if (Object.prototype.hasOwnProperty.call(body, k)) update[k] = body[k];
