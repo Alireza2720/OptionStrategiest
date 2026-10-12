@@ -4580,13 +4580,43 @@ function LegRowV2(props) {
     if (q.length < 1) { setSugg([]); return; }
     var qN = q.replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
     var out = [], seen = {};
-    for (var i = 0; i < contracts.length; i++) {
-      var c = contracts[i];
-      if (leg.kind !== 'stock' && c.type !== leg.kind) continue;
-      var nN = String(c.name||'').toLowerCase().replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
-      if (nN.indexOf(qN) === 0 || nN.indexOf(qN) > 0 || String(c.basis_name||'').indexOf(qN) !== -1) {
-        if (!seen[c.name]) { out.push(c); seen[c.name] = true; }
-        if (out.length >= 12) break;
+    if (leg.kind === 'stock') {
+      // 🆕 Stock legs: extract UNIQUE basis_names from contracts (not option tickers)
+      for (var i = 0; i < contracts.length; i++) {
+        var c = contracts[i];
+        var bn = String(c.basis_name || '').trim();
+        if (!bn) continue;
+        if (seen['__stk_' + bn]) continue;
+        var bnN = bn.toLowerCase().replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
+        if (bnN.indexOf(qN) !== -1) {
+          out.push({
+            name: bn,
+            basis_name: bn,
+            type: 'stock',
+            strike: null,
+            expiry: null,
+            size: 1,
+            dte: null,
+            spot: c.spot || 0,
+            bid: 0, ask: 0, last: 0,
+            nakedMargin: 0,
+            _isStock: true
+          });
+          seen['__stk_' + bn] = true;
+        }
+        if (out.length >= 15) break;
+      }
+    } else {
+      // Option legs: search by contract name OR basis_name (both normalized)
+      for (var i = 0; i < contracts.length; i++) {
+        var c = contracts[i];
+        if (c.type !== leg.kind) continue;
+        var nN = String(c.name || '').toLowerCase().replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
+        var bN = String(c.basis_name || '').toLowerCase().replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
+        if (nN.indexOf(qN) === 0 || nN.indexOf(qN) > 0 || bN.indexOf(qN) !== -1) {
+          if (!seen[c.name]) { out.push(c); seen[c.name] = true; }
+          if (out.length >= 12) break;
+        }
       }
     }
     setSugg(out);
@@ -4627,16 +4657,30 @@ function LegRowV2(props) {
           {showS && sugg.length > 0 ? (
             <div style={{position:'absolute',top:'100%',right:0,left:0,zIndex:40,border:'1px solid var(--acc)',borderRadius:6,background:'var(--sur)',maxHeight:220,overflowY:'auto',boxShadow:'0 4px 12px rgba(0,0,0,.12)'}}>
               {sugg.map(function(c,i){
+                var isStock = !!c._isStock;
                 return (
                   <div key={i} style={{padding:'6px 10px',cursor:'pointer',borderBottom:i<sugg.length-1?'1px solid var(--bor)':'none',fontSize:11.5}}
                     onMouseDown={function(ev){ev.preventDefault();pick(c);}}>
                     <div style={{display:'flex',justifyContent:'space-between',gap:8}}>
-                      <span><b>{c.name}</b><span className="mut" style={{fontSize:10,marginRight:6}}> ({c.basis_name})</span></span>
-                      <span className="mut" style={{fontSize:10}}>{c.expiry}</span>
+                      <span>
+                        <b>{c.name}</b>
+                        {isStock ? (
+                          <span style={{fontSize:9,marginRight:6,background:'var(--acc-t)',color:'var(--acc)',padding:'1px 6px',borderRadius:3,fontWeight:700}}>سهم پایه</span>
+                        ) : (
+                          <span className="mut" style={{fontSize:10,marginRight:6}}> ({c.basis_name})</span>
+                        )}
+                      </span>
+                      {!isStock ? <span className="mut" style={{fontSize:10}}>{c.expiry}</span> : null}
                     </div>
-                    <div style={{color:'var(--mut)',fontSize:10,marginTop:2}}>
-                      اعمال: {c.strike || '—'} • روز: {c.dte || '—'} • اندازه: {c.size || '—'}
-                    </div>
+                    {!isStock ? (
+                      <div style={{color:'var(--mut)',fontSize:10,marginTop:2}}>
+                        اعمال: {c.strike || '—'} • روز: {c.dte || '—'} • اندازه: {c.size || '—'}
+                      </div>
+                    ) : (
+                      <div style={{color:'var(--mut)',fontSize:10,marginTop:2}}>
+                        قیمت لحظه‌ای: {c.spot > 0 ? Math.round(c.spot).toLocaleString() : '—'}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -4652,7 +4696,7 @@ function LegRowV2(props) {
           onChange={function(e){onChange(Object.assign({},leg,{quantity:e.target.value}));}}
         />
       </div>
-      {(leg.strike !== '' || leg.expiry || leg.size) ? (
+      {leg.kind !== 'stock' && (leg.strike !== '' || leg.expiry || leg.size) ? (
         <div style={{fontSize:11,color:'var(--mut)',marginTop:4}}>
           {leg.strike !== '' ? 'اعمال: ' + leg.strike + '  ' : ''}
           {leg.expiry ? 'سررسید: ' + leg.expiry + '  ' : ''}
