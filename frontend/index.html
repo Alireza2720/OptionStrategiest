@@ -452,6 +452,7 @@ var Api={
   signalsUpdate:function(id,body){return apiSend("PATCH","/api/signals/followed/"+id,body)},
   signalsClose:function(id,body){return apiSend("POST","/api/signals/followed/"+id+"/close",body||{})},
   signalsDelete:function(id){return apiSend("DELETE","/api/signals/followed/"+id)},
+  mtContracts:function(){return apiGet("/api/manual-trackers/contracts")},
   mtCalc:function(body){return apiSend("POST","/api/manual-trackers/calc",body)},
   mtList:function(status){return apiGet("/api/manual-trackers?status="+(status||"active"))},
   mtGet:function(id){return apiGet("/api/manual-trackers/"+id)},
@@ -3641,37 +3642,30 @@ function TickDetailView(props){
 
 /* =========================================================
    ManualTrackerOverlay — پیگیری دستی سبد (کال/پوت/سهم)
+   نسخه‌ی ۲ — با autocomplete و face تضمین
    ========================================================= */
 function ManualTrackerOverlay(props){
   var open=props.open, onClose=props.onClose, globalSearch=props.globalSearch;
   var stTab=useState("create");
   var tab=stTab[0], setTab=stTab[1];
 
-  // لیست trackers
-  var stList=useState([]);
-  var list=stList[0], setList=stList[1];
-  var stLoading=useState(false);
-  var loading=stLoading[0], setLoading=stLoading[1];
-  var stErr=useState(null);
-  var err=stErr[0], setErr=stErr[1];
+  var stList=useState([]); var list=stList[0], setList=stList[1];
+  var stLoading=useState(false); var loading=stLoading[0], setLoading=stLoading[1];
+  var stErr=useState(null); var err=stErr[0], setErr=stErr[1];
 
-  // فرم ایجاد
-  var stTitle=useState("");
-  var title=stTitle[0], setTitle=stTitle[1];
-  var stNote=useState("");
-  var note=stNote[0], setNote=stNote[1];
-  var stMargin=useState("");
-  var margin=stMargin[0], setMargin=stMargin[1];
-  var stLegs=useState([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000}]);
+  var stContracts=useState([]); var contracts=stContracts[0], setContracts=stContracts[1];
+  var stContractsLoading=useState(false);
+
+  var stTitle=useState(""); var title=stTitle[0], setTitle=stTitle[1];
+  var stNote=useState(""); var note=stNote[0], setNote=stNote[1];
+  var stLegs=useState([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000,margin:""}]);
   var legs=stLegs[0], setLegs=stLegs[1];
   var stTargets=useState([{kind:"profit",value:20},{kind:"profit",value:50},{kind:"loss",value:-20}]);
   var targets=stTargets[0], setTargets=stTargets[1];
 
-  // نتیجه‌ی محاسبه
-  var stCalc=useState(null);
-  var calc=stCalc[0], setCalc=stCalc[1];
-  var stSaving=useState(false);
-  var saving=stSaving[0], setSaving=stSaving[1];
+  var stActiveLeg=useState(-1); var activeLeg=stActiveLeg[0], setActiveLeg=stActiveLeg[1];
+  var stCalc=useState(null); var calc=stCalc[0], setCalc=stCalc[1];
+  var stSaving=useState(false); var saving=stSaving[0], setSaving=stSaving[1];
 
   function loadList(){
     setLoading(true); setErr(null);
@@ -3681,14 +3675,26 @@ function ManualTrackerOverlay(props){
     .finally(function(){ setLoading(false); });
   }
 
+  function loadContracts(){
+    if(contracts.length > 0) return Promise.resolve();
+    setContractsLoading(true);
+    return Api.mtContracts().then(function(r){
+      setContracts((r&&r.contracts)||[]);
+    }).catch(function(e){ /* ignore */ })
+    .finally(function(){ setContractsLoading(false); });
+  }
+
   useEffect(function(){ if(open) loadList(); },[open]);
+  useEffect(function(){ if(open && tab==="create") loadContracts(); },[open,tab]);
 
   function updateLeg(i,key,val){
     var arr=legs.slice();
     arr[i]=Object.assign({},arr[i],{[key]:val});
     setLegs(arr);
   }
-  function addLeg(){ setLegs(legs.concat([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000}])); }
+  function addLeg(){
+    setLegs(legs.concat([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000,margin:""}]));
+  }
   function removeLeg(i){ var arr=legs.slice(); arr.splice(i,1); setLegs(arr); }
 
   function updateTarget(i,key,val){
@@ -3699,8 +3705,25 @@ function ManualTrackerOverlay(props){
   function addTarget(){ setTargets(targets.concat([{kind:"profit",value:100}])); }
   function removeTarget(i){ var arr=targets.slice(); arr.splice(i,1); setTargets(arr); }
 
+  function selectContractForLeg(i,c){
+    var arr=legs.slice();
+    var old=arr[i]||{};
+    arr[i]=Object.assign({},old,{
+      kind:c.type,
+      contractName:c.name,
+      expiry:c.expiry,
+      strike:String(c.strike),
+      size:c.size,
+      // auto-fill margin for naked sell
+      margin: (old.side==="sell")? String(c.nakedMargin||0) : (old.margin||"")
+    });
+    setLegs(arr);
+    setActiveLeg(-1);
+  }
+
   function buildPayload(){
     var cleanLegs=legs.map(function(l){
+      var m = l.margin!=="" && l.margin!=null ? parseFloat(l.margin)||0 : 0;
       return {
         kind:l.kind, side:l.side,
         contractName:String(l.contractName||"").trim(),
@@ -3708,14 +3731,14 @@ function ManualTrackerOverlay(props){
         strike:l.strike!==""&&l.strike!=null?parseFloat(l.strike):null,
         entryPrice:parseFloat(l.entryPrice)||0,
         quantity:parseInt(l.quantity,10)||1,
-        size:parseInt(l.size,10)||(l.kind==="stock"?1:1000)
+        size:parseInt(l.size,10)||(l.kind==="stock"?1:1000),
+        margin:m
       };
     }).filter(function(l){ return l.contractName && l.entryPrice>0; });
     if(!cleanLegs.length) throw new Error("حداقل یک پای معتبر (نام + قیمت ورود) لازم است");
     return {
       title:title||"پیگیری دستی",
       note:note,
-      margin:parseFloat(margin)||0,
       legs:cleanLegs,
       targets:targets.map(function(t){return {kind:t.kind,value:parseFloat(t.value)||0};})
     };
@@ -3726,10 +3749,9 @@ function ManualTrackerOverlay(props){
     var payload;
     try { payload=buildPayload(); } catch(e){ setErr(e.message); return; }
     setSaving(true);
-    Api.mtCalc(payload).then(function(r){
-      setCalc(r);
-    }).catch(function(e){ setErr(e.message); })
-    .finally(function(){ setSaving(false); });
+    Api.mtCalc(payload).then(function(r){ setCalc(r); })
+      .catch(function(e){ setErr(e.message); })
+      .finally(function(){ setSaving(false); });
   }
 
   function doCreate(){
@@ -3739,13 +3761,13 @@ function ManualTrackerOverlay(props){
     setSaving(true);
     Api.mtCreate(payload).then(function(r){
       setCalc(null);
-      setTitle(""); setNote(""); setMargin("");
-      setLegs([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000}]);
+      setTitle(""); setNote("");
+      setLegs([{kind:"call",side:"buy",contractName:"",expiry:"",strike:"",entryPrice:"",quantity:1,size:1000,margin:""}]);
       setTargets([{kind:"profit",value:20},{kind:"profit",value:50},{kind:"loss",value:-20}]);
       setTab("active");
       return loadList();
     }).catch(function(e){ setErr(e.message); })
-    .finally(function(){ setSaving(false); });
+      .finally(function(){ setSaving(false); });
   }
 
   function doDelete(id){
@@ -3755,6 +3777,23 @@ function ManualTrackerOverlay(props){
   function doCloseTracker(id){
     if(!window.confirm("بستن پیگیری؟")) return;
     Api.mtClose(id,{}).then(loadList).catch(function(e){ setErr(e.message); });
+  }
+
+  // ─── suggestions per leg ───
+  function getSuggestions(leg){
+    var q=String(leg.contractName||"").trim().toLowerCase();
+    if(q.length<2) return [];
+    var kind=leg.kind;
+    var out=[];
+    for(var i=0;i<contracts.length;i++){
+      var c=contracts[i];
+      if(kind!=="stock" && c.type!==kind) continue;
+      var hay=(c.name+" "+c.basis_name).toLowerCase();
+      if(hay.indexOf(q)===-1) continue;
+      out.push(c);
+      if(out.length>=12) break;
+    }
+    return out;
   }
 
   if(!open) return null;
@@ -3772,7 +3811,7 @@ function ManualTrackerOverlay(props){
         <b>📝 پیگیری دستی سبد</b>
         <span className="tb">| کال/پوت/سهم</span>
         <div className="sp1" />
-        <button className="ib" onClick={function(){ if(tab==="active") loadList(); }} title="بروزرسانی">↻</button>
+        <button className="ib" onClick={function(){ if(tab==="active") loadList(); else loadContracts(); }} title="بروزرسانی">↻</button>
         <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
       </div>
 
@@ -3800,12 +3839,14 @@ function ManualTrackerOverlay(props){
 
             <div className="msec">
               <div className="msec-t" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span>پاهای سبد (قرارداد / سهم)</span>
+                <span>پاهای سبد (قرارداد / سهم) — {contracts.length>0?contracts.length+" قرارداد بارگذاری شد":"در حال بارگذاری..."}</span>
                 <button className="cbtn cbtn-acc" onClick={addLeg}>+ افزودن پا</button>
               </div>
               {legs.map(function(l,i){
+                var sugg = (activeLeg===i) ? getSuggestions(l) : [];
+                var showMargin = (l.side==="sell" && l.kind!=="stock");
                 return (
-                  <div key={i} style={{border:"1px solid var(--bor)",borderRadius:6,padding:10,marginBottom:8,background:"var(--sur2)"}}>
+                  <div key={i} style={{border:"1px solid var(--bor)",borderRadius:6,padding:10,marginBottom:8,background:"var(--sur2)",position:"relative"}}>
                     <div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap",alignItems:"center"}}>
                       <span className="rlbl" style={{width:40}}>پای {i+1}</span>
                       <select value={l.kind} onChange={function(e){updateLeg(i,"kind",e.target.value);}}
@@ -3814,17 +3855,31 @@ function ManualTrackerOverlay(props){
                         <option value="put">پوت</option>
                         <option value="stock">سهم</option>
                       </select>
-                      <select value={l.side} onChange={function(e){updateLeg(i,"side",e.target.value);}}
+                      <select value={l.side} onChange={function(e){
+                          var newSide=e.target.value;
+                          var arr=legs.slice();
+                          var up={side:newSide};
+                          // if switch to sell for call/put, auto-fill margin if empty
+                          if(newSide==="sell" && (l.kind==="call"||l.kind==="put")){
+                            var c=contracts.find(function(x){return x.name===l.contractName && x.type===l.kind;});
+                            if(c && !up.margin && !arr[i].margin) up.margin=String(c.nakedMargin||0);
+                          }
+                          arr[i]=Object.assign({},arr[i],up);
+                          setLegs(arr);
+                        }}
                         style={{padding:"4px 8px",borderRadius:5,border:"1px solid var(--bor)",background:"var(--sur)",color:"var(--txt)",fontFamily:"var(--f)",fontSize:12}}>
                         <option value="buy">خرید</option>
                         <option value="sell">فروش</option>
                       </select>
                       <input type="text" className="ov-input-name" style={{flex:"2 1 150px"}}
-                        value={l.contractName} placeholder={l.kind==="stock"?"نام سهم (مثلاً اهرم)":"نام قرارداد"}
-                        onChange={function(e){updateLeg(i,"contractName",e.target.value);}} />
+                        value={l.contractName}
+                        placeholder={l.kind==="stock"?"نام سهم (مثلاً اهرم)":"نام قرارداد (حداقل ۲ کاراکتر)"}
+                        onFocus={function(){setActiveLeg(i);}}
+                        onBlur={function(){setTimeout(function(){ if(activeLeg===i) setActiveLeg(-1); },200);}}
+                        onChange={function(e){updateLeg(i,"contractName",e.target.value); setActiveLeg(i);}} />
                       {l.kind!=="stock"?
                         <input type="text" className="ov-input-name" style={{flex:"1 1 100px"}}
-                          value={l.expiry} placeholder="سررسید (2026-11-05)"
+                          value={l.expiry} placeholder="سررسید"
                           onChange={function(e){updateLeg(i,"expiry",e.target.value);}} />
                         :null}
                       <input type="text" inputMode="decimal" className="ov-input-price sm"
@@ -3840,16 +3895,54 @@ function ManualTrackerOverlay(props){
                         <button className="ov-remove" onClick={function(){removeLeg(i);}} title="حذف">✕</button>
                         :null}
                     </div>
+
+                    {showMargin?
+                      <div style={{display:"flex",gap:6,marginTop:4,alignItems:"center"}}>
+                        <span className="rlbl" style={{minWidth:100}}>وجه تضمین هر قرارداد:</span>
+                        <input type="text" inputMode="decimal" className="ov-input-price sm"
+                          value={l.margin} placeholder="مبلغ تضمین"
+                          onChange={function(e){updateLeg(i,"margin",e.target.value);}} />
+                        <span className="rlbl" style={{fontSize:11,color:"var(--mut)"}}>
+                          (برای فروش بدون پوشش — از داده‌ی زنجیره auto-fill شد، می‌توانید تغییر دهید)
+                        </span>
+                      </div>
+                      :null}
+
+                    {sugg.length>0?
+                      <div style={{
+                        marginTop:6,border:"1px solid var(--acc)",borderRadius:6,
+                        background:"var(--sur)",maxHeight:240,overflowY:"auto",
+                        boxShadow:"0 4px 12px rgba(0,0,0,.08)"
+                      }}>
+                        {sugg.map(function(c,idx){
+                          return (
+                            <div key={idx}
+                              onMouseDown={function(ev){ev.preventDefault(); selectContractForLeg(i,c);}}
+                              style={{
+                                padding:"8px 12px",cursor:"pointer",
+                                borderBottom:idx<sugg.length-1?"1px solid var(--bor)":"none",
+                                fontSize:12,fontFamily:"var(--f)"
+                              }}
+                              onMouseEnter={function(e){e.currentTarget.style.background="var(--acc-t)";}}
+                              onMouseLeave={function(e){e.currentTarget.style.background="";}}>
+                              <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+                                <span><b>{c.name}</b> <span style={{color:"var(--mut)",fontSize:11}}>({c.basis_name})</span></span>
+                                <span style={{color:"var(--mut)",fontSize:11}}>{c.type==="call"?"کال":"پوت"}</span>
+                              </div>
+                              <div style={{display:"flex",gap:10,color:"var(--mut)",fontSize:11,marginTop:2}}>
+                                <span>اعمال: {n(c.strike)}</span>
+                                <span>سررسید: {c.expiry}</span>
+                                <span>روز: {c.dte}</span>
+                                <span>اندازه: {c.size}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      :null}
                   </div>
                 );
               })}
-            </div>
-
-            <div className="msec">
-              <div className="msec-t">وجه تضمین (اختیاری — برای سبدهای اعتباری)</div>
-              <input type="text" inputMode="decimal" className="ov-input-price"
-                value={margin} placeholder="مثلاً 2000000"
-                onChange={function(e){setMargin(e.target.value);}} />
             </div>
 
             <div className="msec">
@@ -3898,10 +3991,11 @@ function ManualTrackerOverlay(props){
                 <div style={{marginTop:10}}>
                   {calc.legsLive.map(function(l,i){
                     return (
-                      <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--bor)",fontSize:12}}>
+                      <div key={i} style={{display:"flex",gap:8,alignItems:"center",padding:"6px 0",borderBottom:"1px solid var(--bor)",fontSize:12,flexWrap:"wrap"}}>
                         <code style={{flex:"1 1 150px",overflow:"hidden",textOverflow:"ellipsis"}}>{l.contractName}</code>
                         <span className="tb">{l.side==="buy"?"خرید":"فروش"}</span>
                         <span>ورود: <b>{n(l.entryPrice)}</b></span>
+                        {l.margin>0?<span>تضمین: <b>{n(Math.round(l.margin))}</b></span>:null}
                         <span>{l.ok?<>خروج: <b>{n(l.currentExitPrice)}</b></>:"—"}</span>
                         {l.ok?
                           <b className={l.pnl>=0?"gain":"loss"}>{n(Math.round(l.pnl))} ({(l.pnlPct>=0?"+":"")+n(l.pnlPct,2)}٪)</b>
@@ -3941,6 +4035,7 @@ function ManualTrackerOverlay(props){
                       return (
                         <div key={i}>
                           • {l.kind==="stock"?"سهم":l.kind==="call"?"کال":"پوت"} <code>{l.contractName}</code> — {l.side==="buy"?"خرید":"فروش"} @ <b>{n(l.entryPrice)}</b> × {l.quantity}
+                          {l.margin>0?<> — تضمین: <b>{n(Math.round(l.margin))}</b></>:null}
                         </div>
                       );
                     })}

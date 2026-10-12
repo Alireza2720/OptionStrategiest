@@ -4,6 +4,13 @@ var router = express.Router();
 var manualTracker = require("../services/manualTracker");
 
 // calc — بدون ذخیره (باید قبل از :id ثبت بشه)
+router.get("/manual-trackers/contracts", async function (req, res) {
+    try {
+        var list = manualTracker.listContracts();
+        res.json({ ok: true, contracts: list, count: list.length });
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 router.post("/manual-trackers/calc", async function (req, res) {
     try {
         var r = await manualTracker.calcOnce(req.body || {});

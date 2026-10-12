@@ -30,6 +30,7 @@ function normalizeLeg(raw) {
     if (!(entryPrice > 0)) return null;
     var quantity = Math.max(1, Math.floor(Number(raw.quantity) || 1));
     var size = Number(raw.size) > 0 ? Number(raw.size) : (kind === "stock" ? 1 : 1000);
+    var margin = Number(raw.margin) > 0 ? Number(raw.margin) : 0;
     return {
         kind: kind,
         contractName: name,
@@ -38,7 +39,8 @@ function normalizeLeg(raw) {
         side: side,
         quantity: quantity,
         size: size,
-        entryPrice: entryPrice
+        entryPrice: entryPrice,
+        margin: margin
     };
 }
 
@@ -151,6 +153,7 @@ function computeLive(legs, margin, contractMap, basisMap) {
             kind: leg.kind, contractName: leg.contractName,
             expiry: leg.expiry, strike: leg.strike, side: leg.side,
             quantity: qty, size: size, entryPrice: entry,
+            margin: Number(leg.margin) || 0,
             currentExitPrice: Math.round(exitPrice * 100) / 100,
             pnl: Math.round(pnl * 100) / 100,
             pnlPct: Math.round(pnlPct * 100) / 100,
@@ -158,12 +161,18 @@ function computeLive(legs, margin, contractMap, basisMap) {
         });
     }
 
+    // مجموع وجه تضمین هر پای
+    var legMarginSum = 0;
+    for (var mi = 0; mi < legs.length; mi++) {
+        legMarginSum += Number(legs[mi].margin) || 0;
+    }
+    var effectiveMargin = legMarginSum > 0 ? legMarginSum : (Number(margin) || 0);
+
     var base;
     if (entryCF > 0) base = entryCF;
     else if (entryCF < 0) {
         var credit = -entryCF;
-        var m = Number(margin) || 0;
-        base = m > 0 ? Math.max(m - credit, m * 0.01) : credit;
+        base = effectiveMargin > 0 ? Math.max(effectiveMargin - credit, effectiveMargin * 0.01) : credit;
     } else base = 1;
 
     var roi = base > 0 ? (totalPnL / base) * 100 : 0;
@@ -175,6 +184,46 @@ function computeLive(legs, margin, contractMap, basisMap) {
         legsLive: legsLive,
         missing: missing
     };
+}
+
+// ─── محاسبه‌ی وجه تضمین برای فروش اختیار بدون پوشش ───
+// فرمول تقریبی TSETMC:
+//   Margin = max(0.25 * S, 0.15 * S + Premium) * Size
+function nakedOptionMargin(spot, premium, size) {
+    if (!(spot > 0) || !(size > 0)) return 0;
+    var p = (premium > 0) ? premium : 0;
+    return Math.max(0.25 * spot, 0.15 * spot + p) * size;
+}
+
+// ─── لیست قراردادها برای autocomplete ───
+function listContracts() {
+    var chain = deps.getChain ? (deps.getChain() || []) : [];
+    var out = [];
+    for (var i = 0; i < chain.length; i++) {
+        var c = chain[i];
+        if (!c) continue;
+        var spot = Number(c.spot) || 0;
+        var size = Number(c.size) || 1000;
+        var last = Number(c.price) || 0;
+        var bid = Number(c.bid_price) || 0;
+        var ask = Number(c.ask_price) || 0;
+        var suggested = nakedOptionMargin(spot, last > 0 ? last : (bid > 0 ? bid : ask), size);
+        out.push({
+            name: String(c.name || ""),
+            basis_name: String(c.basis_name || ""),
+            type: c.type === "call" ? "call" : "put",
+            strike: Number(c.strike) || 0,
+            expiry: String(c.expiry || ""),
+            size: size,
+            dte: Number(c.dte) || 0,
+            spot: spot,
+            bid: bid,
+            ask: ask,
+            last: last,
+            nakedMargin: Math.round(suggested)
+        });
+    }
+    return out;
 }
 
 // ─── عملیات ───
@@ -328,5 +377,6 @@ module.exports = {
     init: init,
     create: create, list: list, getById: getById,
     update: update, remove: remove, close: close,
-    calcOnce: calcOnce, checkAll: checkAll, computeLive: computeLive
+    calcOnce: calcOnce, checkAll: checkAll, computeLive: computeLive,
+    listContracts: listContracts, nakedOptionMargin: nakedOptionMargin
 };

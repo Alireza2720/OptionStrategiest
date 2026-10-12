@@ -10,7 +10,7 @@ var apiRouter = require("./routes/api");
 var signalsRouter = require("./routes/signals");
 var manualTrackerRouter = require("./routes/manualTracker");
 var manualTracker = require("./services/manualTracker");
-var { runCycle, restoreFromSnapshot } = require("./services/cycleRunner");
+var { runCycle, restoreFromSnapshot, getCache } = require("./services/cycleRunner");
 var { isMarketOpen } = require("./services/marketHours");
 var apiWatcher = require("./services/apiWatcher");
 

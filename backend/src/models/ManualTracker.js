@@ -9,7 +9,8 @@ var LegSchema = new mongoose.Schema({
     side: { type: String, enum: ["buy", "sell"], default: "buy" },
     quantity: { type: Number, default: 1, min: 1 },
     size: { type: Number, default: 1000 },
-    entryPrice: { type: Number, required: true }
+    entryPrice: { type: Number, required: true },
+    margin: { type: Number, default: 0 }
 }, { _id: true });
 
 var TargetSchema = new mongoose.Schema({
