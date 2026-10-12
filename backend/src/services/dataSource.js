@@ -64,13 +64,13 @@ var _DIRECT_URL = "https://s3.optionschool24.com/last?type=3";
 var TARGET_URL = _PROXY_URL || _DIRECT_URL;
 
 // منبع داده‌ی زنده سهم پایه (collector روی پورت 5000)
-var _LIVE_MARKET_URL = process.env.LIVE_MARKET_URL || "http://127.0.0.1:5000/live-market";
+var _LIVE_MARKET_URL = process.env.LIVE_MARKET_URL || "http://127.0.0.1:3000/api/algotik/live-market";
 
 // دریافت اطلاعات لحظه‌ای سهم‌های پایه از /live-market
 // خروجی: { "اهرم": { price, close, open, high, low, volume, trades }, ... }
 async function fetchStockMarket() {
   var controller = new AbortController();
-  var timeout = setTimeout(function () { controller.abort(); }, 15000);
+  var timeout = setTimeout(function () { controller.abort(); }, 45000);
   try {
     var res = await fetch(_LIVE_MARKET_URL, { signal: controller.signal });
     if (!res.ok) throw new Error("HTTP " + res.status);

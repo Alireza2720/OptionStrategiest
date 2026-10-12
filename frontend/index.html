@@ -3654,7 +3654,6 @@ function ManualTrackerOverlay(props){
   var stErr=useState(null); var err=stErr[0], setErr=stErr[1];
 
   var stContracts=useState([]); var contracts=stContracts[0], setContracts=stContracts[1];
-  var stContractsLoading=useState(false);
 
   var stTitle=useState(""); var title=stTitle[0], setTitle=stTitle[1];
   var stNote=useState(""); var note=stNote[0], setNote=stNote[1];
@@ -3677,11 +3676,9 @@ function ManualTrackerOverlay(props){
 
   function loadContracts(){
     if(contracts.length > 0) return Promise.resolve();
-    setContractsLoading(true);
     return Api.mtContracts().then(function(r){
       setContracts((r&&r.contracts)||[]);
-    }).catch(function(e){ /* ignore */ })
-    .finally(function(){ setContractsLoading(false); });
+    }).catch(function(e){ /* ignore */ });
   }
 
   useEffect(function(){ if(open) loadList(); },[open]);
