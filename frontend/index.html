@@ -3779,18 +3779,33 @@ function ManualTrackerOverlay(props){
   // ─── suggestions per leg ───
   function getSuggestions(leg){
     var q=String(leg.contractName||"").trim().toLowerCase();
-    if(q.length<2) return [];
-    var kind=leg.kind;
+    if(q.length<1) return [];
+    var qNorm = q.replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
     var out=[];
+    var seen={};
     for(var i=0;i<contracts.length;i++){
       var c=contracts[i];
-      if(kind!=="stock" && c.type!==kind) continue;
-      var hay=(c.name+" "+c.basis_name).toLowerCase();
-      if(hay.indexOf(q)===-1) continue;
-      out.push(c);
-      if(out.length>=12) break;
+      var nameNorm = String(c.name||"").toLowerCase().replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
+      if(nameNorm.indexOf(qNorm) === 0){
+        if(!seen[c.name]){ out.push({c:c, s:0}); seen[c.name]=true; }
+      }
     }
-    return out;
+    for(var i2=0;i2<contracts.length;i2++){
+      var c2=contracts[i2];
+      var nameNorm2 = String(c2.name||"").toLowerCase().replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
+      if(nameNorm2.indexOf(qNorm) > 0){
+        if(!seen[c2.name]){ out.push({c:c2, s:1}); seen[c2.name]=true; }
+      }
+    }
+    for(var i3=0;i3<contracts.length;i3++){
+      var c3=contracts[i3];
+      var basisNorm = String(c3.basis_name||"").toLowerCase().replace(/\u064a/g,'\u06cc').replace(/\u0643/g,'\u06a9').replace(/\s/g,'');
+      if(basisNorm.indexOf(qNorm) !== -1){
+        if(!seen[c3.name]){ out.push({c:c3, s:2}); seen[c3.name]=true; }
+      }
+    }
+    out.sort(function(a,b){return a.s - b.s;});
+    return out.slice(0,15).map(function(x){return x.c;});
   }
 
   if(!open) return null;
