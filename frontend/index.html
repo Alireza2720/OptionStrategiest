@@ -468,7 +468,8 @@ var Api={
   mtCreate:function(body){return apiSend("POST","/api/manual-trackers",body)},
   mtUpdate:function(id,body){return apiSend("PATCH","/api/manual-trackers/"+id,body)},
   mtClose:function(id,body){return apiSend("POST","/api/manual-trackers/"+id+"/close",body||{})},
-  mtDelete:function(id){return apiSend("DELETE","/api/manual-trackers/"+id)}
+  mtDelete:function(id){return apiSend("DELETE","/api/manual-trackers/"+id)},
+  mtSetLegPrice:function(id,idx,price){return apiSend("PATCH","/api/manual-trackers/"+id+"/legs/"+idx+"/price",{price:price})}
 };
 /* =========================================================
    توابع کمکی عمومی
@@ -4862,7 +4863,7 @@ function CreateTabV2(props) {
 // ─── TrackerCard ───
 function TrackerCardV2(props) {
   var item = props.item, type = props.type;
-  var onEdit = props.onEdit, onClose = props.onClose, onDelete = props.onDelete;
+  var onEdit = props.onEdit, onClose = props.onClose, onDelete = props.onDelete, onSetLegPrice = props.onSetLegPrice;
   var roi = item.currentROI;
   var roiCls = roi > 0 ? 'gain' : roi < 0 ? 'loss' : 'mut';
   var roiStr = roi == null ? '—' : ((roi > 0 ? '+' : '') + Number(roi).toFixed(2) + '٪');
@@ -4916,10 +4917,16 @@ function TrackerCardV2(props) {
                 {l.quantity ? <span className="mut"> ×{l.quantity}</span> : null}
                 {l.margin > 0 ? <span className="mut"> — تضمین: {Math.round(l.margin).toLocaleString()}</span> : null}
               </div>
-              <div style={{fontSize:11,marginTop:1}}>
+              <div style={{fontSize:11,marginTop:1,display:'flex',flexWrap:'wrap',gap:6,alignItems:'center'}}>
                 {estimatedTag}
                 <span className="mut">قیمت فعلی: </span><b>{curP}</b>
                 <span className="mut"> | P&L این پا: </span><b className={legPnlCls}>{legPnl}</b>
+                <button type="button" className="cbtn cbtn-acc" style={{padding:'1px 8px',fontSize:10}}
+                  onClick={function(e){ e.stopPropagation(); onSetLegPrice(item, type, i, curP); }}>تعیین قیمت</button>
+                {isManual && l.manualCurrentPrice ? (
+                  <button type="button" className="cbtn" style={{padding:'1px 8px',fontSize:10}}
+                    onClick={function(e){ e.stopPropagation(); onSetLegPrice(item, type, i, 0); }}>لغو</button>
+                ) : null}
               </div>
             </div>
           );
@@ -4963,6 +4970,7 @@ function ActiveTabV2(props) {
         return <TrackerCardV2 key={(it._id || i) + '_' + it._type}
           item={it} type={it._type}
           onEdit={props.onEdit} onClose={props.onClose} onDelete={props.onDelete}
+          onSetLegPrice={props.onSetLegPrice}
         />;
       })}
     </div>
@@ -5313,6 +5321,19 @@ function SignalsOverlayV2(props) {
   if (!open) return null;
 
   function handleEdit(item, type) { setEditCtx({ item: item, type: type }); }
+  function handleSetLegPrice(item, type, idx, currentPrice) {
+    if (type !== 'manual') { showAlert('فقط در پیگیری‌های دستی قابل ویرایش قیمت است', 'warn', 4000); return; }
+    var def = currentPrice && currentPrice !== '—' ? String(currentPrice).replace(/,/g,'') : '';
+    var inp = window.prompt('قیمت فعلی این پا را وارد کنید (خالی = لغو override):', def);
+    if (inp === null) return;
+    var p = parseFloat(inp);
+    if (inp.trim() === '') p = 0;
+    else if (!Number.isFinite(p) || p < 0) { showAlert('قیمت نامعتبر', 'error', 3000); return; }
+    Api.mtSetLegPrice(item._id, idx, p).then(function(){
+      showAlert(p > 0 ? 'قیمت ذخیره شد' : 'override لغو شد', 'success', 3000);
+      reload();
+    }).catch(function(e){ showAlert('خطا: ' + e.message, 'error', 4000); });
+  }
   function handleClose(item, type) {
     var api = type === 'manual' ? Api.mtClose(item._id, {}) : Api.signalsClose(item._id, {});
     api.then(reload).catch(function(e){ setErr(e.message); });
@@ -5342,7 +5363,8 @@ function SignalsOverlayV2(props) {
         {err ? <div className="error-box" style={{margin:14}}><div className="desc">{err}</div></div> : null}
         {tab === 'create' ? <CreateTabV2 contracts={contracts} onCreated={reload} /> : null}
         {tab === 'active' ? <ActiveTabV2 manual={manual} signals={signals}
-          onEdit={handleEdit} onClose={handleClose} onDelete={handleDelete} /> : null}
+          onEdit={handleEdit} onClose={handleClose} onDelete={handleDelete}
+          onSetLegPrice={handleSetLegPrice} /> : null}
         {tab === 'sent' ? <SentTabV2 sent={sent} followed={signals}
           onFollow={function(s){setFollowCtx(s);}} /> : null}
       </div>
