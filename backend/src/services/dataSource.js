@@ -425,7 +425,13 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
         .replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, " ");
       s = stockMarket[nrmBn];
     }
-    if (!s || !(s.price > 0)) return;
+    if (!s || !(s.price > 0)) {
+      // 🆕 Symbol halted or missing from live-market — mark as pending
+      c.basis_data_pending = true;
+      c.basis_buyable = false;
+      c.basis_queue = null;
+      return;
+    }
 
     c.basis_price = s.price;
     c.basis_high  = s.high || 0;

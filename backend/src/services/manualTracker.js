@@ -6,18 +6,28 @@ var ManualTracker = require("../models/ManualTracker");
 var { sendLongMessage } = require("./telegram");
 var Settings = require("../models/Settings");
 
+var _feesCache = null;
+var _feesCacheAt = 0;
+var _FEES_TTL_MS = 60 * 1000;
+
 async function _loadFees() {
+    var now = Date.now();
+    if (_feesCache && (now - _feesCacheAt) < _FEES_TTL_MS) return _feesCache;
     try {
         var s = await Settings.findOne({ ownerId: "default" }).lean();
-        return {
+        _feesCache = {
             buy: (s && Number.isFinite(s.feeBuy)) ? s.feeBuy : 0.0012,
             sell: (s && Number.isFinite(s.feeSell)) ? s.feeSell : 0.0012,
             taxPct: (s && Number.isFinite(s.taxOnSellPct)) ? s.taxOnSellPct : 0.1
         };
+        _feesCacheAt = now;
+        return _feesCache;
     } catch (_) {
         return { buy: 0.0012, sell: 0.0012, taxPct: 0.1 };
     }
 }
+
+function _invalidateFeesCache() { _feesCache = null; _feesCacheAt = 0; }
 
 var deps = {
     logger: null,
@@ -340,7 +350,9 @@ async function calcOnce(payload) {
 }
 
 // ─── چک دوره‌ای ───
-async function checkAll() {
+async function checkAll(opts) {
+    opts = opts || {};
+    var allowNotify = opts.notify !== false;
     var active = await ManualTracker.find({
         ownerId: "default",
         status: "active",
@@ -352,8 +364,8 @@ async function checkAll() {
     var maps = buildMaps(chain);
     var fees = await _loadFees();
 
-    var token = process.env.TELEGRAM_BOT_TOKEN;
-    var chatId = process.env.TELEGRAM_CHAT_ID;
+    var token = allowNotify ? process.env.TELEGRAM_BOT_TOKEN : null;
+    var chatId = allowNotify ? process.env.TELEGRAM_CHAT_ID : null;
     var notified = 0;
 
     for (var i = 0; i < active.length; i++) {
@@ -398,6 +410,7 @@ async function checkAll() {
 
 module.exports = {
     init: init,
+    invalidateFeesCache: _invalidateFeesCache,
     create: create, list: list, getById: getById,
     update: update, remove: remove, close: close,
     calcOnce: calcOnce, checkAll: checkAll, computeLive: computeLive,

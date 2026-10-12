@@ -452,7 +452,16 @@ var Api={
   signalsUpdate:function(id,body){return apiSend("PATCH","/api/signals/followed/"+id,body)},
   signalsClose:function(id,body){return apiSend("POST","/api/signals/followed/"+id+"/close",body||{})},
   signalsDelete:function(id){return apiSend("DELETE","/api/signals/followed/"+id)},
-  mtContracts:function(){return apiGet("/api/manual-trackers/contracts")},
+  mtContracts:function(){
+    var now = Date.now();
+    if (window._mtContractsCache && (now - window._mtContractsCache.at) < 5 * 60 * 1000) {
+      return Promise.resolve(window._mtContractsCache.val);
+    }
+    return apiGet("/api/manual-trackers/contracts").then(function(r){
+      window._mtContractsCache = { at: Date.now(), val: r };
+      return r;
+    });
+  },
   mtCalc:function(body){return apiSend("POST","/api/manual-trackers/calc",body)},
   mtList:function(status){return apiGet("/api/manual-trackers?status="+(status||"active"))},
   mtGet:function(id){return apiGet("/api/manual-trackers/"+id)},
@@ -5235,7 +5244,10 @@ function SignalsOverlayV2(props) {
   React.useEffect(function(){
     if (!open) return;
     reload();
-    var t = setInterval(reload, 15000);
+    var t = setInterval(function(){
+      if (document.hidden) return;
+      reload();
+    }, 15000);
     return function(){ clearInterval(t); };
   }, [open]);
 
