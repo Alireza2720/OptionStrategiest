@@ -49,6 +49,7 @@ module.exports = {
         node_args: '--max-old-space-size=550 --expose-gc',
         node_args: '--max-old-space-size=550 --expose-gc',
         node_args: '--max-old-space-size=550 --expose-gc',
+        node_args: '--max-old-space-size=550 --expose-gc',
         env: Object.assign({ NODE_ENV: 'production' }, envVars),
         error_file: path.join(__dirname, 'logs', 'error.log'),
         out_file: path.join(__dirname, 'logs', 'out.log'),
