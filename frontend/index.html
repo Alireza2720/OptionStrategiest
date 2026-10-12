@@ -3464,7 +3464,7 @@ function SignalsOverlay(props){
   return (
     <div className="fs-overlay" role="dialog" aria-label="پیگیری سیگنال‌ها">
       <div className="fs-head">
-        <b>📡 پیگیری سیگنال‌ها</b>
+        <b>پیگیری سیگنال‌ها</b>
         {loading?<span className="tab-spin-dot" />:null}
         <div className="sp1" />
         <button className="ib" onClick={reload} title="بروزرسانی">↻</button>
@@ -4753,6 +4753,7 @@ function CreateTabV2(props) {
     if (!cleanLegs.length) throw new Error('حداقل یک پای معتبر (نام + قیمت ورود) لازم است');
     return {
       title: title || (STRATEGY_LEGS[stStratV] ? STRATEGY_LEGS[stStratV].label : 'پیگیری دستی'),
+      strategyId: stStratV,
       note: note,
       legs: cleanLegs,
       targets: targets.map(function(t){ return {kind:t.kind,value:parseFloat(t.value)||0}; })
@@ -4867,8 +4868,8 @@ function TrackerCardV2(props) {
   var roiStr = roi == null ? '—' : ((roi > 0 ? '+' : '') + Number(roi).toFixed(2) + '٪');
   var pnlStr = item.currentPnL == null ? '—' : Math.round(item.currentPnL).toLocaleString();
   var isManual = type === 'manual';
-  var title = isManual ? (item.title || 'پیگیری دستی') : (item.snapshot && item.snapshot.primary_name || '—');
-  var stratId = isManual ? null : (item.snapshot && item.snapshot.strategy_type);
+  var title = isManual ? (item.title || 'بدون عنوان') : (item.snapshot && item.snapshot.primary_name || '—');
+  var stratId = isManual ? (item.strategyId || null) : (item.snapshot && item.snapshot.strategy_type);
   var stratLabel = stratId && STRATEGY_LEGS[stratId] ? STRATEGY_LEGS[stratId].label : (stratId || 'دستی');
 
   var legs = isManual ? (item.legs || []) : ((item.snapshot && item.snapshot.legs) || []).map(function(l,i){
@@ -4886,26 +4887,40 @@ function TrackerCardV2(props) {
         <span>
           <span className="badge bdg-itm" style={{marginLeft:6,fontSize:10}}>{stratLabel}</span>
           <b>{title}</b>
-          {isManual ? <span className="badge" style={{marginRight:6,fontSize:9,background:'var(--acc-t)',color:'var(--acc)'}}>دستی</span> : null}
+          {(isManual && stratLabel === 'دستی') ? <span className="badge" style={{marginRight:6,fontSize:9,background:'var(--acc-t)',color:'var(--acc)'}}>دستی</span> : null}
         </span>
         <span className={'badge ' + (roi >= 0 ? 'bdg-itm' : 'bdg-q1')} style={{fontSize:13}}>{roiStr}</span>
       </div>
       <div className="gcard-p" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,fontSize:12}}>
-        <div>💰 P&L: <b className={roiCls}>{pnlStr}</b></div>
-        <div>📊 مبنا: <b>{item.base == null ? '—' : Math.round(item.base).toLocaleString()}</b></div>
-        <div>📈 Peak: <b className="gain">{item.peakROI == null ? '—' : Number(item.peakROI).toFixed(2) + '٪'}</b></div>
-        <div>📉 Trough: <b className="loss">{item.troughROI == null ? '—' : Number(item.troughROI).toFixed(2) + '٪'}</b></div>
+        <div title="سود یا زیان فعلی به ریال">سود/زیان: <b className={roiCls}>{pnlStr}</b></div>
+        <div title="مبلغ خالصی که در این استراتژی پرداخت کرده‌اید">سرمایه‌گذاری خالص: <b>{item.base == null ? '—' : Math.round(item.base).toLocaleString()}</b></div>
+        <div title="بیشترین بازده تجربه‌شده از زمان شروع">بیشترین بازده: <b className="gain">{item.peakROI == null ? '—' : Number(item.peakROI).toFixed(2) + '٪'}</b></div>
+        <div title="کمترین بازده تجربه‌شده از زمان شروع">کمترین بازده: <b className="loss">{item.troughROI == null ? '—' : Number(item.troughROI).toFixed(2) + '٪'}</b></div>
       </div>
       <div style={{marginTop:8,fontSize:11.5,lineHeight:1.9}}>
         {legs.map(function(l,i){
           var sideL = l.side === 'sell' ? 'فروش' : 'خرید';
           var kindL = l.kind === 'stock' ? 'سهم' : (l.kind === 'call' ? 'کال' : 'پوت');
-          var price = l.entryPrice != null ? Number(l.entryPrice).toLocaleString() : '—';
+          var entryP = l.entryPrice != null ? Number(l.entryPrice).toLocaleString() : '—';
+          var liveL = (item.lastLegsLive && item.lastLegsLive[i]) ? item.lastLegsLive[i] : null;
+          var curP = liveL && liveL.currentExitPrice != null ? Number(liveL.currentExitPrice).toLocaleString() : '—';
+          var legPnl = liveL && liveL.pnl != null ? Math.round(liveL.pnl).toLocaleString() : '—';
+          var legPnlCls = liveL && liveL.pnl != null ? (liveL.pnl >= 0 ? 'gain' : 'loss') : 'mut';
+          var estimatedTag = liveL && liveL.detail && liveL.detail.estimated
+            ? <span className="mut" style={{fontSize:9.5,padding:'0 5px',background:'var(--warn-t)',color:'var(--warn)',borderRadius:3,marginRight:4}}>تخمینی</span>
+            : null;
           return (
-            <div key={i}>
-              • {kindL} <code>{l.contractName || '-'}</code> — {sideL} @ <b>{price}</b>
-              {l.quantity ? <span className="mut"> ×{l.quantity}</span> : null}
-              {l.margin > 0 ? <span className="mut"> — تضمین: {Math.round(l.margin).toLocaleString()}</span> : null}
+            <div key={i} style={{paddingBottom:3,borderBottom:i<legs.length-1?'1px dashed var(--bor)':'none',marginBottom:3}}>
+              <div>
+                {kindL} <code>{l.contractName || '-'}</code> — {sideL} @ <b>{entryP}</b>
+                {l.quantity ? <span className="mut"> ×{l.quantity}</span> : null}
+                {l.margin > 0 ? <span className="mut"> — تضمین: {Math.round(l.margin).toLocaleString()}</span> : null}
+              </div>
+              <div style={{fontSize:11,marginTop:1}}>
+                {estimatedTag}
+                <span className="mut">قیمت فعلی: </span><b>{curP}</b>
+                <span className="mut"> | P&L این پا: </span><b className={legPnlCls}>{legPnl}</b>
+              </div>
             </div>
           );
         })}
@@ -5312,16 +5327,16 @@ function SignalsOverlayV2(props) {
   return (
     <div className="fs-overlay" role="dialog">
       <div className="fs-head">
-        <b>📡 پیگیری سیگنال‌ها</b>
+        <b>پیگیری سیگنال‌ها</b>
         {loading ? <span className="tab-spin-dot" /> : null}
         <div style={{flex:1}} />
         <button className="ib" onClick={reload} title="بروزرسانی">↻</button>
         <button className="ib" onClick={onClose}>✕</button>
       </div>
       <div className="msub-tabs">
-        <button className={tabCls('create')} onClick={function(){setTab('create');}}>➕ ایجاد / محاسبه</button>
-        <button className={tabCls('active')} onClick={function(){setTab('active');}}>📊 در حال پیگیری ({manual.length + signals.length})</button>
-        <button className={tabCls('sent')} onClick={function(){setTab('sent');}}>📤 ارسال‌شده ({sent.length})</button>
+        <button className={tabCls('create')} onClick={function(){setTab('create');}}>ایجاد / محاسبه</button>
+        <button className={tabCls('active')} onClick={function(){setTab('active');}}>در حال پیگیری ({manual.length + signals.length})</button>
+        <button className={tabCls('sent')} onClick={function(){setTab('sent');}}>ارسال‌شده ({sent.length})</button>
       </div>
       <div className="fs-body" style={{overflow:'hidden'}}>
         {err ? <div className="error-box" style={{margin:14}}><div className="desc">{err}</div></div> : null}
