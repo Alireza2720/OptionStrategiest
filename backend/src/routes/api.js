@@ -453,4 +453,41 @@ router.get("/admin/status", async function (req, res) {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+
+// ---------- Notification Bell: پیگیری سیگنال‌های رسیده به هدف ----------
+router.get("/notifications/hits", async function (req, res) {
+  try {
+    var FollowedSignal = require("../models/FollowedSignal");
+    var docs = await FollowedSignal.find({ ownerId: "default", status: "active" }).lean();
+    var out = [];
+    docs.forEach(function (f) {
+      (f.targets || []).forEach(function (t, idx) {
+        if (!t.hit) return;
+        out.push({
+          id: f._id + "#" + idx,
+          followedId: f._id,
+          signalKey: f.signalKey,
+          strategy: (f.snapshot && f.snapshot.strategy_type) || "",
+          primary_name: (f.snapshot && f.snapshot.primary_name) || "",
+          basis_name: (f.snapshot && f.snapshot.basis_name) || "",
+          kind: t.kind,
+          value: t.value,
+          hitAt: t.hitAt,
+          notified: !!t.notified,
+          currentROI: f.currentROI,
+          currentPnL: f.currentPnL,
+          entryNote: f.entryNote || ""
+        });
+      });
+    });
+    out.sort(function (a, b) {
+      return new Date(b.hitAt || 0) - new Date(a.hitAt || 0);
+    });
+    res.json({ ok: true, hits: out });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
+

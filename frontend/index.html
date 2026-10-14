@@ -271,10 +271,15 @@ tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
   .ov-remove{min-width:32px;min-height:32px;font-size:16px;padding:4px 8px}
   .msub-tab{min-height:44px;padding:12px 0;font-size:13px}
   .ov-add-btn{min-height:42px;padding:10px 18px;font-size:13px}
-  .step-input,.hunt-strat-input,.ov-input-name,.ov-input-price,.mini-num,.range-input{min-height:32px;font-size:12px;padding:4px 6px}
-  table{font-size:11px}
-  th{font-size:10px;padding:5px 4px}
-  td{padding:4px 4px}
+  /* ═══ Dense table mode (mobile) — row ~32px, font 11px ═══ */
+  table{font-size:11px;line-height:1.3}
+  th{font-size:10px;padding:4px 5px;line-height:1.2;height:auto}
+  td{padding:3px 5px;line-height:1.3;height:28px;max-height:32px}
+  thead tr.fr td{padding:2px 3px}
+  thead tr.fr input{padding:2px 4px;font-size:10px;min-height:22px}
+  .step-input,.hunt-strat-input,.ov-input-name,.ov-input-price,.mini-num,.range-input{min-height:30px;font-size:12px;padding:3px 5px}
+  .sv{min-width:44px;padding:3px 2px;font-size:10px}
+  .svh{min-width:44px;padding:4px 2px;font-size:9.5px}
   .info-toggle-btn{min-width:26px;min-height:26px;font-size:13px}
   .hunt-strat-tg input[type=checkbox],.toggle-switch input[type=checkbox],.ov-toggle input[type=checkbox]{width:20px;height:20px}
   .hunt-strat-row,.hunt-metric-row{gap:8px}
@@ -1810,10 +1815,32 @@ function StrategyTable(props){
     if(IS_TOUCH&&c.sticky&&w>70)return 70;
     return w;
   };
+  var stStickySet=useState({});
+  var stickyActive=stStickySet[0],setStickyActive=stStickySet[1];
   var stickyOffset=useMemo(function(){
     var offsets={},acc=0;
-    cols.forEach(function(c){if(c.sticky){offsets[c.k]=acc;acc+=effectiveW(c)}});
+    cols.forEach(function(c){
+      if(c.sticky&&stickyActive[c.k]){offsets[c.k]=acc;acc+=effectiveW(c)}
+    });
     return offsets;
+  },[cols,colW.widths,stickyActive]);
+  useEffect(function(){
+    var el=twRef2.current;if(!el)return;
+    function update(){
+      var sl=el.scrollLeft;
+      var slAbs=Math.abs(sl);
+      var act={};
+      var colRight=0;
+      cols.forEach(function(c){
+        var w=effectiveW(c);
+        if(c.sticky&&slAbs>colRight) act[c.k]=true;
+        colRight+=w;
+      });
+      setStickyActive(act);
+    }
+    el.addEventListener("scroll",update,{passive:true});
+    update();
+    return function(){el.removeEventListener("scroll",update)};
   },[cols,colW.widths]);
 
   var twRef=useRef(null);
@@ -2025,10 +2052,49 @@ function Watch(props){
     if(IS_TOUCH&&c.sticky&&w>70)return 70;
     return w;
   };
+  // ═══ Progressive sticky: هر ستون فقط وقتی sticky می‌شود که به لبه برسد ═══
+  var twRefSticky=useRef(null);
+  var stScrollLeft=useState(0);
+  var scrollLeft=stScrollLeft[0];
+  var stColOffsets=useState({});
+  var colNaturalOffsets=stColOffsets[0],setColNaturalOffsets=stColOffsets[1];
+  var stStickySet=useState({});
+  var stickyActive=stStickySet[0],setStickyActive=stStickySet[1];
   var stickyOffset=useMemo(function(){
     var offsets={},acc=0;
-    cols.forEach(function(c){if(c.sticky){offsets[c.k]=acc;acc+=effectiveW(c)}});
+    cols.forEach(function(c){
+      if(c.sticky&&stickyActive[c.k]){offsets[c.k]=acc;acc+=effectiveW(c)}
+    });
     return offsets;
+  },[cols,colW.widths,stickyActive]);
+  useEffect(function(){
+    var el=twRefSticky.current;if(!el)return;
+    function update(){
+      var sl=el.scrollLeft;
+      setScrollLeft(sl);
+      // محاسبه عرض کل ستون‌های قبلی برای هر ستون sticky
+      var act={},acc=0;
+      var runningOffset=0;
+      cols.forEach(function(c){
+        var w=effectiveW(c);
+        if(c.sticky){
+          // اگر موقعیت طبیعی ستون منهای scrollLeft از لبه‌ی راست viewport خارج شود → sticky
+          // natural right position of column = sum of widths of all previous columns
+          var colRight=0;
+          for(var i=0;i<cols.length;i++){
+            if(cols[i].k===c.k)break;
+            colRight+=effectiveW(cols[i]);
+          }
+          // در RTL، scrollLeft منفی می‌شود. قدر مطلق می‌گیریم.
+          var slAbs=Math.abs(sl);
+          if(slAbs>colRight) act[c.k]=true;
+        }
+      });
+      setStickyActive(act);
+    }
+    el.addEventListener("scroll",update,{passive:true});
+    update();
+    return function(){el.removeEventListener("scroll",update)};
   },[cols,colW.widths]);
 
   useEffect(function(){
@@ -2097,7 +2163,7 @@ function Watch(props){
         
       </div>
       <div className="tw-wrap" style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
-        <div className="tw" style={{flex:1}} ref={twRef}>
+        <div className="tw" style={{flex:1}} ref={function(el){twRef.current=el;twRefSticky.current=el;}}>
           <table className="tbl-watch">
             <colgroup>
               {cols.map(function(c){return <col key={c.k} style={{width:effectiveW(c)}} />})}
@@ -4671,6 +4737,7 @@ function handleTabClick(id){
             value={globalSearch} onChange={function(e){setGlobalSearch(e.target.value)}} />
           {globalSearch?<button className="search-clear" onClick={function(){setGlobalSearch("")}}>✕</button>:null}
         </div>
+        <NotificationBell onOpenSignals={function(){setSignalsOpen(true)}} />
         <div className="status-chip" role="status">
           <div className={dotCls} />
           <span>{refreshing?"در حال اجرای محاسبات...":applying?"در حال اعمال تنظیمات...":globalError?"خطا":(watchTabData&&watchTabData.updatedAt)?new Date(watchTabData.updatedAt).toLocaleTimeString("fa-IR"):""}</span>
@@ -4848,6 +4915,94 @@ function AdminPanel(props){
         )}
       </div>
     </Modal>
+  );
+}
+
+function NotificationBell(props){
+  var stOpen=useState(false);var open=stOpen[0],setOpen=stOpen[1];
+  var stHits=useState([]);var hits=stHits[0],setHits=stHits[1];
+  var stSeen=useState(function(){
+    try{return JSON.parse(localStorage.getItem("bell_seen_ids")||"[]")}catch(e){return []}
+  });
+  var seen=stSeen[0],setSeen=stSeen[1];
+  var stErr=useState(null);var err=stErr[0],setErr=stErr[1];
+  var ref=useRef(null);
+
+  function load(){
+    apiGet("/api/notifications/hits").then(function(r){
+      setHits(r.hits||[]);
+      setErr(null);
+    }).catch(function(e){setErr(formatApiError(e,"خطا در دریافت اعلان‌ها"))});
+  }
+
+  useEffect(function(){
+    load();
+    var t=setInterval(load,30000);
+    return function(){clearInterval(t)};
+  },[]);
+
+  useEffect(function(){
+    function onDoc(e){
+      if(ref.current&&!ref.current.contains(e.target))setOpen(false);
+    }
+    document.addEventListener("mousedown",onDoc);
+    return function(){document.removeEventListener("mousedown",onDoc)};
+  },[]);
+
+  function markAllSeen(){
+    var ids=hits.map(function(h){return h.id});
+    setSeen(ids);
+    try{localStorage.setItem("bell_seen_ids",JSON.stringify(ids))}catch(e){}
+  }
+
+  var seenSet={};seen.forEach(function(id){seenSet[id]=true});
+  var unread=hits.filter(function(h){return !seenSet[h.id]});
+  var unreadCount=unread.length;
+
+  return (
+    <div ref={ref} style={{position:"relative"}}>
+      <button className="ib" onClick={function(){setOpen(!open);if(!open)setTimeout(markAllSeen,800);}} aria-label="اعلان‌ها" title="اعلان‌های سیگنال" style={{position:"relative"}}>
+        🔔
+        {unreadCount>0?<span style={{position:"absolute",top:"2px",left:"2px",minWidth:"16px",height:"16px",padding:"0 4px",borderRadius:"8px",background:"var(--loss)",color:"#fff",fontSize:"10px",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>{unreadCount>9?"9+":unreadCount}</span>:null}
+      </button>
+      {open?(
+        <div style={{position:"absolute",top:"36px",left:"0",zIndex:120,width:"min(360px,92vw)",maxHeight:"70vh",overflow:"auto",background:"var(--sur)",border:"1px solid var(--bor)",borderRadius:"var(--r)",boxShadow:"var(--sh-md)",padding:"6px 0"}}>
+          <div style={{padding:"8px 12px",borderBottom:"1px solid var(--bor)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <b style={{fontSize:"12.5px"}}>اعلان‌های سیگنال</b>
+            <span style={{fontSize:"11px",color:"var(--mut)"}}>{hits.length} مورد</span>
+          </div>
+          {err?<div style={{padding:"12px",color:"var(--loss)",fontSize:"11.5px"}}>{err}</div>:null}
+          {!err&&hits.length===0?(
+            <div style={{padding:"24px 12px",textAlign:"center",color:"var(--mut)",fontSize:"12px"}}>
+              هیچ سیگنالی به هدفش نرسیده است
+            </div>
+          ):null}
+          {hits.map(function(h){
+            var isProfit=h.kind==="profit";
+            var color=isProfit?"var(--gain)":"var(--loss)";
+            var emoji=isProfit?"🎯":"🛑";
+            var title=isProfit?"هدف سود":"حد ضرر";
+            var isNew=!seenSet[h.id];
+            return (
+              <div key={h.id} style={{padding:"8px 12px",borderBottom:"1px solid var(--bor)",cursor:"pointer",background:isNew?"var(--acc-t)":undefined,transition:"background .2s"}}
+                onClick={function(){if(props.onOpenSignals)props.onOpenSignals();setOpen(false);}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:"6px",alignItems:"center",marginBottom:"2px"}}>
+                  <span style={{fontSize:"12px",fontWeight:700,color:color}}>{emoji} {title}</span>
+                  <span style={{fontSize:"10px",color:"var(--mut)"}}>{h.hitAt?new Date(h.hitAt).toLocaleString("fa-IR"):""}</span>
+                </div>
+                <div style={{fontSize:"11.5px",color:"var(--txt2)",marginBottom:"2px"}}>
+                  {strategyLabel(h.strategy)} · <b>{h.primary_name||h.basis_name}</b>
+                </div>
+                <div style={{fontSize:"11px",color:"var(--mut)",display:"flex",justifyContent:"space-between"}}>
+                  <span>هدف: {isProfit?"+":""}{h.value}٪</span>
+                  {h.currentROI!=null?<span>ROI فعلی: {(h.currentROI>0?"+":"")+h.currentROI.toFixed(2)}٪</span>:null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ):null}
+    </div>
   );
 }
 
