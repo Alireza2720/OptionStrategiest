@@ -2038,7 +2038,7 @@ function Watch(props){
   var pendingOpenSt=useState(false);var pendingOpen=pendingOpenSt[0],setPendingOpen=pendingOpenSt[1];
   var sortRes=useSort(rows||EMPTY_ARR,saved.sortKey||"tvalue",saved.sortDir||"desc");
   var sorted=sortRes.sorted,s=sortRes.s,dir=sortRes.dir,onS=sortRes.onS;
-  var filtRes=useFilters(saved.filters||{});
+  var filtRes=useFilters(saved.filters||{},{storeKey:"watch"});
   var f=filtRes.f,setF=filtRes.set,clear=filtRes.clear,has=filtRes.has,applyRow=filtRes.applyRow;
   var searchDeb=useDebounced(globalSearch,180);
   var dteMinDeb=useDebounced(dteFilterMin,180);
