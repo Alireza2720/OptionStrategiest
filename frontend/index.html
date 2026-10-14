@@ -246,6 +246,15 @@ tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
 .formula-box{background:var(--sur);border:1px dashed var(--bor2);border-radius:6px;padding:8px 10px;font-size:11.5px;line-height:2.1;color:var(--txt2);margin-top:6px}
 .formula-box code{color:var(--acc);font-weight:700}
 
+/* ═══ Signal Card ═══ */
+.signal-card{background:var(--sur);border:1px solid var(--bor);border-left:4px solid var(--acc);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;box-shadow:var(--sh)}
+.signal-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.signal-card-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.signal-badge{padding:2px 8px;border-radius:4px;background:var(--acc-t);color:var(--acc);font-size:10px;font-weight:700;white-space:nowrap}
+.signal-roi{font-size:20px;font-weight:800;white-space:nowrap}
+.signal-basis{color:var(--txt2);font-size:12px}
+.signal-expiry{color:var(--mut);font-size:11px}
+
 /* ═══ Empty state ═══ */
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:60px 20px;color:var(--mut);text-align:center}
 .empty-state .empty-icon{font-size:56px;opacity:.35;margin-bottom:6px;line-height:1}
@@ -262,7 +271,10 @@ tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
   .ov-remove{min-width:32px;min-height:32px;font-size:16px;padding:4px 8px}
   .msub-tab{min-height:44px;padding:12px 0;font-size:13px}
   .ov-add-btn{min-height:42px;padding:10px 18px;font-size:13px}
-  .step-input,.hunt-strat-input,.ov-input-name,.ov-input-price,.mini-num,.range-input{min-height:38px;font-size:13px}
+  .step-input,.hunt-strat-input,.ov-input-name,.ov-input-price,.mini-num,.range-input{min-height:32px;font-size:12px;padding:4px 6px}
+  table{font-size:11px}
+  th{font-size:10px;padding:5px 4px}
+  td{padding:4px 4px}
   .info-toggle-btn{min-width:26px;min-height:26px;font-size:13px}
   .hunt-strat-tg input[type=checkbox],.toggle-switch input[type=checkbox],.ov-toggle input[type=checkbox]{width:20px;height:20px}
   .hunt-strat-row,.hunt-metric-row{gap:8px}
@@ -2491,12 +2503,6 @@ function HamMenu(props){
             <span>{L.huntPositions}</span><span>›</span>
           </div>
 
-          <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6,borderColor:"var(--acc)",background:"var(--acc-t)",color:"var(--acc)"}}
-            onClick={function(){onClose();onOpenAdmin&&onOpenAdmin();}}
-            onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenAdmin&&onOpenAdmin();}}}>
-            <span>🔐 پنل ادمین</span><span>›</span>
-          </div>
-
           <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--gain)", background:"var(--gain-t)", color:"var(--gain)"}}
             onClick={function(){onClose();onOpenSignals()}}
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenSignals()}}}>
@@ -2677,6 +2683,15 @@ function HamMenu(props){
               </div>
             :null}
           </div>
+          <div className="mdiv" />
+
+          <div className="msec">
+            <button type="button" className="cbtn" style={{width:"100%",padding:"10px",fontSize:12.5}}
+              onClick={function(){onClose();onOpenAdmin&&onOpenAdmin();}}>
+              🔐 پنل ادمین
+            </button>
+          </div>
+
         </div>
       </div>
     </React.Fragment>
@@ -3489,17 +3504,17 @@ function FollowedSignalRow(props){
   var pnlStr=f.currentPnL==null?"—":n(Math.round(f.currentPnL));
 
   return (
-    <div className="gcard" style={{marginBottom:10}}>
-      <div className="gcard-t" style={{justifyContent:"space-between",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-        <span>
-          <span className="bdg bdg-itm" style={{marginLeft:6}}>{strategyLabel(f.snapshot.strategy_type)}</span>
+    <div className="signal-card" style={{borderLeftColor:f.currentROI>=0?"var(--gain)":"var(--loss)"}}>
+      <div className="signal-card-head">
+        <div className="signal-card-title">
+          <span className="signal-badge">{strategyLabel(f.snapshot.strategy_type)}</span>
           <b>{f.snapshot.primary_name}</b>
-          <span className="tb" style={{marginRight:6}}>{f.snapshot.basis_name}</span>
-          <span className="mut">{f.snapshot.expiry}</span>
-        </span>
-        <span className={"bdg "+(f.currentROI>=0?"bdg-itm":"bdg-q1")} style={{fontSize:13}}>
+          <span className="signal-basis">{f.snapshot.basis_name}</span>
+          <span className="signal-expiry">{f.snapshot.expiry}</span>
+        </div>
+        <div className={"signal-roi "+(f.currentROI>=0?"gain":"loss")}>
           {roiStr}
-        </span>
+        </div>
       </div>
 
       <div className="gcard-p" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
@@ -4255,6 +4270,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
   var stHolidayBusy=useState(false);var holidayBusy=stHolidayBusy[0],setHolidayBusy=stHolidayBusy[1];
 
   var stTabsData=useState({});var tabsData=stTabsData[0],setTabsData=stTabsData[1];
+  var tabCacheRef=useRef({});
   var stTabLoading=useState({});var tabLoading=stTabLoading[0],setTabLoading=stTabLoading[1];
   var stTabError=useState({});var tabError=stTabError[0],setTabError=stTabError[1];
 
@@ -4294,11 +4310,17 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
 
   /* ---------- بارگذاری داده از سرور ---------- */
   function loadTabData(kind){
+    var cached=tabCacheRef.current[kind];
+    if(cached&&(Date.now()-cached.at)<30000){
+      setTabsData(function(prev){return Object.assign({},prev,{[kind]:cached.data})});
+      return Promise.resolve(cached.data);
+    }
     setTabLoading(function(prev){return Object.assign({},prev,{[kind]:true})});
     var p=kind==="watch"
       ?Api.watch().then(function(r){return {updatedAt:r.updatedAt,rows:r.rows}})
       :Api.strategy(kind).then(function(r){return {updatedAt:r.updatedAt,steps:r.steps,rows:r.rows}});
     return p.then(function(data){
+      tabCacheRef.current[kind]={at:Date.now(),data:data};
       setTabsData(function(prev){return Object.assign({},prev,{[kind]:data})});
       setTabError(function(prev){var c=Object.assign({},prev);delete c[kind];return c});
       return data;
@@ -4341,6 +4363,21 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
     loadHolidayStatus();
     loadTabData(tabRef.current).catch(function(){});
   },[]);
+
+  useEffect(function(){
+    var watch=tabsData.watch;
+    if(!watch||!watch.rows)return;
+    var t=setTimeout(function(){
+      ["cc","mp","co","cv","strangle","strangleSell","callspread","callspreadbear","putspread","putspreadbull","box","boxSell"].forEach(function(k){
+        if(!tabCacheRef.current[k]){
+          Api.strategy(k).then(function(r){
+            tabCacheRef.current[k]={at:Date.now(),data:{updatedAt:r.updatedAt,steps:r.steps,rows:r.rows}};
+          }).catch(function(){});
+        }
+      });
+    },2000);
+    return function(){clearTimeout(t)};
+  },[tabsData.watch&&tabsData.watch.updatedAt]);
 
   // نشانگر بازه‌ی ارسال پیام باید مستقل از تنظیم "بروزرسانی خودکار" هر ۶۰ ثانیه به‌روز بماند
   useEffect(function(){
@@ -4418,7 +4455,13 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
         return Api.refresh().then(reloadCurrentTab);
       }
     }).catch(function(e){
-      setGlobalError(formatApiError(e, "خطا در ذخیره تنظیمات"));
+      var msg=String(e.message||e);
+      if(/401|unauthorized/i.test(msg)){
+        setGlobalError("برای ذخیره تنظیمات باید رمز ادمین را وارد کنید. از منوی ☰ → پنل ادمین وارد شوید.");
+        setAdminOpen(true);
+      } else {
+        setGlobalError(formatApiError(e, "خطا در ذخیره تنظیمات"));
+      }
       loadSettings();
     }).finally(function(){setApplying(false)});
   }
@@ -4666,6 +4709,7 @@ function AdminPanel(props){
   var stSaving=useState(false);var saving=stSaving[0],setSaving=stSaving[1];
   var stLoggedIn=useState(!!CONFIG.getApiKey());var loggedIn=stLoggedIn[0],setLoggedIn=stLoggedIn[1];
   var stLoginPwd=useState("");var loginPwd=stLoginPwd[0],setLoginPwd=stLoginPwd[1];
+  var stShowPwd=useState(false);var showPwd=stShowPwd[0],setShowPwd=stShowPwd[1];
 
   useEffect(function(){
     if(!open)return;
@@ -4716,10 +4760,17 @@ function AdminPanel(props){
         {!loggedIn?(
           <div>
             <div className="msec-t" style={{marginBottom:6}}>ورود</div>
-            <input type="password" className="ov-input-name" style={{width:"100%",marginBottom:8}}
-              placeholder="رمز ادمین" value={loginPwd}
-              onChange={function(e){setLoginPwd(e.target.value);}}
-              onKeyDown={function(e){if(e.key==="Enter")doLogin();}} />
+            <div style={{position:"relative",marginBottom:8}}>
+              <input type={showPwd?"text":"password"} className="ov-input-name" style={{width:"100%",paddingLeft:"36px"}}
+                placeholder="رمز ادمین" value={loginPwd}
+                onChange={function(e){setLoginPwd(e.target.value);}}
+                onKeyDown={function(e){if(e.key==="Enter")doLogin();}} />
+              <button type="button" onClick={function(){setShowPwd(!showPwd);}}
+                style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:"16px",color:"var(--mut)",padding:"2px"}}
+                title={showPwd?"مخفی کردن رمز":"نمایش رمز"}>
+                {showPwd?"🙈":"👁"}
+              </button>
+            </div>
             <button className="ov-add-btn" onClick={doLogin} disabled={saving||!loginPwd}>
               {saving?"...":"ورود"}
             </button>
