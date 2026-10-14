@@ -69,7 +69,7 @@ pm2 flush optionstrategiest
 ## زمان‌بندی
 
 - watcher: هر 30 ثانیه
-- internal tick: فقط در ساعات بازار (9:00-12:35)
+- internal tick: فقط در ساعات بازار (9:00-12:30)
 - cycle: هر بار تغییر API
 
 ## عیب‌یابی

@@ -890,8 +890,22 @@ function useSort(data,defaultKey,initialDir){
   return {sorted:sorted,s:sortKey,dir:dir,onS:onS};
 }
 
-function useFilters(initial){
-  var st=useState(initial||{});
+function useFilters(initial,opts){
+  opts=opts||{};
+  var storeKey=opts.storeKey||"";
+  var st=useState(function(){
+    if(storeKey){
+      try{
+        var p=new URLSearchParams(window.location.hash.slice(1));
+        var fdStr=p.get("f");
+        if(fdStr){
+          var fd=JSON.parse(fdStr);
+          if(fd&&fd[storeKey])return fd[storeKey];
+        }
+      }catch(e){}
+    }
+    return initial||{};
+  });
   var f=st[0];
   var fDebounced=useDebounced(f,180);
   var set=useCallback(function(key,val){
@@ -1763,7 +1777,7 @@ function StrategyTable(props){
   var saved=(store&&storeKey&&store[storeKey])||{};
   var sortRes=useSort(data,saved.sortKey||"roi_zero",saved.sortDir||"desc");
   var sorted=sortRes.sorted,s=sortRes.s,dir=sortRes.dir,onS=sortRes.onS;
-  var filtRes=useFilters(saved.filters||{});
+  var filtRes=useFilters(saved.filters||{},{storeKey:storeKey});
   var f=filtRes.f,setF=filtRes.set,clear=filtRes.clear,has=filtRes.has,applyRow=filtRes.applyRow;
 
   var dteMinDeb=useDebounced(dteFilterMin,180);
@@ -1772,6 +1786,7 @@ function StrategyTable(props){
 
   useEffect(function(){
     if(store&&storeKey)store[storeKey]={filters:f,sortKey:s,sortDir:dir};
+    try{ window.dispatchEvent(new Event("of:filter")); }catch(e){}
   },[f,s,dir]);
 
   var final=useMemo(function(){
@@ -1790,9 +1805,14 @@ function StrategyTable(props){
   var cols=allCols;
   var colW=useColWidths(kind+"_"+storeKey+"_v1",cols);
 
+  var effectiveW=function(c){
+    var w=colW.getWidth(c.k,c.w);
+    if(IS_TOUCH&&c.sticky&&w>70)return 70;
+    return w;
+  };
   var stickyOffset=useMemo(function(){
     var offsets={},acc=0;
-    cols.forEach(function(c){if(c.sticky){offsets[c.k]=acc;acc+=colW.getWidth(c.k,c.w)}});
+    cols.forEach(function(c){if(c.sticky){offsets[c.k]=acc;acc+=effectiveW(c)}});
     return offsets;
   },[cols,colW.widths]);
 
@@ -1819,7 +1839,7 @@ function StrategyTable(props){
         <div className="tw" style={{flex:1}} ref={twRef}>
           <table className="tbl-strat">
             <colgroup>
-              {cols.map(function(c){return <col key={c.k} style={{width:colW.getWidth(c.k,c.w)}} />})}
+              {cols.map(function(c){return <col key={c.k} style={{width:effectiveW(c)}} />})}
               {scenAdjArr.map(function(_,i){return <col key={"csc"+i} style={{width:isSingle?120:54}} />})}
               {scenRawArr.map(function(_,i){return <col key={"craw"+i} style={{width:isSingle?120:54}} />})}
               {trailingCols.map(function(_,i){return <col key={"ct"+i} style={{width:80}} />})}
@@ -2000,14 +2020,20 @@ function Watch(props){
   var cols=WATCH_COLS;
 
   var colW=useColWidths("watch_v1",WATCH_COLS);
+  var effectiveW=function(c){
+    var w=colW.getWidth(c.k,c.w);
+    if(IS_TOUCH&&c.sticky&&w>70)return 70;
+    return w;
+  };
   var stickyOffset=useMemo(function(){
     var offsets={},acc=0;
-    cols.forEach(function(c){if(c.sticky){offsets[c.k]=acc;acc+=colW.getWidth(c.k,c.w)}});
+    cols.forEach(function(c){if(c.sticky){offsets[c.k]=acc;acc+=effectiveW(c)}});
     return offsets;
   },[cols,colW.widths]);
 
   useEffect(function(){
     if(store&&storeKey)store[storeKey]={filters:f,sortKey:s,sortDir:dir};
+    try{ window.dispatchEvent(new Event("of:filter")); }catch(e){}
   },[f,s,dir]);
 
   var final=useMemo(function(){
@@ -2074,7 +2100,7 @@ function Watch(props){
         <div className="tw" style={{flex:1}} ref={twRef}>
           <table className="tbl-watch">
             <colgroup>
-              {cols.map(function(c){return <col key={c.k} style={{width:colW.getWidth(c.k,c.w)}} />})}
+              {cols.map(function(c){return <col key={c.k} style={{width:effectiveW(c)}} />})}
               <col key="__raw_btn" style={{width:40}} />
             </colgroup>
             <thead>
@@ -4395,6 +4421,34 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
       if(window.location.hash.slice(1)!==h)window.history.replaceState(null,"",u);
     }catch(e){}
   },[tab]);
+
+  /* همگام‌سازی فیلترها با URL — با debounce */
+  useEffect(function(){
+    var t=null;
+    function sync(){
+      clearTimeout(t);
+      t=setTimeout(function(){
+        try{
+          var out={};
+          [watchStoreRef.current,sectionStoreRef.current].forEach(function(store){
+            if(!store)return;
+            Object.keys(store).forEach(function(sk){
+              var e=store[sk];
+              if(e&&e.filters&&Object.keys(e.filters).length>0)out[sk]=e.filters;
+            });
+          });
+          var p=new URLSearchParams(window.location.hash.slice(1));
+          if(Object.keys(out).length>0)p.set("f",JSON.stringify(out));
+          else p.delete("f");
+          var h=p.toString();
+          var u=window.location.pathname+window.location.search+(h?"#"+h:"");
+          if(window.location.hash.slice(1)!==h)window.history.replaceState(null,"",u);
+        }catch(e){}
+      },500);
+    }
+    window.addEventListener("of:filter",sync);
+    return function(){window.removeEventListener("of:filter",sync);clearTimeout(t);};
+  },[]);
 
   /* گوش دادن به back/forward برای تغییرات hash */
   useEffect(function(){

@@ -5,6 +5,16 @@ var { sendLongMessage } = require("./telegram");
 
 var CONTRACT_SIZE = 1000;
 
+var STRATEGY_LABELS_MAP = {
+  cc: "کاورد کال", mp: "مریدپوت", co: "کلار", cv: "کانورژن",
+  strangle: "استرانگل خرید", strangleSell: "استرانگل فروش",
+  callspread: "کال اسپرد صعودی", callspreadbear: "کال اسپرد نزولی",
+  putspread: "پوت اسپرد نزولی", putspreadbull: "پوت اسپرد صعودی",
+  box: "خرید باکس", boxSell: "فروش باکس"
+};
+function strategyLabel(code){ return STRATEGY_LABELS_MAP[code] || code || ""; }
+
+
 // نگاشت هر استراتژی به ترتیب side هر پای
 // side = "buy" → کاربر خرید، بستن با bid
 // side = "sell" → کاربر فروخت، بستن با ask
@@ -207,7 +217,7 @@ async function checkFollowedSignals(token, chatId, notify, cache) {
         var msg = emoji + " <b>" + title + "</b>\n"
                 + "━━━━━━━━━━━━━━━━━━━━━━\n"
                 + "📌 سیگنال: <code>" + (f.snapshot.primary_name || "") + "</code>\n"
-                + "📊 استراتژی: " + (f.snapshot.strategy_type || "") + "\n"
+                + "📊 استراتژی: " + strategyLabel(f.snapshot.strategy_type) + "\n"
                 + "🎯 هدف: " + (t.kind === "profit" ? "+" : "") + t.value + "٪\n"
                 + "📈 ROI فعلی: " + (result.roi >= 0 ? "+" : "") + result.roi.toFixed(2) + "٪\n"
                 + "💰 P&L (per contract): " + Math.round(result.pnl).toLocaleString() + "\n"
