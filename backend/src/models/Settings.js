@@ -90,12 +90,22 @@ var SettingsSchema = new mongoose.Schema({
   // فعال/غیرفعال کردن ذخیره‌ی داده‌های دیباگ در هر چرخه
   debugCollectEnabled: { type: Boolean, default: false },
 
-  // کارمزد خرید (نسبت درصدی) - default 0.0012 = 0.12%
+  // ─── کارمزد و مالیات (جدید) ───
+  feeEnabled: { type: Boolean, default: false },
+  optionFeeBuy: { type: Number, default: 0.0012 },
+  optionFeeSell: { type: Number, default: 0.0012 },
+  optionTaxOnSellPct: { type: Number, default: 0.1 },
+  stockFeeBuy: { type: Number, default: 0.0012 },
+  stockFeeSell: { type: Number, default: 0.0012 },
+  stockTaxOnSellPct: { type: Number, default: 0.1 },
+
+  // ─── سازگاری با فیلدهای قدیمی ───
   feeBuy: { type: Number, default: 0.0012 },
-  // کارمزد فروش (نسبت درصدی) - default 0.0012 = 0.12%
   feeSell: { type: Number, default: 0.0012 },
-  // مالیات فروش (نسبت درصدی از کارمزد فروش) - default 0.1 = 10% tax on fee
-  taxOnSellPct: { type: Number, default: 0.1 }
+  taxOnSellPct: { type: Number, default: 0.1 },
+
+  // ─── رمز ادمین (پنل ادمین) ───
+  adminPassword: { type: String, default: "" }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Settings", SettingsSchema);

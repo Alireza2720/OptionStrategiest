@@ -301,7 +301,15 @@ var useRef=React.useRef;
    ========================================================= */
 var CONFIG={
   API_BASE:"https://api.optionstrategist.ir",
-  API_KEY:"sk-0g6k1r5J7Z8v3Q2L1mN4T3P9R8Y5W2X1Z0A7B6C5D4E3F2G1H"  /* <<< اینجا همون مقدار API_KEY که در .env بک‌اندت هست رو بذار */
+  getApiKey:function(){
+    try { return localStorage.getItem("admin_password") || ""; } catch(e) { return ""; }
+  },
+  setApiKey:function(v){
+    try {
+      if(v) localStorage.setItem("admin_password", v);
+      else localStorage.removeItem("admin_password");
+    } catch(e) {}
+  }
 };
 
 /* =========================================================
@@ -411,7 +419,8 @@ function apiGet(path){
 }
 function apiSend(method,path,body){
   var headers={"Content-Type":"application/json"};
-  if(CONFIG.API_KEY)headers["x-api-key"]=CONFIG.API_KEY;
+  var _k=CONFIG.getApiKey();
+  if(_k)headers["x-api-key"]=_k;
   return fetch(apiUrl(path),{
     method:method,headers:headers,
     body:body!==undefined?JSON.stringify(body):undefined
@@ -2372,6 +2381,7 @@ function HamMenu(props){
     refreshSec=props.refreshSec,setRefreshSec=props.setRefreshSec,
     autoRefreshEnabled=props.autoRefreshEnabled,setAutoRefreshEnabled=props.setAutoRefreshEnabled,
     onOpenHunt=props.onOpenHunt,onOpenDebug=props.onOpenDebug,onOpenSignals=props.onOpenSignals,onOpenManualTracker=props.onOpenManualTracker,
+    onOpenAdmin=props.onOpenAdmin,
     holidayStatus=props.holidayStatus,onToggleHoliday=props.onToggleHoliday,holidayBusy=props.holidayBusy;
 
   var stHuntOpen=useState(false);
@@ -2394,6 +2404,12 @@ function HamMenu(props){
             onClick={function(){onClose();onOpenHunt()}}
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenHunt()}}}>
             <span>{L.huntPositions}</span><span>›</span>
+          </div>
+
+          <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6,borderColor:"var(--acc)",background:"var(--acc-t)",color:"var(--acc)"}}
+            onClick={function(){onClose();onOpenAdmin&&onOpenAdmin();}}
+            onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenAdmin&&onOpenAdmin();}}}>
+            <span>🔐 پنل ادمین</span><span>›</span>
           </div>
 
           <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--gain)", background:"var(--gain-t)", color:"var(--gain)"}}
@@ -2519,6 +2535,62 @@ function HamMenu(props){
                   .catch(function(e){window.alert("خطا: "+e.message)});
               }}>پاک کردن داده‌های دیباگ</button>
             </div>
+          </div>
+          <div className="mdiv" />
+
+          <div className="msec">
+            <div className="msec-t-row">
+              <span className="msec-t">کارمزد و مالیات</span>
+              <InfoToggle>با فعال‌سازی این گزینه، کارمزد خرید/فروش و مالیات فروش در محاسبات سود و زیان لحاظ می‌شود. نرخ‌ها برای آپشن‌ها و سهم پایه جداگانه تعریف می‌شوند.</InfoToggle>
+            </div>
+            <label className="toggle-switch" style={{marginBottom:8}}>
+              <input type="checkbox" checked={settings.feeEnabled===true}
+                onChange={function(e){updateSettings({feeEnabled:e.target.checked},false)}} />
+              محاسبه کارمزد و مالیات
+            </label>
+            {settings.feeEnabled?
+              <div style={{padding:"6px 0"}}>
+                <div className="step-hint" style={{marginBottom:6,fontWeight:700}}>آپشن‌ها:</div>
+                <div className="step-row" style={{marginBottom:6}}>
+                  <span style={{minWidth:90,fontSize:12}}>کارمزد خرید:</span>
+                  <NumberField className="step-input" value={settings.optionFeeBuy!=null?+(settings.optionFeeBuy*100).toFixed(4):0.12} min={0} max={10}
+                    onCommit={function(v){updateSettings({optionFeeBuy:v/100},false)}} ariaLabel="کارمزد خرید آپشن" />
+                  <span className="step-hint">٪</span>
+                </div>
+                <div className="step-row" style={{marginBottom:6}}>
+                  <span style={{minWidth:90,fontSize:12}}>کارمزد فروش:</span>
+                  <NumberField className="step-input" value={settings.optionFeeSell!=null?+(settings.optionFeeSell*100).toFixed(4):0.12} min={0} max={10}
+                    onCommit={function(v){updateSettings({optionFeeSell:v/100},false)}} ariaLabel="کارمزد فروش آپشن" />
+                  <span className="step-hint">٪</span>
+                </div>
+                <div className="step-row" style={{marginBottom:10}}>
+                  <span style={{minWidth:90,fontSize:12}}>مالیات فروش:</span>
+                  <NumberField className="step-input" value={settings.optionTaxOnSellPct!=null?+(settings.optionTaxOnSellPct*100).toFixed(2):10} min={0} max={100}
+                    onCommit={function(v){updateSettings({optionTaxOnSellPct:v/100},false)}} ariaLabel="مالیات فروش آپشن" />
+                  <span className="step-hint">٪ از کارمزد</span>
+                </div>
+
+                <div className="step-hint" style={{marginBottom:6,fontWeight:700}}>سهم پایه:</div>
+                <div className="step-row" style={{marginBottom:6}}>
+                  <span style={{minWidth:90,fontSize:12}}>کارمزد خرید:</span>
+                  <NumberField className="step-input" value={settings.stockFeeBuy!=null?+(settings.stockFeeBuy*100).toFixed(4):0.12} min={0} max={10}
+                    onCommit={function(v){updateSettings({stockFeeBuy:v/100},false)}} ariaLabel="کارمزد خرید سهم" />
+                  <span className="step-hint">٪</span>
+                </div>
+                <div className="step-row" style={{marginBottom:6}}>
+                  <span style={{minWidth:90,fontSize:12}}>کارمزد فروش:</span>
+                  <NumberField className="step-input" value={settings.stockFeeSell!=null?+(settings.stockFeeSell*100).toFixed(4):0.12} min={0} max={10}
+                    onCommit={function(v){updateSettings({stockFeeSell:v/100},false)}} ariaLabel="کارمزد فروش سهم" />
+                  <span className="step-hint">٪</span>
+                </div>
+                <div className="step-row" style={{marginBottom:6}}>
+                  <span style={{minWidth:90,fontSize:12}}>مالیات فروش:</span>
+                  <NumberField className="step-input" value={settings.stockTaxOnSellPct!=null?+(settings.stockTaxOnSellPct*100).toFixed(2):10} min={0} max={100}
+                    onCommit={function(v){updateSettings({stockTaxOnSellPct:v/100},false)}} ariaLabel="مالیات فروش سهم" />
+                  <span className="step-hint">٪ از کارمزد</span>
+                </div>
+              </div>
+            :null}
           </div>
         </div>
       </div>
@@ -4105,6 +4177,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
   var stHuntErr=useState(null);var huntError=stHuntErr[0],setHuntError=stHuntErr[1];
   var stHuntOpen=useState(false);var huntOpen=stHuntOpen[0],setHuntOpen=stHuntOpen[1];
   var stDebugOpen=useState(false);var debugOpen=stDebugOpen[0],setDebugOpen=stDebugOpen[1];
+  var stAdminOpen=useState(false);var adminOpen=stAdminOpen[0],setAdminOpen=stAdminOpen[1];
 
   var stMenu=useState(false);var menuOpen=stMenu[0],setMenuOpen=stMenu[1];
   var stTab=useState("watch");var tab=stTab[0],setTab=stTab[1];
@@ -4343,6 +4416,7 @@ function handleTabClick(id){
         onOpenDebug={function(){setDebugOpen(true)}}
         onOpenSignals={function(){setSignalsOpen(true)}}
         onOpenManualTracker={function(){setMtOpen(true)}}
+        onOpenAdmin={function(){setAdminOpen(true)}}
         holidayStatus={holidayStatus} onToggleHoliday={handleToggleHoliday} holidayBusy={holidayBusy}
       />
 
@@ -4354,6 +4428,8 @@ function handleTabClick(id){
 
 
       <DebugOverlay open={debugOpen} onClose={function(){setDebugOpen(false)}} />
+
+      <AdminPanel open={adminOpen} onClose={function(){setAdminOpen(false)}} />
 
       {chartCtx?(
         <ErrorBoundary fallback={function(){return <FloatFallback onClose={closeChart} />}}>
@@ -4455,6 +4531,96 @@ function handleTabClick(id){
         )}
       </div>
     </div>
+  );
+}
+
+function AdminPanel(props){
+  var open=props.open,onClose=props.onClose;
+  var stCur=useState("");var cur=stCur[0],setCur=stCur[1];
+  var stNew=useState("");var newP=stNew[0],setNewP=stNew[1];
+  var stCnf=useState("");var cnf=stCnf[0],setCnf=stCnf[1];
+  var stMsg=useState(null);var msg=stMsg[0],setMsg=stMsg[1];
+  var stErr=useState(null);var err=stErr[0],setErr=stErr[1];
+  var stSaving=useState(false);var saving=stSaving[0],setSaving=stSaving[1];
+  var stLoggedIn=useState(!!CONFIG.getApiKey());var loggedIn=stLoggedIn[0],setLoggedIn=stLoggedIn[1];
+  var stLoginPwd=useState("");var loginPwd=stLoginPwd[0],setLoginPwd=stLoginPwd[1];
+
+  useEffect(function(){
+    if(!open)return;
+    setLoggedIn(!!CONFIG.getApiKey());
+    setErr(null);setMsg(null);
+  },[open]);
+
+  function doLogin(){
+    setErr(null);setMsg(null);setSaving(true);
+    apiSend("POST","/api/admin/login",{password:loginPwd})
+      .then(function(r){
+        if(r&&r.valid){
+          CONFIG.setApiKey(loginPwd);
+          setLoggedIn(true);
+          setMsg("ورود موفق");
+          setLoginPwd("");
+        } else { setErr(r&&r.error||"رمز اشتباه"); }
+      })
+      .catch(function(e){setErr(e.message||"خطا");})
+      .finally(function(){setSaving(false);});
+  }
+  function doChangePwd(){
+    setErr(null);setMsg(null);
+    if(newP.length<4){setErr("رمز جدید حداقل 4 کاراکتر");return;}
+    if(newP!==cnf){setErr("تکرار رمز جدید مطابقت ندارد");return;}
+    setSaving(true);
+    apiSend("POST","/api/admin/change-password",{currentPassword:cur,newPassword:newP})
+      .then(function(){
+        CONFIG.setApiKey(newP);
+        setMsg("رمز با موفقیت تغییر کرد");
+        setCur("");setNewP("");setCnf("");
+      })
+      .catch(function(e){setErr(e.message||"خطا");})
+      .finally(function(){setSaving(false);});
+  }
+  function doLogout(){
+    CONFIG.setApiKey("");
+    setLoggedIn(false);
+    setMsg("از حساب خارج شدید");
+  }
+
+  if(!open)return null;
+  return (
+    <Modal title="پنل ادمین" onClose={onClose} width="min(500px,96vw)">
+      <div style={{padding:14}}>
+        {err?<div className="error-box" style={{marginBottom:10}}><div className="desc">{err}</div></div>:null}
+        {msg?<div className="gcard" style={{marginBottom:10}}><div className="gcard-p">{msg}</div></div>:null}
+        {!loggedIn?(
+          <div>
+            <div className="msec-t" style={{marginBottom:6}}>ورود</div>
+            <input type="password" className="ov-input-name" style={{width:"100%",marginBottom:8}}
+              placeholder="رمز ادمین" value={loginPwd}
+              onChange={function(e){setLoginPwd(e.target.value);}}
+              onKeyDown={function(e){if(e.key==="Enter")doLogin();}} />
+            <button className="ov-add-btn" onClick={doLogin} disabled={saving||!loginPwd}>
+              {saving?"...":"ورود"}
+            </button>
+          </div>
+        ):(
+          <div>
+            <div className="msec-t" style={{marginBottom:6}}>تغییر رمز</div>
+            <input type="password" className="ov-input-name" style={{width:"100%",marginBottom:6}}
+              placeholder="رمز فعلی" value={cur} onChange={function(e){setCur(e.target.value);}} />
+            <input type="password" className="ov-input-name" style={{width:"100%",marginBottom:6}}
+              placeholder="رمز جدید (حداقل 4 کاراکتر)" value={newP} onChange={function(e){setNewP(e.target.value);}} />
+            <input type="password" className="ov-input-name" style={{width:"100%",marginBottom:10}}
+              placeholder="تکرار رمز جدید" value={cnf} onChange={function(e){setCnf(e.target.value);}} />
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className="ov-add-btn" onClick={doChangePwd} disabled={saving||!cur||!newP||!cnf}>
+                {saving?"...":"تغییر رمز"}
+              </button>
+              <button className="cbtn" onClick={doLogout}>خروج</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
   );
 }
 

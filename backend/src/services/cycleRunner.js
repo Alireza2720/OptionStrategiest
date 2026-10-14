@@ -18,7 +18,7 @@ var manualTracker = require("./manualTracker");
 var HUNT_CACHE_CAP = 800;
 var FAILURE_ALERT_THRESHOLD = 3;
 
-var HUNT_STATE_CAP = 2000;
+// بدون cap
 
 function strategyExitEnabled(type, settings) {
   var src = (settings.huntStrategies && settings.huntStrategies[type]) || {};
@@ -251,15 +251,21 @@ async function runCycle(opts) {
 
     var exitedRows = prevRows.filter(function (r) {
       if (currKeyMap[huntRowKey(r)]) return false;
-      if ((r.dte || 0) <= 1) return false; // قراردادهای منقضی‌شده را نادیده بگیر
+      if ((r.dte || 0) <= 1) return false;
       return true;
     });
+
+    // محافظت از glitch API
+    if (prevRows.length >= 5 && huntRows.length < prevRows.length * 0.5) {
+      console.log("[cycle] افت شدید rows: " + prevRows.length + " → " + huntRows.length + " — exit notify غیرفعال شد.");
+      exitedRows = [];
+    }
 
     // ذخیره‌ی وضعیت جدید (مستقل از notify؛ تا در ری‌استارت‌ها هم درست کار کنه)
     try {
       await HuntState.findOneAndUpdate(
         { ownerId: "default" },
-        { rows: huntRows.slice(0, HUNT_STATE_CAP), updatedAt: new Date() },
+        { rows: huntRows, updatedAt: new Date() },
         { upsert: true }
       );
     } catch (e) {

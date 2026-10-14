@@ -16,6 +16,13 @@ async function _loadFees() {
     try {
         var s = await Settings.findOne({ ownerId: "default" }).lean();
         _feesCache = {
+            enabled: !!(s && s.feeEnabled),
+            optionBuy: (s && Number.isFinite(s.optionFeeBuy)) ? s.optionFeeBuy : 0.0012,
+            optionSell: (s && Number.isFinite(s.optionFeeSell)) ? s.optionFeeSell : 0.0012,
+            optionTaxPct: (s && Number.isFinite(s.optionTaxOnSellPct)) ? s.optionTaxOnSellPct : 0.1,
+            stockBuy: (s && Number.isFinite(s.stockFeeBuy)) ? s.stockFeeBuy : 0.0012,
+            stockSell: (s && Number.isFinite(s.stockFeeSell)) ? s.stockFeeSell : 0.0012,
+            stockTaxPct: (s && Number.isFinite(s.stockTaxOnSellPct)) ? s.stockTaxOnSellPct : 0.1,
             buy: (s && Number.isFinite(s.feeBuy)) ? s.feeBuy : 0.0012,
             sell: (s && Number.isFinite(s.feeSell)) ? s.feeSell : 0.0012,
             taxPct: (s && Number.isFinite(s.taxOnSellPct)) ? s.taxOnSellPct : 0.1
@@ -23,7 +30,7 @@ async function _loadFees() {
         _feesCacheAt = now;
         return _feesCache;
     } catch (_) {
-        return { buy: 0.0012, sell: 0.0012, taxPct: 0.1 };
+        return { enabled: false, optionBuy: 0.0012, optionSell: 0.0012, optionTaxPct: 0.1, stockBuy: 0.0012, stockSell: 0.0012, stockTaxPct: 0.1, buy: 0.0012, sell: 0.0012, taxPct: 0.1 };
     }
 }
 
@@ -149,8 +156,19 @@ function _findContract(contractMap, name, expiry) {
 }
 
 // ─── محاسبه‌ی P&L زنده ───
+
+// helper: نرخ کارمزد بر اساس نوع پا و سمت معامله
+function _feeFor(leg, side, fees) {
+    if (!fees || !fees.enabled) return { rate: 0, tax: 0 };
+    var isStock = leg.kind === "stock";
+    if (side === "buy") return { rate: isStock ? fees.stockBuy : fees.optionBuy, tax: 0 };
+    var rate = isStock ? fees.stockSell : fees.optionSell;
+    var taxPct = isStock ? fees.stockTaxPct : fees.optionTaxPct;
+    return { rate: rate, tax: rate * taxPct };
+}
+
 function computeLive(legs, margin, contractMap, basisMap, fees) {
-    fees = fees || { buy: 0.0012, sell: 0.0012, taxPct: 0.1 };
+    fees = fees || { enabled: false, optionBuy: 0.0012, optionSell: 0.0012, optionTaxPct: 0.1, stockBuy: 0.0012, stockSell: 0.0012, stockTaxPct: 0.1, buy: 0.0012, sell: 0.0012, taxPct: 0.1 };
     var totalPnL = 0;
     var entryCF = 0;
     var missing = false;
@@ -217,15 +235,19 @@ function computeLive(legs, margin, contractMap, basisMap, fees) {
         var pnl, pnlPct;
         if (leg.side === "sell") {
             // Sell: entry proceeds minus fee+sell tax; exit cost plus buy fee
-            var _sellFee = entry * mult * (fees.sell + fees.sell * fees.taxPct);
-            var _buyFee  = exitPrice * mult * fees.buy;
+            var _fS = _feeFor(leg, "sell", fees);
+            var _fB = _feeFor(leg, "buy", fees);
+            var _sellFee = entry * mult * (_fS.rate + _fS.tax);
+            var _buyFee  = exitPrice * mult * _fB.rate;
             pnl = (entry * mult - exitPrice * mult) - _sellFee - _buyFee;
             entryCF -= entry * mult;
             pnlPct = entry > 0 ? ((pnl) / (entry * mult)) * 100 : 0;
         } else {
             // Buy: entry cost plus buy fee; exit proceeds minus sell fee and tax
-            var _buyFeeIn  = entry * mult * fees.buy;
-            var _sellFeeOut = exitPrice * mult * (fees.sell + fees.sell * fees.taxPct);
+            var _fB2 = _feeFor(leg, "buy", fees);
+            var _fS2 = _feeFor(leg, "sell", fees);
+            var _buyFeeIn  = entry * mult * _fB2.rate;
+            var _sellFeeOut = exitPrice * mult * (_fS2.rate + _fS2.tax);
             pnl = (exitPrice * mult - entry * mult) - _buyFeeIn - _sellFeeOut;
             entryCF += entry * mult;
             pnlPct = entry > 0 ? ((pnl) / (entry * mult)) * 100 : 0;
@@ -332,7 +354,8 @@ async function create(payload) {
     try {
         var chain = deps.getChain ? (deps.getChain() || []) : [];
         var maps = buildMaps(chain);
-        var live = computeLive(doc.legs, doc.margin, maps.contractMap, maps.basisMap, fees);
+        var _fees = await _loadFees();
+        var live = computeLive(doc.legs, doc.margin, maps.contractMap, maps.basisMap, _fees);
         if (!live.missing) {
             doc.currentPnL = live.pnl;
             doc.currentROI = live.roi;
@@ -436,7 +459,7 @@ async function calcOnce(payload) {
     var chain = deps.getChain ? (deps.getChain() || []) : [];
     var maps = buildMaps(chain);
     var fees = await _loadFees();
-    return computeLive(legs, payload.margin, maps.contractMap, maps.basisMap, await _loadFees());
+    return computeLive(legs, payload.margin, maps.contractMap, maps.basisMap, fees);
 }
 
 // ─── چک دوره‌ای ───

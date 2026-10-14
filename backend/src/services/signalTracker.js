@@ -48,7 +48,8 @@ function findStockSpot(cache, basisName) {
 }
 
 // محاسبه‌ی P&L
-function computePnL(snapshot, entries, cache) {
+function computePnL(snapshot, entries, cache, fees) {
+  fees = fees || { enabled: false, optionBuy: 0.0012, optionSell: 0.0012, optionTaxPct: 0.1, stockBuy: 0.0012, stockSell: 0.0012, stockTaxPct: 0.1 };
   var strategyType = snapshot.strategy_type;
   var sides = legsSideFor(strategyType);
   var legs = snapshot.legs || [];
@@ -145,7 +146,7 @@ async function checkFollowedSignals(token, chatId, notify, cache) {
 
   for (var i = 0; i < list.length; i++) {
     var f = list[i];
-    var result = computePnL(f.snapshot, f.entries, cache);
+    var result = computePnL(f.snapshot, f.entries, cache, fees);
 
     if (result.missing) continue; // اگر داده ناقص است، آخرین مقدار معتبر را نگه دار
 

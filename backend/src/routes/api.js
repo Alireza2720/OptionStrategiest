@@ -12,13 +12,22 @@ var { fetchRawDataOnce, parseContracts, dedupeAndFlagBuyable } = require("../ser
 var apiWatcher = require("../services/apiWatcher");
 var crypto = require("crypto");
 
-function requireApiKey(req, res, next) {
-  var key = process.env.API_KEY;
-  if (!key) return next(); // اگر تعریف نشده، محدودیتی اعمال نمی‌شود (فقط برای توسعه‌ی محلی)
-  if (req.headers["x-api-key"] !== key) {
-    return res.status(401).json({ ok: false, error: "unauthorized" });
+async function requireApiKey(req, res, next) {
+  try {
+    var expected = process.env.API_KEY || "";
+    if (!expected) {
+      var s = await Settings.findOne({ ownerId: "default" }).lean();
+      expected = (s && s.adminPassword) || "";
+    }
+    if (!expected) return next();
+    var token = req.headers["x-api-key"] || req.headers["x-admin-token"] || "";
+    if (token !== expected) {
+      return res.status(401).json({ ok: false, error: "unauthorized" });
+    }
+    next();
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
   }
-  next();
 }
 
 // محدودیت نرخ برای مسیرهای پرهزینه (فراخوانی دیتاسورس خارجی + احتمالاً تلگرام)
@@ -104,7 +113,9 @@ router.post("/settings", requireApiKey, async function (req, res) {
   var allowed = ["scenStep", "dteFilterMin", "dteFilterMax", "checkIntervalSec",
     "huntOnlyBuyable", "huntTopN", "huntTopNUnlimited",
     "huntCooldownMinutes", "huntCooldownForever", "huntStrategies",
-    "feeBuy", "feeSell", "taxOnSellPct"];
+    "feeBuy", "feeSell", "taxOnSellPct",
+    "feeEnabled", "optionFeeBuy", "optionFeeSell", "optionTaxOnSellPct",
+    "stockFeeBuy", "stockFeeSell", "stockTaxOnSellPct"];
   var update = {};
   allowed.forEach(function (k) {
     if (Object.prototype.hasOwnProperty.call(body, k)) update[k] = body[k];
@@ -400,6 +411,44 @@ router.delete("/watcher/samples", requireApiKey, async function (req, res) {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+
+// ---------- ادمین: ورود / تغییر رمز / وضعیت ----------
+router.post("/admin/login", async function (req, res) {
+  try {
+    var body = req.body || {};
+    var password = String(body.password || "");
+    var s = await Settings.findOne({ ownerId: "default" }).lean();
+    var stored = (s && s.adminPassword) || process.env.API_KEY || "";
+    if (!stored) return res.json({ ok: true, valid: true, note: "no-password-set" });
+    if (password === stored) return res.json({ ok: true, valid: true });
+    return res.status(401).json({ ok: false, valid: false, error: "رمز اشتباه است" });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.post("/admin/change-password", async function (req, res) {
+  try {
+    var body = req.body || {};
+    var currentPwd = String(body.currentPassword || "");
+    var newPwd = String(body.newPassword || "");
+    if (newPwd.length < 4) return res.status(400).json({ ok: false, error: "رمز جدید حداقل 4 کاراکتر" });
+    var s = await Settings.findOne({ ownerId: "default" });
+    if (!s) s = await Settings.create({ ownerId: "default" });
+    var stored = s.adminPassword || process.env.API_KEY || "";
+    if (stored && currentPwd !== stored) return res.status(401).json({ ok: false, error: "رمز فعلی اشتباه است" });
+    s.adminPassword = newPwd;
+    await s.save();
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+router.get("/admin/status", async function (req, res) {
+  try {
+    var s = await Settings.findOne({ ownerId: "default" }).lean();
+    var hasPwd = !!((s && s.adminPassword) || process.env.API_KEY);
+    res.json({ ok: true, hasPassword: hasPwd, usingEnvKey: !!process.env.API_KEY });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 module.exports = router;
