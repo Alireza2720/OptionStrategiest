@@ -24,7 +24,7 @@
 }
 [data-theme=midnight]{
   --bg:#06080f;--sur:#0e1219;--sur2:#131720;--sur3:#181d28;--bor:#1e2535;--bor2:#2a3347;
-  --txt:#c8d8f0;--txt2:#8898b8;--mut:#4a5870;--acc:#7c3aed;--acc-d:#6d28d9;--acc-t:rgba(124,58,237,.15);
+  --txt:#d4e2f7;--txt2:#9aaccc;--mut:#6b7a95;--acc:#8b5cf6;--acc-d:#7c3aed;--acc-t:rgba(139,92,246,.16);
   --gain:#10b981;--gain-t:rgba(16,185,129,.12);--loss:#f43f5e;--loss-t:rgba(244,63,94,.12);
   --warn:#f59e0b;--warn-t:rgba(245,158,11,.12);--sh:none;--sh-md:0 4px 20px rgba(0,0,0,.5);--zebra:rgba(255,255,255,.045);
 }
@@ -36,7 +36,7 @@
 }
 [data-theme=slate]{
   --bg:#191b1f;--sur:#212429;--sur2:#282c32;--sur3:#30343b;--bor:#3a3f47;--bor2:#4a505a;
-  --txt:#e5e7ea;--txt2:#aab0b9;--mut:#6d7480;--acc:#f59e0b;--acc-d:#d97706;--acc-t:rgba(245,158,11,.14);
+  --txt:#e8eaee;--txt2:#b5bbc4;--mut:#8a919c;--acc:#fbbf24;--acc-d:#f59e0b;--acc-t:rgba(251,191,36,.15);
   --gain:#4ade80;--gain-t:rgba(74,222,128,.12);--loss:#f87171;--loss-t:rgba(248,113,113,.12);
   --warn:#fbbf24;--warn-t:rgba(251,191,36,.12);--sh:none;--sh-md:0 4px 16px rgba(0,0,0,.4);--zebra:rgba(255,255,255,.05);
 }
@@ -245,6 +245,37 @@ tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
 .gcard-ul li{font-size:11.5px;line-height:1.85;color:var(--txt2);margin-bottom:3px}
 .formula-box{background:var(--sur);border:1px dashed var(--bor2);border-radius:6px;padding:8px 10px;font-size:11.5px;line-height:2.1;color:var(--txt2);margin-top:6px}
 .formula-box code{color:var(--acc);font-weight:700}
+
+/* ═══ Empty state ═══ */
+.empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:60px 20px;color:var(--mut);text-align:center}
+.empty-state .empty-icon{font-size:56px;opacity:.35;margin-bottom:6px;line-height:1}
+.empty-state .empty-title{font-size:16px;font-weight:700;color:var(--txt2)}
+.empty-state .empty-desc{font-size:12.5px;max-width:360px;line-height:1.9}
+.empty-state .empty-actions{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+
+/* ═══ Mobile tap targets (WCAG/Apple/Google recommends >=44px for primary, >=36px for secondary) ═══ */
+@media (pointer:coarse),(max-width:768px){
+  .ib{min-width:42px;min-height:42px;font-size:18px}
+  .rbtn{min-width:42px;min-height:42px}
+  .tab{min-height:44px;padding:0 16px;font-size:13px}
+  .cbtn{min-height:36px;padding:7px 12px;font-size:12px;line-height:1.3;border-radius:5px}
+  .ov-remove{min-width:32px;min-height:32px;font-size:16px;padding:4px 8px}
+  .msub-tab{min-height:44px;padding:12px 0;font-size:13px}
+  .ov-add-btn{min-height:42px;padding:10px 18px;font-size:13px}
+  .step-input,.hunt-strat-input,.ov-input-name,.ov-input-price,.mini-num,.range-input{min-height:38px;font-size:13px}
+  .info-toggle-btn{min-width:26px;min-height:26px;font-size:13px}
+  .hunt-strat-tg input[type=checkbox],.toggle-switch input[type=checkbox],.ov-toggle input[type=checkbox]{width:20px;height:20px}
+  .hunt-strat-row,.hunt-metric-row{gap:8px}
+  .search-input{width:130px;padding:8px 26px 8px 10px;font-size:13px}
+  /* ═══ Column resizer: غیرفعال روی لمس تا با horizontal scroll تداخل نکند ═══ */
+  .col-resizer{display:none !important}
+}
+
+/* ═══ Sticky columns بهتر در موبایل: shadow ملایم تا معلوم شود frozen است ═══ */
+@media (pointer:coarse){
+  .sticky-col{box-shadow:2px 0 4px -2px rgba(0,0,0,.18)}
+}
+
 </style>
 </head>
 <body>
@@ -538,6 +569,43 @@ function matchesGlobalSearch(row,term){
   return false;
 }
 function sanitizeFilename(name){return String(name).replace(/[\\\/:*?"<>|]/g,"_").trim()||"خروجی"}
+
+/* تبدیل خطای فنی به پیام قابل فهم برای کاربر */
+function formatApiError(err, fallbackMsg) {
+  if (!err) return fallbackMsg || "خطای نامشخص";
+  var msg = String(err.message || err);
+  if (/Failed to fetch|NetworkError|net::ERR|load failed/i.test(msg)) {
+    return "اتصال به سرور برقرار نشد. لطفاً اتصال اینترنت خود را بررسی کنید.";
+  }
+  if (/timeout|ETIMEDOUT|aborted|AbortError/i.test(msg)) {
+    return "پاسخ سرور دیر شد. لطفاً چند لحظه دیگر دوباره تلاش کنید.";
+  }
+  if (/HTTP 401|unauthorized|Unauthorized/i.test(msg)) {
+    return "دسترسی شما منقضی شده است. لطفاً از پنل ادمین (☰) دوباره وارد شوید.";
+  }
+  if (/HTTP 403|forbidden|Forbidden/i.test(msg)) {
+    return "شما مجاز به انجام این عملیات نیستید.";
+  }
+  if (/HTTP 404|not found|not found/i.test(msg)) {
+    return "منبع درخواستی یافت نشد. ممکن است سرور در حال بروزرسانی باشد.";
+  }
+  if (/HTTP 429|too many/i.test(msg)) {
+    return "تعداد درخواست‌های شما زیاد است. لطفاً چند لحظه صبر کنید.";
+  }
+  if (/HTTP 5\d\d|internal server/i.test(msg)) {
+    return "خطای داخلی سرور. لطفاً چند لحظه دیگر دوباره تلاش کنید.";
+  }
+  if (/HTTP 400|Bad Request/i.test(msg)) {
+    return "درخواست نامعتبر. لطفاً تنظیمات را بررسی کنید.";
+  }
+  return (fallbackMsg ? fallbackMsg + " — " : "") + msg;
+}
+
+/* تبدیل کد استراتژی به نام فارسی */
+function strategyLabel(code) {
+  return BEST_STRATEGY_LABELS[code] || code || "";
+}
+
 function contractNamesForRow(kind,row){
   if(!row)return [];
   var exp=row.expiry;
@@ -770,6 +838,8 @@ function useColWidths(tableKey,cols){
   function onUp(){dragRef.current=null;window.removeEventListener("pointermove",onMove);window.removeEventListener("pointerup",onUp)}
   function startResize(colKey,minWidth){
     return function(e){
+      // روی دستگاه لمس (موبایل/تبلت)، resize غیرفعال است تا با horizontal scroll تداخل نکند
+      if(IS_TOUCH)return;
       e.preventDefault();e.stopPropagation();
       dragRef.current={colKey:colKey,startX:e.clientX,startW:widths[colKey]||100,minWidth:minWidth||8};
       window.addEventListener("pointermove",onMove);
@@ -1356,7 +1426,7 @@ var NEW_STRATEGY_TITLE={
   box:L.box,boxSell:L.boxSell
 };
 var MARGIN_APPROX_NOTE="به دلیل تفاوت در نحوهٔ محاسبهٔ وجه تضمین میان کارگزاری‌های مختلف، بازده‌های نمایش‌داده‌شده در این جدول تقریبی هستند؛ برای سود و زیان دقیق این استراتژی حتماً به سامانهٔ معاملاتی کارگزاری خود مراجعه کنید.";
-var MARGIN_NOTE_KINDS={strangleSell:true};
+var MARGIN_NOTE_KINDS={strangleSell:true,boxSell:true,callspreadbear:true,putspreadbull:true};
 
 class ErrorBoundary extends React.Component{
   constructor(props){super(props);this.state={hasError:false}}
@@ -1924,6 +1994,7 @@ function Watch(props){
     dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax;
   var saved=(store&&storeKey&&store[storeKey])||{};
   var rawCtxSt=useState(null);var rawCtx=rawCtxSt[0],setRawCtx=rawCtxSt[1];
+  var pendingOpenSt=useState(false);var pendingOpen=pendingOpenSt[0],setPendingOpen=pendingOpenSt[1];
   var sortRes=useSort(rows||EMPTY_ARR,saved.sortKey||"tvalue",saved.sortDir||"desc");
   var sorted=sortRes.sorted,s=sortRes.s,dir=sortRes.dir,onS=sortRes.onS;
   var filtRes=useFilters(saved.filters||{});
@@ -1960,14 +2031,15 @@ function Watch(props){
     return r.filter(function(row){return applyRow(row,WATCH_COLS)}).filter(function(row){return matchesGlobalSearch(row,searchDeb)});
   },[sorted,applyRow,searchDeb,dteMinDeb,dteMaxDeb]);
 
-  var pendingCount=useMemo(function(){
-    var seen={},cnt=0;
+  var pendingData=useMemo(function(){
+    var seen={},list=[];
     (rows||[]).forEach(function(r){
       if(r.basis_data_pending&&r.basis_name&&!seen[r.basis_name]){
-        seen[r.basis_name]=true;cnt++;
+        seen[r.basis_name]=true;
+        list.push({name:r.basis_name, sampleContract:r.name, expiry:r.expiry});
       }
     });
-    return cnt;
+    return {count:list.length, items:list};
   },[rows]);
 
   var twRef=useRef(null);
@@ -1981,18 +2053,30 @@ function Watch(props){
     return <tr><td colSpan={totalCols} style={{textAlign:"center",color:"var(--loss)",fontSize:11,padding:"6px 8px"}}>خطا در نمایش این ردیف</td></tr>;
   }
 
-  if(!rows||rows.length===0)return <div className="center"><span>{L.noData}</span></div>;
+  if(!rows||rows.length===0)return (
+    <div className="empty-state">
+      <div className="empty-icon" aria-hidden="true">📊</div>
+      <div className="empty-title">هنوز داده‌ای دریافت نشده</div>
+      <div className="empty-desc">شاید سرور در حال اجرای اولین چرخه است (تا ۶۰ ثانیه) یا اتصال به منبع داده موقتاً قطع شده.</div>
+      <div className="empty-actions">
+        <button className="cbtn cbtn-acc" onClick={function(){loadTabData("watch");}}>↻ بارگذاری مجدد</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="watch-view">
       <div className="ibar">
         <span className="count-badge">{final.length}</span>
         <span className="count-label">قرارداد</span>
-        {pendingCount>0?(
-          <span className="bdg" style={{background:"var(--warn-t)",color:"var(--warn)"}}
-            title="تعداد سهم‌های پایه‌ای که داده‌ی درصدشان هنوز نرسیده">
-            ⏳ {pendingCount} در انتظار
-          </span>
+        {pendingData.count>0?(
+          <button type="button"
+            className="cbtn"
+            style={{borderColor:"var(--warn)",background:"var(--warn-t)",color:"var(--warn)",cursor:"pointer"}}
+            onClick={function(){setPendingOpen(true);}}
+            aria-label={pendingData.count+" سهم پایه در انتظار داده — کلیک برای جزئیات"}>
+            ⏳ {pendingData.count} سهم در انتظار داده
+          </button>
         ):null}
         {has?<button className="cbtn" onClick={clear}>{L.clearFilters}</button>:null}
         {IS_TOUCH?(
@@ -2048,6 +2132,34 @@ function Watch(props){
           ⬇ {L.exportXlsxShort}
         </button>
       </div>
+      {pendingOpen?(
+        <Modal title="سهم‌های پایه در انتظار داده" onClose={function(){setPendingOpen(false)}} width="min(600px,96vw)">
+          <div style={{padding:14}}>
+            <div className="gcard-p" style={{fontSize:12.5,lineHeight:1.9,marginBottom:12}}>
+              این سهم‌ها در منبع داده زنده (live-market) یافت نشده یا قیمت معتبر ندارند.
+              تا زمانیکه داده‌ی آن‌ها برسد، در استراتژی‌های سهم‌محور به عنوان «غیرقابل خرید» در نظر گرفته می‌شوند.
+            </div>
+            <div className="msec-t" style={{marginBottom:6}}>سهم‌های در انتظار ({pendingData.count}):</div>
+            <div style={{maxHeight:"50vh",overflowY:"auto"}}>
+              {pendingData.items.map(function(it,i){
+                return (
+                  <div key={i} style={{padding:"8px 10px",borderBottom:"1px solid var(--bor)",fontSize:12.5}}>
+                    <b>{it.name}</b>
+                    {it.sampleContract?<span className="mut" style={{marginRight:8,fontSize:11}}>مثال قرارداد: {it.sampleContract}</span>:null}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{marginTop:12,display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className="cbtn cbtn-acc" onClick={function(){setPendingOpen(false);loadTabData("watch");}}>
+                ↻ تلاش مجدد
+              </button>
+              <button className="cbtn" onClick={function(){setPendingOpen(false);}}>بستن</button>
+            </div>
+          </div>
+        </Modal>
+      ):null}
+
       {rawCtx?(
         <Modal title={"داده خام API — "+(rawCtx.name||"")} onClose={function(){setRawCtx(null)}} width="min(880px,96vw)">
           <div style={{padding:"10px 14px"}}>
@@ -3406,7 +3518,7 @@ function FollowedSignalRow(props){
     <div className="gcard" style={{marginBottom:10}}>
       <div className="gcard-t" style={{justifyContent:"space-between",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
         <span>
-          <span className="bdg bdg-itm" style={{marginLeft:6}}>{f.snapshot.strategy_type}</span>
+          <span className="bdg bdg-itm" style={{marginLeft:6}}>{strategyLabel(f.snapshot.strategy_type)}</span>
           <b>{f.snapshot.primary_name}</b>
           <span className="tb" style={{marginRight:6}}>{f.snapshot.basis_name}</span>
           <span className="mut">{f.snapshot.expiry}</span>
@@ -4180,7 +4292,14 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
   var stAdminOpen=useState(false);var adminOpen=stAdminOpen[0],setAdminOpen=stAdminOpen[1];
 
   var stMenu=useState(false);var menuOpen=stMenu[0],setMenuOpen=stMenu[1];
-  var stTab=useState("watch");var tab=stTab[0],setTab=stTab[1];
+  var stTab=useState(function(){
+    try{
+      var p=new URLSearchParams(window.location.hash.slice(1));
+      var t=p.get("tab");
+      if(t&&["watch","cc","mp","co","cv","strangle","strangleSell","callspread","callspreadbear","putspread","putspreadbull","box","boxSell"].indexOf(t)!==-1)return t;
+    }catch(e){}
+    return "watch";
+  });var tab=stTab[0],setTab=stTab[1];
   var stSignalsOpen=useState(false);var signalsOpen=stSignalsOpen[0],setSignalsOpen=stSignalsOpen[1];
   var stMtOpen=useState(false);var mtOpen=stMtOpen[0],setMtOpen=stMtOpen[1];
   var stSearch=useState("");var globalSearch=stSearch[0],setGlobalSearch=stSearch[1];
@@ -4209,7 +4328,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
       setTabError(function(prev){var c=Object.assign({},prev);delete c[kind];return c});
       return data;
     }).catch(function(e){
-      setTabError(function(prev){return Object.assign({},prev,{[kind]:e.message})});
+      setTabError(function(prev){return Object.assign({},prev,{[kind]:formatApiError(e, "خطا در دریافت داده")})});
       throw e;
     }).finally(function(){
       setTabLoading(function(prev){return Object.assign({},prev,{[kind]:false})});
@@ -4245,13 +4364,40 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
     loadSettings();
     loadOverrides();
     loadHolidayStatus();
-    loadTabData("watch").catch(function(){});
+    loadTabData(tabRef.current).catch(function(){});
   },[]);
 
   // نشانگر بازه‌ی ارسال پیام باید مستقل از تنظیم "بروزرسانی خودکار" هر ۶۰ ثانیه به‌روز بماند
   useEffect(function(){
     var interval=setInterval(function(){loadHolidayStatus()},60000);
     return function(){clearInterval(interval)};
+  },[]);
+
+  /* همگام‌سازی tab با URL hash — برای shareability و bookmark */
+  useEffect(function(){
+    try{
+      var p=new URLSearchParams(window.location.hash.slice(1));
+      if(tab&&tab!=="watch")p.set("tab",tab);else p.delete("tab");
+      var h=p.toString();
+      var u=window.location.pathname+(h?"#"+h:"");
+      if(window.location.hash.slice(1)!==h)window.history.replaceState(null,"",u);
+    }catch(e){}
+  },[tab]);
+
+  /* گوش دادن به back/forward برای تغییرات hash */
+  useEffect(function(){
+    function onHash(){
+      try{
+        var p=new URLSearchParams(window.location.hash.slice(1));
+        var t=p.get("tab")||"watch";
+        if(t!==tabRef.current){
+          setTab(t);
+          loadTabData(t).catch(function(){});
+        }
+      }catch(e){}
+    }
+    window.addEventListener("hashchange",onHash);
+    return function(){window.removeEventListener("hashchange",onHash)};
   },[]);
 
   useEffect(function(){if(huntOpen&&!huntData)loadHunt()},[huntOpen]);
@@ -4263,7 +4409,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
     Api.refresh().then(function(){
       return reloadCurrentTab();
     }).catch(function(e){
-      setGlobalError("خطا در بروزرسانی: "+e.message);
+      setGlobalError(formatApiError(e, "خطا در بروزرسانی"));
     }).finally(function(){
       setRefreshing(false);
     });
@@ -4297,7 +4443,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
         return Api.refresh().then(reloadCurrentTab);
       }
     }).catch(function(e){
-      setGlobalError("خطا در ذخیره تنظیمات: "+e.message);
+      setGlobalError(formatApiError(e, "خطا در ذخیره تنظیمات"));
       loadSettings();
     }).finally(function(){setApplying(false)});
   }
@@ -4308,7 +4454,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
     return loadOverrides().then(function(){
       return Api.refresh();
     }).then(reloadCurrentTab).catch(function(e){
-      setGlobalError("خطا در اعمال تغییرات: "+e.message);
+      setGlobalError(formatApiError(e, "خطا در اعمال تغییرات"));
     }).finally(function(){setApplying(false)});
   }
   function handleAddOverride(name,price){
@@ -4337,7 +4483,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
       setHolidayStatus({todayKey:res.todayKey,isHoliday:res.isHoliday,isMarketOpenNow:holidayStatus?holidayStatus.isMarketOpenNow:false});
       setSettings(function(prev){return prev?Object.assign({},prev,{manualHolidays:res.settings.manualHolidays}):prev});
     }).catch(function(e){
-      setGlobalError("خطا در تغییر وضعیت تعطیلی: "+e.message);
+      setGlobalError(formatApiError(e, "خطا در تغییر وضعیت تعطیلی"));
     }).finally(function(){setHolidayBusy(false)});
   }
 
@@ -5160,7 +5306,7 @@ function SentTabV2(props) {
           <div key={s._id || i} className="gcard" style={{marginBottom:8}}>
             <div className="gcard-t" style={{display:'flex',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}>
               <span>
-                <span className="badge bdg-itm" style={{marginLeft:6,fontSize:10}}>{s.strategy_type}</span>
+                <span className="badge bdg-itm" style={{marginLeft:6,fontSize:10}}>{strategyLabel(s.strategy_type)}</span>
                 <b>{s.primary_name}</b>
                 <span className="mut" style={{marginRight:6,fontSize:11}}>{s.basis_name}</span>
                 <span className="mut" style={{fontSize:11}}>{s.expiry}</span>
