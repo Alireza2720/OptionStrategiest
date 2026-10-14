@@ -31,6 +31,16 @@ function daysLeft(v, d) {
   return Math.max(0, Math.round(x));
 }
 
+
+// تابع نرمال‌سازی نام فارسی — برای تطبیق دقیق‌تر
+function normalizeFaName(s) {
+  return String(s || "").trim()
+    .replace(/\u064a/g, '\u06cc')  // ي → ی
+    .replace(/\u0643/g, '\u06a9')  // ك → ک
+    .replace(/[\u200c\u200e\u200f\u00a0]/g, '')  // حذف ZWNJ و کاراکترهای کنترلی
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 function firstNumber(row, keys, fallback) {
   for (var i = 0; i < keys.length; i++) {
     var v = row[keys[i]];
@@ -419,11 +429,19 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
   // ═══ مرحله ۱: ادغام داده‌ی زنده سهم پایه از live-market ═══
   contracts.forEach(function (c) {
     if (!c.basis_name) return;
+    // جستجوی مستقیم
     var s = stockMarket[c.basis_name];
+    // جستجوی با نرمال‌سازی
     if (!s) {
-      var nrmBn = String(c.basis_name || "").trim()
-        .replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, " ");
+      var nrmBn = normalizeFaName(c.basis_name);
       s = stockMarket[nrmBn];
+    }
+    // جستجوی نهایی: اسکن کلیدهای stockMarket با نرمال‌سازی
+    if (!s) {
+      var bnNorm = normalizeFaName(c.basis_name);
+      for (var sk in stockMarket) {
+        if (normalizeFaName(sk) === bnNorm) { s = stockMarket[sk]; break; }
+      }
     }
     if (!s || !(s.price > 0)) {
       // 🆕 Symbol halted or missing from live-market — mark as pending
@@ -438,22 +456,59 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
     c.basis_low   = s.low  || 0;
     c.basis_volume = s.volume || 0;
 
-    if (s.close > 0) {
-      c.basis_last_percent  = ((s.price - s.close) / s.close) * 100;
+    // محاسبه درصد — اگر close معتبر نبود، از closePrice یا priceYesterday استفاده کن
+    var closeRef = s.close > 0 ? s.close : (s.closePrice > 0 ? s.closePrice : (s.priceYesterday > 0 ? s.priceYesterday : 0));
+    if (closeRef > 0 && s.price > 0) {
+      c.basis_last_percent  = ((s.price - closeRef) / closeRef) * 100;
       c.basis_close_percent = c.basis_last_percent;
+    } else {
+      // اگر هیچ مرجع قیمتی موجود نبود، صفر نگذار — undefined بگذار تا فرانت "—" نشان دهد
+      c.basis_last_percent  = null;
+      c.basis_close_percent = null;
     }
 
-    // تشخیص صف با tolerance — Last باید **نزدیک** سقف/کف باشه (نه صرفاً >= یا <=)
-    // این کار از data quality issues (مثل MaxAllowed=200 برای سهم 6.7M ریالی) جلوگیری می‌کند
-    var highOk = s.high > 0 && s.high >= s.price * 0.5 && s.high <= s.price * 2;
-    var lowOk  = s.low  > 0 && s.low  >= s.price * 0.5 && s.low  <= s.price * 2;
-    var highLowValid = highOk && lowOk && s.high > s.low;
+    // ═══ تشخیص صف خرید/فروش با منطق مقاوم ═══
+    // اگر high/low صفر یا نامعتبر باشند، از MaxAllowed/MinAllowed استفاده می‌کنیم
+    var highVal = s.high > 0 ? s.high : (s.maxAllowed > 0 ? s.maxAllowed : 0);
+    var lowVal  = s.low  > 0 ? s.low  : (s.minAllowed > 0 ? s.minAllowed : 0);
 
     var atCeiling = false, atFloor = false;
-    if (highLowValid && s.price > 0) {
-      var tol = 0.005; // 0.5%
-      atCeiling = Math.abs(s.price - s.high) / s.high < tol;
-      atFloor   = Math.abs(s.price - s.low)  / s.low  < tol;
+
+    // روش اول: مقایسه price با سقف/کف مجاز (اگر موجود باشد)
+    if (highVal > 0 && s.price > 0) {
+      var highOk = highVal >= s.price * 0.5 && highVal <= s.price * 2;
+      if (highOk) {
+        var tol = 0.01; // 1% tolerance
+        atCeiling = (highVal - s.price) / highVal < tol && s.price >= highVal * (1 - tol);
+      }
+    }
+    if (lowVal > 0 && s.price > 0) {
+      var lowOk = lowVal >= s.price * 0.5 && lowVal <= s.price * 2;
+      if (lowOk) {
+        var tol2 = 0.01;
+        atFloor = (s.price - lowVal) / lowVal < tol2 && s.price <= lowVal * (1 + tol2);
+      }
+    }
+
+    // روش دوم (fallback): اگر high/low نامعتبر بود، از درصد آخرین vs پایانی استفاده کن
+    if (!atCeiling && !atFloor && s.close > 0 && s.price > 0) {
+      var lastPct = ((s.price - s.close) / s.close) * 100;
+      // صف خرید: قیمت به سقف دامنه رسیده (حدود +3% یا +4%)
+      if (lastPct >= 2.5) {
+        atCeiling = true;
+      }
+      // صف فروش: قیمت به کف دامنه رسیده (حدود -3% یا -4%)
+      if (lastPct <= -2.5) {
+        atFloor = true;
+      }
+    }
+
+    // روش سوم (fallback نهایی): اگر price == highVal (دقیقاً برابر سقف) → صف خرید
+    if (!atCeiling && highVal > 0 && s.price === highVal) {
+      atCeiling = true;
+    }
+    if (!atFloor && lowVal > 0 && s.price === lowVal) {
+      atFloor = true;
     }
 
     if (atCeiling) {
@@ -467,6 +522,13 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
       c.basis_buyable = true;
     }
     c.basis_data_pending = false;
+// ═══ لاگ تشخیصی برای دیباگ ═══
+if (c.basis_name && normalizeFaName(c.basis_name).indexOf('تاصیکو') !== -1) {
+  console.log('[DEBUG] تاصیکو — price:', s.price, 'high:', s.high, 'low:', s.low,
+    'maxAllowed:', s.maxAllowed, 'minAllowed:', s.minAllowed,
+    'close:', s.close, 'atCeiling:', atCeiling, 'atFloor:', atFloor,
+    'basis_buyable:', c.basis_buyable, 'queue:', c.basis_queue);
+}
   });
 
   // ═══ مرحله ۲: default مقدار برای موارد باقی‌مانده ═══
@@ -479,6 +541,13 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
     if (c.basis_ask_vol == null) c.basis_ask_vol = 0;
     if (c.basis_buyable == null) c.basis_buyable = true;
     if (c.basis_data_pending == null) c.basis_data_pending = false;
+// ═══ لاگ تشخیصی برای دیباگ ═══
+if (c.basis_name && normalizeFaName(c.basis_name).indexOf('تاصیکو') !== -1) {
+  console.log('[DEBUG] تاصیکو — price:', s.price, 'high:', s.high, 'low:', s.low,
+    'maxAllowed:', s.maxAllowed, 'minAllowed:', s.minAllowed,
+    'close:', s.close, 'atCeiling:', atCeiling, 'atFloor:', atFloor,
+    'basis_buyable:', c.basis_buyable, 'queue:', c.basis_queue);
+}
     if (c.basis_volume == null) c.basis_volume = 0;
     if (c.basis_queue === undefined) c.basis_queue = null;
   });
