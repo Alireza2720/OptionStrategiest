@@ -100,12 +100,15 @@ async function fetchStockMarket() {
         high:   sf(s.MaxAllowed != null ? s.MaxAllowed : (s.high || 0)),
         low:    sf(s.MinAllowed != null ? s.MinAllowed : (s.low || 0)),
         volume: sf(s.Volume != null ? s.Volume : (s.volume || 0)),
-        trades: sf(s.TradeCount != null ? s.TradeCount : 0)
+        trades: sf(s.TradeCount != null ? s.TradeCount : 0),
+        maxAllowed: sf(s.MaxAllowed || s.maxAllowed || 0),
+        minAllowed: sf(s.MinAllowed || s.minAllowed || 0),
+        closePrice: sf(s.ClosePrice || s.closePrice || s.YesterdayClose || 0),
+        priceYesterday: sf(s.PriceYesterday || s.priceYesterday || s.yesterday || 0)
       };
       map[sym] = entry;
       // نسخه نرمال‌شده (یکسان‌سازی ی/ي و ک/ك و trim فاصله)
-      var nrmSym = String(sym).trim()
-        .replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, " ");
+      var nrmSym = normalizeFaName(sym);
       if (nrmSym !== sym) map[nrmSym] = entry;
     });
     console.log("[dataSource] live-market: " + Object.keys(map).length + " symbols fetched");
