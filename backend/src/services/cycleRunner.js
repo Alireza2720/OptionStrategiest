@@ -255,6 +255,12 @@ async function runCycle(opts) {
       return true;
     });
 
+    // محافظت از glitch API: اگر rows افت شدید داشت، exit notify را غیرفعال کن
+    if (prevRows.length >= 5 && huntRows.length < prevRows.length * 0.5) {
+      console.log("[cycle] افت شدید rows: " + prevRows.length + " -> " + huntRows.length + " — exit notify غیرفعال شد.");
+      exitedRows = [];
+    }
+
     // محافظت از glitch API
     if (prevRows.length >= 5 && huntRows.length < prevRows.length * 0.5) {
       console.log("[cycle] افت شدید rows: " + prevRows.length + " → " + huntRows.length + " — exit notify غیرفعال شد.");

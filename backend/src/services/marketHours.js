@@ -8,9 +8,9 @@ var MARKET_CLOSE_MIN = 12 * 60 + 30;  // 12:30
 var MARKET_DAYS = [0, 1, 2, 3, 6];
 
 function toTehranDate(date) {
+  // مستقل از timezone سرور — فقط offset اضافه می‌کنیم
   var d = date || new Date();
-  var utcMs = d.getTime() + d.getTimezoneOffset() * 60000; // نرمال‌سازی به UTC واقعی
-  return new Date(utcMs + MARKET_TZ_OFFSET_MIN * 60000);
+  return new Date(d.getTime() + MARKET_TZ_OFFSET_MIN * 60000);
 }
 
 function pad2(v) { return v < 10 ? "0" + v : String(v); }

@@ -1,5 +1,6 @@
 "use strict";
 var FollowedSignal = require("../models/FollowedSignal");
+var Settings = require("../models/Settings");
 var { sendLongMessage } = require("./telegram");
 
 var CONTRACT_SIZE = 1000;
@@ -48,6 +49,29 @@ function findStockSpot(cache, basisName) {
 }
 
 // محاسبه‌ی P&L
+
+var _feesCache = null, _feesCacheAt = 0, _FEES_TTL_MS = 60 * 1000;
+async function _loadFees() {
+  var now = Date.now();
+  if (_feesCache && (now - _feesCacheAt) < _FEES_TTL_MS) return _feesCache;
+  try {
+    var s = await Settings.findOne({ ownerId: "default" }).lean();
+    _feesCache = {
+      enabled: !!(s && s.feeEnabled),
+      optionBuy: (s && Number.isFinite(s.optionFeeBuy)) ? s.optionFeeBuy : 0.0012,
+      optionSell: (s && Number.isFinite(s.optionFeeSell)) ? s.optionFeeSell : 0.0012,
+      optionTaxPct: (s && Number.isFinite(s.optionTaxOnSellPct)) ? s.optionTaxOnSellPct : 0.1,
+      stockBuy: (s && Number.isFinite(s.stockFeeBuy)) ? s.stockFeeBuy : 0.0012,
+      stockSell: (s && Number.isFinite(s.stockFeeSell)) ? s.stockFeeSell : 0.0012,
+      stockTaxPct: (s && Number.isFinite(s.stockTaxOnSellPct)) ? s.stockTaxOnSellPct : 0.1
+    };
+    _feesCacheAt = now;
+    return _feesCache;
+  } catch (_) {
+    return { enabled: false, optionBuy: 0.0012, optionSell: 0.0012, optionTaxPct: 0.1, stockBuy: 0.0012, stockSell: 0.0012, stockTaxPct: 0.1 };
+  }
+}
+
 function computePnL(snapshot, entries, cache, fees) {
   fees = fees || { enabled: false, optionBuy: 0.0012, optionSell: 0.0012, optionTaxPct: 0.1, stockBuy: 0.0012, stockSell: 0.0012, stockTaxPct: 0.1 };
   var strategyType = snapshot.strategy_type;

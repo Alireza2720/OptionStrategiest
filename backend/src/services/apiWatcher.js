@@ -19,9 +19,8 @@ var state = {
 };
 
 function tehranNow() {
-  var now = new Date();
-  var utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  return new Date(utcMs + 3.5 * 60 * 60 * 1000);
+  // مستقل از timezone سرور
+  return new Date(Date.now() + 3.5 * 60 * 60 * 1000);
 }
 
 function isMarketOpenNow() {
@@ -30,7 +29,8 @@ function isMarketOpenNow() {
   var tradingDays = [6, 0, 1, 2, 3];
   if (tradingDays.indexOf(day) === -1) return false;
   var minutes = t.getUTCHours() * 60 + t.getUTCMinutes();
-  return minutes >= 9 * 60 && minutes <= 12 * 60 + 30;
+  // بازار در 12:30:00 بسته است
+  return minutes >= 9 * 60 && minutes < 12 * 60 + 30;
 }
 
 async function fetchOnce() {

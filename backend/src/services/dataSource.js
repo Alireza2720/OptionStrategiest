@@ -31,7 +31,6 @@ function daysLeft(v, d) {
   return Math.max(0, Math.round(x));
 }
 
-
 // تابع نرمال‌سازی نام فارسی — برای تطبیق دقیق‌تر
 function normalizeFaName(s) {
   return String(s || "").trim()
@@ -525,13 +524,7 @@ function dedupeAndFlagBuyable(contracts, stockMarket) {
       c.basis_buyable = true;
     }
     c.basis_data_pending = false;
-// ═══ لاگ تشخیصی برای دیباگ ═══
-if (c.basis_name && normalizeFaName(c.basis_name).indexOf('تاصیکو') !== -1) {
-  console.log('[DEBUG] تاصیکو — price:', s.price, 'high:', s.high, 'low:', s.low,
-    'maxAllowed:', s.maxAllowed, 'minAllowed:', s.minAllowed,
-    'close:', s.close, 'atCeiling:', atCeiling, 'atFloor:', atFloor,
-    'basis_buyable:', c.basis_buyable, 'queue:', c.basis_queue);
-}
+
   });
 
   // ═══ مرحله ۲: default مقدار برای موارد باقی‌مانده ═══
@@ -544,13 +537,7 @@ if (c.basis_name && normalizeFaName(c.basis_name).indexOf('تاصیکو') !== -1
     if (c.basis_ask_vol == null) c.basis_ask_vol = 0;
     if (c.basis_buyable == null) c.basis_buyable = true;
     if (c.basis_data_pending == null) c.basis_data_pending = false;
-// ═══ لاگ تشخیصی برای دیباگ ═══
-if (c.basis_name && normalizeFaName(c.basis_name).indexOf('تاصیکو') !== -1) {
-  console.log('[DEBUG] تاصیکو — price:', s.price, 'high:', s.high, 'low:', s.low,
-    'maxAllowed:', s.maxAllowed, 'minAllowed:', s.minAllowed,
-    'close:', s.close, 'atCeiling:', atCeiling, 'atFloor:', atFloor,
-    'basis_buyable:', c.basis_buyable, 'queue:', c.basis_queue);
-}
+
     if (c.basis_volume == null) c.basis_volume = 0;
     if (c.basis_queue === undefined) c.basis_queue = null;
   });
