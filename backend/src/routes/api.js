@@ -14,6 +14,8 @@ var crypto = require("crypto");
 
 async function requireApiKey(req, res, next) {
   try {
+    // GET (خواندن) نیاز به احراز هویت ندارد — فقط نوشتن احراز می‌خواهد
+    if (req.method === "GET") return next();
     // پذیرش هر دو رمز: adminPassword (از پنل) یا API_KEY (از .env)
     var s = await Settings.findOne({ ownerId: "default" }).lean();
     var adminPwd = (s && s.adminPassword) || "";
