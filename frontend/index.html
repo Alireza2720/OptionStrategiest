@@ -1825,7 +1825,7 @@ function StrategyTable(props){
     return offsets;
   },[cols,colW.widths,stickyActive]);
   useEffect(function(){
-    var el=twRef2.current;if(!el)return;
+    var el=twRef.current;if(!el)return;
     function update(){
       var sl=el.scrollLeft;
       var slAbs=Math.abs(sl);
