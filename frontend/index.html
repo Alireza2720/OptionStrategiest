@@ -630,15 +630,6 @@ function downloadXlsx(filename,aoa){
   XLSX.writeFile(wb,sanitizeFilename(filename)+".xlsx");
 }
 function isMobileViewport(){return IS_TOUCH}
-function limitStickyCols(cols,maxSticky){
-  var count=0;
-  return cols.map(function(c){
-    if(!c.sticky)return c;
-    count++;
-    if(count>maxSticky)return Object.assign({},c,{sticky:false});
-    return c;
-  });
-}
 function splitBuyable(data){
   var buy=[],notBuy=[];
   (data||[]).forEach(function(row){
@@ -987,10 +978,6 @@ var NetCreditR=function(v){
   return <span className="gain">+{n(v,0)}</span>;
 };
 var BoxMarginR=MarginR;
-var BoxRomR=function(v){
-  if(v==null||isNaN(v))return <span className="mut">—</span>;
-  return <span className={v>=0?"gain":"loss"}>{(v>0?"+":"")+n(v,1)+"٪"}</span>;
-};
 var BoxRomR=function(v){
   if(v==null||isNaN(v))return <span className="mut">—</span>;
   return <span className={v>=0?"gain":"loss"}>{(v>0?"+":"")+n(v,1)+"٪"}</span>;
@@ -1382,10 +1369,6 @@ var WATCH_COLS=[
   {k:"rho",l:function(){return "رو"},r:function(v){return v!=null?n2(v)+"%":"—"},numeric:true,w:65,mw:8}
 ];
 var RAW_BTN_KEY="__raw_btn";
-var WATCH_LOW_PRIORITY_KEYS=["trading_days","final_pct","intrinsic","time_val","bs","bs_diff","leverage","hist_vol","low","high","spread","margin","theta","gamma","vega","rho"];
-
-var WATCH_LOW_PRIORITY_KEYS=["trading_days","final_pct","intrinsic","time_val","bs","bs_diff","leverage","hist_vol","low","high","spread","margin","theta","gamma","vega","rho"];
-
 var BASE_TABS=[
   {id:"watch",l:"watch"},
   {id:"cc",l:"cc"},
@@ -1699,7 +1682,7 @@ function PayoffPanel(props){
 /* =========================================================
    خروجی اکسل
    ========================================================= */
-var ISSINGLE_SCENARIO_KINDS={cv:true,box:true};
+var ISSINGLE_SCENARIO_KINDS={cv:true,box:true,boxSell:true};
 var SINGLE_SCEN_LABEL_ADJ="بازده تعدیل‌شده (۳۰ روزه)";
 var SINGLE_SCEN_LABEL_RAW="بازده واقعی تا سررسید";
 
@@ -1792,8 +1775,7 @@ function StrategyTable(props){
     return rows;
   },[sorted,dteMinDeb,dteMaxDeb,allCols,applyRow,searchDeb]);
 
-  var isMobile=useMemo(function(){return isMobileViewport()},[]);
-  var cols=useMemo(function(){return isMobile?limitStickyCols(allCols,2):allCols},[allCols,isMobile]);
+  var cols=allCols;
   var colW=useColWidths(kind+"_"+storeKey+"_v1",cols);
 
   var stickyOffset=useMemo(function(){
@@ -1991,7 +1973,7 @@ function SimpleStrategySection(props){
    ========================================================= */
 function Watch(props){
   var rows=props.rows,store=props.store,storeKey=props.storeKey,globalSearch=props.globalSearch,
-    dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax;
+    dteFilterMin=props.dteFilterMin,dteFilterMax=props.dteFilterMax,onRetry=props.onRetry;
   var saved=(store&&storeKey&&store[storeKey])||{};
   var rawCtxSt=useState(null);var rawCtx=rawCtxSt[0],setRawCtx=rawCtxSt[1];
   var pendingOpenSt=useState(false);var pendingOpen=pendingOpenSt[0],setPendingOpen=pendingOpenSt[1];
@@ -2003,12 +1985,7 @@ function Watch(props){
   var dteMinDeb=useDebounced(dteFilterMin,180);
   var dteMaxDeb=useDebounced(dteFilterMax,180);
 
-  var showAllArr=useLocalStorage("watchShowAllCols",!IS_TOUCH);
-  var showAll=showAllArr[0],setShowAll=showAllArr[1];
-  var cols=useMemo(function(){
-    if(!IS_TOUCH||showAll)return WATCH_COLS;
-    return WATCH_COLS.filter(function(c){return WATCH_LOW_PRIORITY_KEYS.indexOf(c.k)===-1});
-  },[showAll]);
+  var cols=WATCH_COLS;
 
   var colW=useColWidths("watch_v1",WATCH_COLS);
   var stickyOffset=useMemo(function(){
@@ -2059,7 +2036,7 @@ function Watch(props){
       <div className="empty-title">هنوز داده‌ای دریافت نشده</div>
       <div className="empty-desc">شاید سرور در حال اجرای اولین چرخه است (تا ۶۰ ثانیه) یا اتصال به منبع داده موقتاً قطع شده.</div>
       <div className="empty-actions">
-        <button className="cbtn cbtn-acc" onClick={function(){loadTabData("watch");}}>↻ بارگذاری مجدد</button>
+        <button className="cbtn cbtn-acc" onClick={function(){if(onRetry)onRetry();}}>↻ بارگذاری مجدد</button>
       </div>
     </div>
   );
@@ -2079,11 +2056,7 @@ function Watch(props){
           </button>
         ):null}
         {has?<button className="cbtn" onClick={clear}>{L.clearFilters}</button>:null}
-        {IS_TOUCH?(
-          <button className="cbtn cbtn-acc" onClick={function(){setShowAll(!showAll)}}>
-            {showAll?L.hideExtraColumns:L.showAllColumns}
-          </button>
-        ):null}
+        
       </div>
       <div className="tw-wrap" style={{flex:1,minHeight:0,display:"flex",flexDirection:"column"}}>
         <div className="tw" style={{flex:1}} ref={twRef}>
@@ -2151,7 +2124,7 @@ function Watch(props){
               })}
             </div>
             <div style={{marginTop:12,display:"flex",gap:8,flexWrap:"wrap"}}>
-              <button className="cbtn cbtn-acc" onClick={function(){setPendingOpen(false);loadTabData("watch");}}>
+              <button className="cbtn cbtn-acc" onClick={function(){setPendingOpen(false);if(onRetry)onRetry();}}>
                 ↻ تلاش مجدد
               </button>
               <button className="cbtn" onClick={function(){setPendingOpen(false);}}>بستن</button>
@@ -3341,7 +3314,8 @@ function signalNeedsStock(strategyType){
   return ["cc","mp","co","cv"].indexOf(strategyType)!==-1;
 }
 function signalNeedsMargin(strategyType){
-  return ["strangleSell","callspreadbear","putspread","boxSell"].indexOf(strategyType)!==-1;
+  // فقط استراتژی‌های اعتباری که وجه تضمین لازم دارند (putspreadbull اعتباری است؛ putspread بدهی)
+  return ["strangleSell","callspreadbear","putspreadbull","boxSell"].indexOf(strategyType)!==-1;
 }
 
 function SignalFollowForm(props){
@@ -4313,6 +4287,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
 
   var sectionStoreRef=useRef({});
   var watchStoreRef=useRef({});
+  var retryWatch=useCallback(function(){loadTabData("watch");},[]);
 
   var tabRef=useRef(tab);useEffect(function(){tabRef.current=tab},[tab]);
   var huntOpenRef=useRef(false);useEffect(function(){huntOpenRef.current=huntOpen},[huntOpen]);
@@ -4379,7 +4354,7 @@ var autoRefreshArr=useLocalStorage("autoRefreshEnabled",true);
       var p=new URLSearchParams(window.location.hash.slice(1));
       if(tab&&tab!=="watch")p.set("tab",tab);else p.delete("tab");
       var h=p.toString();
-      var u=window.location.pathname+(h?"#"+h:"");
+      var u=window.location.pathname+window.location.search+(h?"#"+h:"");
       if(window.location.hash.slice(1)!==h)window.history.replaceState(null,"",u);
     }catch(e){}
   },[tab]);
@@ -4650,7 +4625,8 @@ function handleTabClick(id){
             <div className="panel-active">
               <ErrorBoundary fallback={function(){return <div className="error-box">خطا در نمایش دیده‌بان</div>}}>
                 <Watch rows={watchTabData.rows} store={watchStoreRef.current} storeKey="watch" globalSearch={globalSearch}
-                  dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""} />
+                  dteFilterMin={settings?settings.dteFilterMin:""} dteFilterMax={settings?settings.dteFilterMax:""}
+                  onRetry={retryWatch} />
               </ErrorBoundary>
             </div>
           )
