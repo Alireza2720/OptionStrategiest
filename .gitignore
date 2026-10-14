@@ -23,3 +23,7 @@ _backup-*/
 # Patch script backups
 *.bak-*
 *.bak
+
+# Backup files (any .bak prefix and version)
+*.bak*-*
+*.bak*

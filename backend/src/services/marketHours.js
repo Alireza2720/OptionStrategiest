@@ -26,7 +26,7 @@ function isMarketOpen(date, holidays) {
   var day = t.getUTCDay();
   if (MARKET_DAYS.indexOf(day) === -1) return false;
   var minutes = t.getUTCHours() * 60 + t.getUTCMinutes();
-  if (minutes < MARKET_OPEN_MIN || minutes > MARKET_CLOSE_MIN) return false;
+  if (minutes < MARKET_OPEN_MIN || minutes >= MARKET_CLOSE_MIN) return false;
   if (holidays && holidays.length > 0) {
     if (holidays.indexOf(todayKeyTehran(date)) !== -1) return false;
   }

@@ -14,14 +14,14 @@ var crypto = require("crypto");
 
 async function requireApiKey(req, res, next) {
   try {
-    var expected = process.env.API_KEY || "";
-    if (!expected) {
-      var s = await Settings.findOne({ ownerId: "default" }).lean();
-      expected = (s && s.adminPassword) || "";
-    }
-    if (!expected) return next();
+    // پذیرش هر دو رمز: adminPassword (از پنل) یا API_KEY (از .env)
+    var s = await Settings.findOne({ ownerId: "default" }).lean();
+    var adminPwd = (s && s.adminPassword) || "";
+    var envKey = process.env.API_KEY || "";
+    var validTokens = [adminPwd, envKey].filter(Boolean);
+    if (validTokens.length === 0) return next();
     var token = req.headers["x-api-key"] || req.headers["x-admin-token"] || "";
-    if (token !== expected) {
+    if (validTokens.indexOf(token) === -1) {
       return res.status(401).json({ ok: false, error: "unauthorized" });
     }
     next();
