@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -7,6 +8,8 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>استراتژیست آپشن</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%233e63dd'/%3E%3Cstop offset='1' stop-color='%237c5cf0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Crect x='16' y='24' width='6' height='22' rx='2' fill='%23fff' opacity='.95'/%3E%3Crect x='17.5' y='14' width='3' height='40' rx='1.5' fill='%23fff' opacity='.6'/%3E%3Crect x='30' y='16' width='6' height='26' rx='2' fill='%23a5f3c4'/%3E%3Crect x='31.5' y='10' width='3' height='42' rx='1.5' fill='%23a5f3c4' opacity='.6'/%3E%3Crect x='43' y='30' width='6' height='14' rx='2' fill='%23ffd9d9'/%3E%3Crect x='44.5' y='22' width='3' height='30' rx='1.5' fill='%23ffd9d9' opacity='.6'/%3E%3C/svg%3E" />
+<script>(function(){try{var t=localStorage.getItem("theme");var c={light:"#ffffff",midnight:"#0b1019",solarized:"#fdf6e3",slate:"#1d2025"};var m=document.createElement("meta");m.name="theme-color";m.content=c[t]||"#ffffff";document.head.appendChild(m);}catch(e){}})();</script>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
@@ -14,285 +17,822 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
+/* ═══════════════════════════════════════════════════════════════════
+   استراتژیست آپشن — OpenDesk Design System v2
+   طراحی مدرن داده‌محور • چهار تم • RTL • بدون تغییر در هندسهٔ جداول
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── توکن‌های طراحی: تم روشن ─── */
 :root{
-  --r:8px;--rs:5px;--f:'Vazirmatn','Tahoma',sans-serif;--row-pad:7px 10px;
-  --bg:#f0f4f8;--sur:#fff;--sur2:#f5f7fa;--sur3:#edf0f5;--bor:#dce1ea;--bor2:#c8d0dc;
-  --txt:#1e2635;--txt2:#4a5568;--mut:#8898aa;--acc:#3b82f6;--acc-d:#2563eb;--acc-t:rgba(59,130,246,.1);
-  --gain:#16a34a;--gain-t:rgba(22,163,74,.1);--loss:#dc2626;--loss-t:rgba(220,38,38,.1);
-  --warn:#d97706;--warn-t:rgba(217,119,6,.1);--sh:0 1px 3px rgba(0,0,0,.06);--sh-md:0 4px 12px rgba(0,0,0,.08);
-  --zebra:rgba(0,0,0,.045);--fs:13px;
+  color-scheme:light;
+  /* هندسه (ثابت — با مجازی‌سازی جداول همگام است) */
+  --r:12px;--rs:8px;--f:'Vazirmatn','Segoe UI',Tahoma,sans-serif;--row-pad:7px 10px;--fs:13px;
+  /* سطوح و رنگ‌ها */
+  --bg:#edf0f6;--sur:#ffffff;--sur2:#f6f8fc;--sur3:#eceff6;
+  --bor:#e0e5ee;--bor2:#c9d2e0;--bor-row:#eceff5;
+  --txt:#101a2c;--txt2:#475467;--mut:#7b8aa1;
+  --acc:#3e63dd;--acc-d:#3358c4;--acc-t:rgba(62,99,221,.09);--acc-soft:rgba(62,99,221,.16);
+  --gain:#16a34a;--gain-t:rgba(22,163,74,.10);
+  --loss:#dc2626;--loss-t:rgba(220,38,38,.09);
+  --warn:#d97706;--warn-t:rgba(217,119,6,.11);
+  --row-even:#f7f9fd;--row-hl:#e9eefc;
+  --sh:0 1px 2px rgba(16,24,40,.05);
+  --sh-md:0 2px 6px rgba(16,24,40,.07),0 10px 24px -6px rgba(16,24,40,.12);
+  --sh-lg:0 8px 20px rgba(16,24,40,.12),0 24px 48px -12px rgba(16,24,40,.22);
+  --ring:rgba(62,99,221,.28);
+  --zebra:rgba(16,24,40,.026);
+  --grad-brand:linear-gradient(270deg,#3e63dd,#7c5cf0 55%,#0ea5b7);
+  --grad-acc:linear-gradient(180deg,#4a6ee8,#3a5ccd);
+  --stick-sh:-6px 0 10px -6px rgba(16,24,40,.14);
+  --scrim:rgba(11,17,32,.5);
+  --bg-glow:radial-gradient(900px 380px at 85% -80px,rgba(62,99,221,.06),transparent 70%);
+  --tr:.18s cubic-bezier(.4,0,.2,1);
 }
+
+/* ─── تم نیمه‌شب ─── */
 [data-theme=midnight]{
-  --bg:#06080f;--sur:#0e1219;--sur2:#131720;--sur3:#181d28;--bor:#1e2535;--bor2:#2a3347;
-  --txt:#d4e2f7;--txt2:#9aaccc;--mut:#6b7a95;--acc:#8b5cf6;--acc-d:#7c3aed;--acc-t:rgba(139,92,246,.16);
-  --gain:#10b981;--gain-t:rgba(16,185,129,.12);--loss:#f43f5e;--loss-t:rgba(244,63,94,.12);
-  --warn:#f59e0b;--warn-t:rgba(245,158,11,.12);--sh:none;--sh-md:0 4px 20px rgba(0,0,0,.5);--zebra:rgba(255,255,255,.045);
+  color-scheme:dark;
+  --bg:#05070e;--sur:#0b1019;--sur2:#101624;--sur3:#161d2e;
+  --bor:#1e2740;--bor2:#2b3757;--bor-row:#172036;
+  --txt:#dce6fa;--txt2:#a3b2d0;--mut:#67758f;
+  --acc:#8b7cf8;--acc-d:#7c6cf2;--acc-t:rgba(139,124,248,.14);--acc-soft:rgba(139,124,248,.22);
+  --gain:#34d399;--gain-t:rgba(52,211,153,.13);
+  --loss:#fb7185;--loss-t:rgba(251,113,133,.13);
+  --warn:#fbbf24;--warn-t:rgba(251,191,36,.13);
+  --row-even:#0e1420;--row-hl:#1a2138;
+  --sh:none;--sh-md:0 4px 24px rgba(0,0,0,.55);--sh-lg:0 12px 48px rgba(0,0,0,.65);
+  --ring:rgba(139,124,248,.4);
+  --zebra:rgba(255,255,255,.03);
+  --grad-brand:linear-gradient(270deg,#8b7cf8,#b57cf0 55%,#5eead4);
+  --grad-acc:linear-gradient(180deg,#9588f9,#7f6ff4);
+  --stick-sh:-6px 0 10px -6px rgba(0,0,0,.55);
+  --scrim:rgba(2,4,10,.62);
+  --bg-glow:radial-gradient(900px 380px at 85% -80px,rgba(139,124,248,.08),transparent 70%);
 }
+
+/* ─── تم سولارایزد ─── */
 [data-theme=solarized]{
-  --bg:#fdf6e3;--sur:#eee8d5;--sur2:#e8e2cf;--sur3:#ddd8c0;--bor:#ccc5af;--bor2:#b8b0a0;
-  --txt:#073642;--txt2:#2e5465;--mut:#657b83;--acc:#268bd2;--acc-d:#1a6fa8;--acc-t:rgba(38,139,210,.1);
-  --gain:#2aa198;--gain-t:rgba(42,161,152,.1);--loss:#dc322f;--loss-t:rgba(220,50,47,.1);
-  --warn:#cb4b16;--warn-t:rgba(203,75,22,.1);--sh:0 1px 3px rgba(0,0,0,.08);--sh-md:0 4px 14px rgba(0,0,0,.1);--zebra:rgba(0,0,0,.055);
+  color-scheme:light;
+  --bg:#fdf6e3;--sur:#fbf4de;--sur2:#f5eed6;--sur3:#eee7cd;
+  --bor:#e0d8bd;--bor2:#c9bf9f;--bor-row:#eee7d2;
+  --txt:#0f4a5a;--txt2:#315e6e;--mut:#6f858d;
+  --acc:#268bd2;--acc-d:#1d74b0;--acc-t:rgba(38,139,210,.1);--acc-soft:rgba(38,139,210,.18);
+  --gain:#1f8a81;--gain-t:rgba(42,161,152,.13);
+  --loss:#dc322f;--loss-t:rgba(220,50,47,.1);
+  --warn:#b07d0a;--warn-t:rgba(176,125,10,.13);
+  --row-even:#f8f1dc;--row-hl:#e7eddc;
+  --sh:0 1px 2px rgba(88,110,117,.08);
+  --sh-md:0 2px 6px rgba(88,110,117,.1),0 10px 24px -6px rgba(88,110,117,.16);
+  --sh-lg:0 8px 20px rgba(88,110,117,.14),0 24px 48px -12px rgba(88,110,117,.24);
+  --ring:rgba(38,139,210,.3);
+  --zebra:rgba(88,110,117,.05);
+  --grad-brand:linear-gradient(270deg,#268bd2,#2aa198 55%,#859900);
+  --grad-acc:linear-gradient(180deg,#3498db,#2280bf);
+  --stick-sh:-6px 0 10px -6px rgba(88,110,117,.22);
+  --scrim:rgba(40,48,20,.42);
+  --bg-glow:radial-gradient(900px 380px at 85% -80px,rgba(38,139,210,.05),transparent 70%);
 }
+
+/* ─── تم سنگی ─── */
 [data-theme=slate]{
-  --bg:#191b1f;--sur:#212429;--sur2:#282c32;--sur3:#30343b;--bor:#3a3f47;--bor2:#4a505a;
-  --txt:#e8eaee;--txt2:#b5bbc4;--mut:#8a919c;--acc:#fbbf24;--acc-d:#f59e0b;--acc-t:rgba(251,191,36,.15);
-  --gain:#4ade80;--gain-t:rgba(74,222,128,.12);--loss:#f87171;--loss-t:rgba(248,113,113,.12);
-  --warn:#fbbf24;--warn-t:rgba(251,191,36,.12);--sh:none;--sh-md:0 4px 16px rgba(0,0,0,.4);--zebra:rgba(255,255,255,.05);
+  color-scheme:dark;
+  --bg:#15171b;--sur:#1d2025;--sur2:#23272e;--sur3:#2a2f38;
+  --bor:#343a44;--bor2:#464e5b;--bor-row:#2b303a;
+  --txt:#e9ebef;--txt2:#b6bcc7;--mut:#848c99;
+  --acc:#f5b942;--acc-d:#e5a92e;--acc-t:rgba(245,185,66,.13);--acc-soft:rgba(245,185,66,.2);
+  --gain:#4ade80;--gain-t:rgba(74,222,128,.12);
+  --loss:#f87171;--loss-t:rgba(248,113,113,.12);
+  --warn:#f5b942;--warn-t:rgba(245,185,66,.12);
+  --row-even:#202429;--row-hl:#2e2c22;
+  --sh:none;--sh-md:0 4px 20px rgba(0,0,0,.45);--sh-lg:0 12px 40px rgba(0,0,0,.55);
+  --ring:rgba(245,185,66,.35);
+  --zebra:rgba(255,255,255,.032);
+  --grad-brand:linear-gradient(270deg,#f5b942,#f59e0b 55%,#fbbf24);
+  --grad-acc:linear-gradient(180deg,#f7c257,#eda92a);
+  --stick-sh:-6px 0 10px -6px rgba(0,0,0,.5);
+  --scrim:rgba(8,9,12,.6);
+  --bg-glow:radial-gradient(900px 380px at 85% -80px,rgba(245,185,66,.05),transparent 70%);
 }
+
+/* ─── پایه ─── */
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;width:100%;max-width:100vw;overflow-x:hidden}
-body{height:100vh;overflow:hidden;overflow-x:hidden;background:var(--bg);color:var(--txt);font-family:var(--f);font-size:var(--fs);direction:rtl;transition:.2s;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{
+  height:100vh;height:100dvh;overflow:hidden;overflow-x:hidden;
+  background:var(--bg);color:var(--txt);font-family:var(--f);font-size:var(--fs);
+  direction:rtl;transition:background-color .25s,color .25s;
+  -webkit-text-size-adjust:100%;text-size-adjust:100%;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+}
 #root{width:100%;max-width:100vw;overflow-x:hidden}
-button,input{font-family:var(--f)}
+button,input,select,textarea{font-family:var(--f)}
+button:disabled{cursor:not-allowed;opacity:.5}
+::selection{background:var(--acc-soft);color:var(--txt)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+th:focus-visible{outline-offset:-2px}
+code{font-family:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,'Courier New',monospace;
+  font-size:.94em;color:var(--acc);background:var(--acc-t);padding:1px 6px;border-radius:5px;direction:ltr;unicode-bidi:embed}
+pre{font-family:ui-monospace,'SF Mono',SFMono-Regular,Menlo,Consolas,'Courier New',monospace;line-height:1.65}
+input[type=checkbox],input[type=radio]{accent-color:var(--acc);cursor:pointer}
+
+/* ─── اسکرول‌بارها ─── */
+*{scrollbar-width:thin;scrollbar-color:var(--bor2) transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:var(--bor2);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:var(--mut);border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-corner{background:transparent}
+
+/* ─── جدول: هندسه ثابت، ظاهر مدرن ─── */
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:12px;table-layout:fixed}
-*::-webkit-scrollbar{width:8px;height:8px}
-*::-webkit-scrollbar-track{background:var(--sur2)}
-*::-webkit-scrollbar-thumb{background:var(--bor2);border-radius:5px}
-.app{display:flex;flex-direction:column;height:100vh;width:100%;max-width:100vw;overflow-x:hidden;position:relative}
-.top{height:46px;display:flex;align-items:center;gap:8px;padding:0 14px;background:var(--sur);border-bottom:1px solid var(--bor);position:relative;z-index:50;flex-shrink:0;box-shadow:var(--sh)}
-.brand-top{position:absolute;left:50%;transform:translateX(-50%);font-size:15px;font-weight:800;white-space:nowrap;pointer-events:none;background:linear-gradient(90deg,var(--acc),var(--gain));background-clip:text;-webkit-background-clip:text;color:transparent}
+td,th{font-variant-numeric:tabular-nums lining-nums}
+
+/* ─── اسکلت برنامه ─── */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;width:100%;max-width:100vw;overflow-x:hidden;position:relative;background:var(--bg-glow),var(--bg)}
+
+/* ─── نوار بالا ─── */
+.top{
+  height:46px;display:flex;align-items:center;gap:8px;padding:0 14px;
+  background:var(--sur);border-bottom:1px solid var(--bor);
+  position:relative;z-index:50;flex-shrink:0;
+  box-shadow:0 1px 2px rgba(16,24,40,.04),0 4px 16px -8px rgba(16,24,40,.08);
+}
+[data-theme=midnight] .top,[data-theme=slate] .top{box-shadow:0 1px 0 rgba(255,255,255,.02),0 6px 20px -10px rgba(0,0,0,.6)}
+.brand-top{
+  position:absolute;left:50%;transform:translateX(-50%);
+  font-size:15.5px;font-weight:800;letter-spacing:-.2px;white-space:nowrap;pointer-events:none;
+  background:var(--grad-brand);background-clip:text;-webkit-background-clip:text;color:transparent;
+}
 @media (max-width:768px){.brand-top{display:none}}
 .sp1{flex:1}
-.ib,.rbtn{border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.ib{width:32px;height:32px;border-radius:var(--rs);background:none;color:var(--mut);font-size:16px;position:relative}
-.ib:hover{background:var(--sur2);color:var(--txt)}
-.rbtn{width:32px;height:32px;border-radius:var(--rs);background:var(--acc);color:#fff;font-size:15px}
-.rbtn:hover{background:var(--acc-d)}
-.rbtn:disabled{opacity:.45;cursor:default}
-.status-chip{display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;background:var(--sur2);color:var(--mut);font-size:11px;white-space:nowrap}
-.dot{width:6px;height:6px;border-radius:50%;background:var(--gain)}
-.dot.sp{background:var(--warn)}.dot.er{background:var(--loss)}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.75)}}
+
+/* ─── دکمه‌ها ─── */
+.ib,.rbtn{border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background var(--tr),color var(--tr),transform .12s,box-shadow var(--tr)}
+.ib{width:32px;height:32px;border-radius:var(--rs);background:none;color:var(--txt2);font-size:16px;position:relative}
+.ib:hover{background:var(--sur3);color:var(--txt)}
+.ib:active{transform:scale(.92)}
+.rbtn{width:32px;height:32px;border-radius:var(--rs);background:var(--grad-acc);color:#fff;font-size:15px;box-shadow:0 1px 3px rgba(16,24,40,.18),inset 0 1px 0 rgba(255,255,255,.18)}
+.rbtn:hover{background:var(--acc-d);box-shadow:0 2px 8px var(--ring),inset 0 1px 0 rgba(255,255,255,.18)}
+.rbtn:active{transform:scale(.92)}
+.rbtn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* ─── چیپ وضعیت ─── */
+.status-chip{
+  display:flex;align-items:center;gap:6px;padding:3px 11px;border-radius:20px;
+  background:var(--sur2);border:1px solid var(--bor);color:var(--mut);
+  font-size:11px;font-weight:500;white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gain);box-shadow:0 0 0 3px var(--gain-t);flex-shrink:0}
+.dot.sp{background:var(--warn);box-shadow:0 0 0 3px var(--warn-t)}
+.dot.er{background:var(--loss);box-shadow:0 0 0 3px var(--loss-t)}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.8)}}
 .dot:not(.sp):not(.er){animation:pulse 2s infinite}
 body.bg-hidden .dot:not(.sp):not(.er){animation:none}
 @keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:36px;height:36px;border:3px solid var(--bor);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+.spinner{
+  width:36px;height:36px;border-radius:50%;
+  border:3px solid var(--sur3);border-top-color:var(--acc);border-right-color:var(--acc);
+  animation:spin .75s linear infinite;opacity:.9;
+}
+
+/* ─── جستجو ─── */
 .search-box{position:relative;display:flex;align-items:center}
-.search-input{width:150px;padding:5px 26px 5px 10px;border:1px solid var(--bor);border-radius:20px;background:var(--sur2);color:var(--txt);font-size:12px}
-.search-input:focus{outline:none;border-color:var(--acc);background:var(--sur)}
-.search-clear{position:absolute;left:6px;border:none;background:none;color:var(--mut);cursor:pointer;font-size:11px}
-.tabs{display:flex;overflow-x:auto;background:var(--sur);border-bottom:1px solid var(--bor);flex-shrink:0}
+.search-box::before{
+  content:"";position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  width:13px;height:13px;pointer-events:none;z-index:1;opacity:.85;
+  background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%238494ab" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M21 21l-4.3-4.3"/></svg>') center/contain no-repeat;
+}
+[data-theme=midnight] .search-box::before,[data-theme=slate] .search-box::before{
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2367758f" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M21 21l-4.3-4.3"/></svg>');
+}
+[data-theme=solarized] .search-box::before{
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%236f858d" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="7"/><path d="M21 21l-4.3-4.3"/></svg>');
+}
+.search-input{
+  width:150px;padding:6px 28px;border:1px solid var(--bor);border-radius:20px;
+  background:var(--sur2);color:var(--txt);font-size:12px;transition:border-color var(--tr),box-shadow var(--tr),background var(--tr),width var(--tr);
+}
+.search-input::placeholder{color:var(--mut);opacity:.85}
+.search-input:hover{border-color:var(--bor2)}
+.search-input:focus{outline:none;border-color:var(--acc);background:var(--sur);box-shadow:0 0 0 3px var(--ring);width:190px}
+.search-clear{position:absolute;left:8px;border:none;background:none;color:var(--mut);cursor:pointer;font-size:11px;padding:2px;border-radius:50%;transition:color var(--tr);z-index:1}
+.search-clear:hover{color:var(--loss)}
+
+/* ─── نوار تب‌ها ─── */
+.tabs{display:flex;overflow-x:auto;background:var(--sur);border-bottom:1px solid var(--bor);flex-shrink:0;scrollbar-width:none}
 .tabs::-webkit-scrollbar{height:0}
-.tab{height:38px;padding:0 14px;border:none;border-bottom:2px solid transparent;background:none;color:var(--mut);cursor:pointer;font-size:12px;white-space:nowrap;flex-shrink:0}
-.tab:hover{color:var(--txt)}.tab.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.tab{
+  height:38px;padding:0 14px;border:none;border-bottom:2px solid transparent;background:none;
+  color:var(--mut);cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;
+  position:relative;transition:color var(--tr),background var(--tr);
+}
+.tab:hover{color:var(--txt);background:var(--sur2)}
+.tab.on{color:var(--acc);font-weight:700;background:linear-gradient(180deg,var(--acc-t),transparent 85%)}
+.tab.on::after{
+  content:"";position:absolute;bottom:-1px;right:10px;left:10px;height:2.5px;border-radius:2px 2px 0 0;
+  background:var(--acc);box-shadow:0 0 8px var(--ring);
+}
+.tab:focus-visible{outline-offset:-2px}
+
+/* ─── ناحیه محتوا ─── */
 .cnt{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0;position:relative}
 .panel-active{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-.strategy-scroll{flex:1;overflow:auto;min-height:0;padding:4px 0 24px}
+.strategy-scroll{flex:1;overflow:auto;min-height:0;padding:6px 0 28px}
 .watch-view{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-.ibar{min-height:28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:4px;padding:5px 14px;background:var(--sur2);border-bottom:1px solid var(--bor);font-size:11px;color:var(--mut);flex-shrink:0}
+
+/* ─── نوار اطلاعات بالای جدول ─── */
+.ibar{
+  min-height:30px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:5px;
+  padding:5px 14px;background:var(--sur2);border-bottom:1px solid var(--bor);
+  font-size:11px;color:var(--mut);flex-shrink:0;
+}
 .rlbl{font-size:11px;font-weight:600;color:var(--mut)}
-.count-badge{padding:1px 8px;border-radius:20px;background:var(--acc-t);color:var(--txt);font-size:11px;font-weight:700}
-.count-label{font-size:11px;color:var(--mut)}
-.cbtn{padding:2px 9px;border:1px solid var(--loss);border-radius:4px;background:var(--loss-t);color:var(--loss);font-family:var(--f);font-size:11px;font-weight:600;cursor:pointer}
+.count-badge{
+  padding:1.5px 9px;border-radius:20px;background:var(--acc-t);border:1px solid transparent;
+  color:var(--acc);font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;
+}
+.count-label{font-size:11px;color:var(--mut);font-weight:500}
+
+/* ─── دکمه‌های تراشه‌ای ─── */
+.cbtn{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:2px 10px;
+  border:1px solid var(--loss);border-radius:6px;background:var(--loss-t);color:var(--loss);
+  font-family:var(--f);font-size:11px;font-weight:600;cursor:pointer;line-height:1.6;
+  transition:background var(--tr),color var(--tr),border-color var(--tr),transform .12s,box-shadow var(--tr);
+}
+.cbtn:hover{background:var(--loss);color:#fff;box-shadow:0 2px 8px var(--loss-t)}
+.cbtn:active{transform:scale(.96)}
 .cbtn-acc{border:1px solid var(--acc);background:var(--acc-t);color:var(--acc)}
-.holiday-btn{padding:6px 12px;border:1px solid var(--warn);border-radius:6px;background:var(--sur);color:var(--warn);font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer}
-.holiday-btn.on{background:var(--warn);color:#fff}
-.holiday-btn:disabled{opacity:.5;cursor:default}
+.cbtn-acc:hover{background:var(--acc);color:#fff;box-shadow:0 2px 8px var(--ring)}
+.holiday-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 13px;
+  border:1px solid var(--warn);border-radius:8px;background:var(--sur);color:var(--warn);
+  font-family:var(--f);font-size:12px;font-weight:700;cursor:pointer;
+  transition:background var(--tr),color var(--tr),box-shadow var(--tr);
+}
+.holiday-btn:hover{background:var(--warn-t);box-shadow:0 2px 8px var(--warn-t)}
+.holiday-btn.on{background:var(--warn);color:#fff;box-shadow:0 2px 10px var(--warn-t)}
+.holiday-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ─── ظرف جدول ─── */
 .tw{width:100%;min-width:0;overflow:auto;-webkit-overflow-scrolling:touch}
 .tw-wrap{position:relative}
+
+/* ─── سرستون‌های چسبنده ─── */
 thead{position:sticky;top:0;z-index:20}
-thead tr{position:sticky;top:0;z-index:21;background:var(--sur)}
+thead tr{position:sticky;top:0;z-index:21;background:var(--sur2)}
 thead tr.fr{top:38px;z-index:20;background:var(--sur3)}
 thead tr.fr td{padding:3px 4px;border-bottom:1px solid var(--bor)}
-thead tr.fr input{width:100%;padding:3px 5px;border:1px solid var(--bor);border-radius:3px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:10px;outline:none}
-thead tr.fr input:focus{border-color:var(--acc)}
-th{position:sticky;top:0;z-index:21;padding:8px 9px;text-align:right;border-bottom:2px solid var(--bor);background:var(--sur);color:var(--mut);font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;user-select:none}
-th:hover{color:var(--txt)}
-td{padding:var(--row-pad);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-tbody tr{border-bottom:1px solid var(--bor);transition:.08s}
-tbody tr:nth-child(even){background:var(--zebra)}
-tbody tr:hover{background:var(--acc-t)!important}
-.s2{margin-right:2px;font-size:8px;opacity:.6}
-.tn{color:var(--acc);font-weight:600}.tb,.mut{color:var(--mut)}.tb{font-size:11px}
-.gain{color:var(--gain)}.loss{color:var(--loss)}.warn{color:var(--warn)}
-.bdg{display:inline-flex;align-items:center;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700}
-.bdg-itm{background:var(--acc-t);color:var(--acc)}.bdg-otm{background:var(--sur3);color:var(--mut)}
-.bdg-q1{background:var(--loss-t);color:var(--loss)}.bdg-rev{background:var(--warn-t);color:var(--warn)}
-.sv{min-width:50px;padding:7px 3px;text-align:center;font-size:11px;font-weight:600}
-.svh{min-width:50px;padding:8px 3px;text-align:center;font-size:10px;font-weight:600;color:var(--mut)}
-.tc0{color:var(--mut)}.tc-pos{color:var(--gain);font-weight:700}.tc-neg{color:var(--loss);font-weight:700}
+thead tr.fr input{
+  width:100%;padding:3px 5px;border:1px solid var(--bor);border-radius:5px;
+  background:var(--sur);color:var(--txt);font-family:var(--f);font-size:10px;outline:none;
+  transition:border-color var(--tr),box-shadow var(--tr);
+}
+thead tr.fr input::placeholder{color:var(--mut);opacity:.7}
+thead tr.fr input:focus{border-color:var(--acc);box-shadow:0 0 0 2px var(--ring)}
+th{
+  position:sticky;top:0;z-index:21;padding:8px 9px;text-align:right;
+  border-bottom:2px solid var(--bor);background:var(--sur2);
+  color:var(--txt2);font-size:11px;font-weight:700;letter-spacing:0;white-space:nowrap;
+  cursor:pointer;user-select:none;transition:color var(--tr),background var(--tr);
+}
+th:hover{color:var(--acc);background:var(--sur3)}
+/* ارتفاع قطعی سرستون در جداول اصلی — هم‌تراز با thead tr.fr{top:38px} و ثابت مجازی‌سازی */
+.tbl-strat th,.tbl-watch th,.tbl-best th{height:38px}
+
+/* ─── سلول‌ها و ردیف‌ها ─── */
+td{padding:var(--row-pad);border-bottom:1px solid var(--bor-row);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ارتفاع قطعی ردیف‌ها = ثابت‌های مجازی‌سازی (ROW_H_STRAT=36 / ROW_H_WATCH=34) تا اسکرول مجازی دقیق بماند */
+.tbl-strat tbody td{height:36px}
+.tbl-watch tbody td{height:34px}
+tbody tr{background:var(--sur);transition:background .1s}
+tbody tr:nth-child(even){background:var(--row-even)}
+tbody tr:hover{background:var(--row-hl)!important}
+.s2{margin-right:3px;font-size:8px;opacity:.75;color:var(--acc)}
+.tn{color:var(--acc);font-weight:700}
+.tb,.mut{color:var(--mut)}
+.tb{font-size:11px}
+.gain{color:var(--gain)}
+.loss{color:var(--loss)}
+.warn{color:var(--warn)}
+
+/* ─── نشان‌ها (badges) ─── */
+.bdg{
+  display:inline-flex;align-items:center;gap:3px;padding:1.5px 8px;border-radius:6px;
+  font-size:10px;font-weight:700;white-space:nowrap;line-height:1.5;
+}
+.badge{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;
+  background:var(--sur3);color:var(--txt2);font-size:11px;font-weight:700;white-space:nowrap;
+}
+.bdg-itm{background:var(--acc-t);color:var(--acc)}
+.bdg-otm{background:var(--sur3);color:var(--mut)}
+.bdg-q1{background:var(--loss-t);color:var(--loss)}
+.bdg-rev{background:var(--warn-t);color:var(--warn)}
+
+/* ─── ستون‌های سناریو ─── */
+.sv{min-width:50px;padding:7px 3px;text-align:center;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums}
+.svh{min-width:50px;padding:8px 3px;text-align:center;font-size:10px;font-weight:700;color:var(--mut)}
+.svh:hover{color:var(--acc)}
+.tc0{color:var(--mut)}
+.tc-pos{color:var(--gain);font-weight:700}
+.tc-neg{color:var(--loss);font-weight:700}
 .raw-divider{border-right:2px dashed var(--bor2)}
-.sticky-col{position:sticky;z-index:16;border-left:1px solid var(--bor);background:var(--sur);overflow:hidden;text-overflow:ellipsis}
-thead .sticky-col{z-index:30;background:var(--sur)}thead tr.fr .sticky-col{z-index:29;background:var(--sur3)}
+
+/* ─── ستون چسبنده (progressive sticky) ─── */
+.sticky-col{position:sticky;z-index:16;border-left:1px solid var(--bor);background:var(--sur);overflow:hidden;text-overflow:ellipsis;box-shadow:var(--stick-sh)}
+thead .sticky-col{z-index:30;background:var(--sur2)}
+thead tr.fr .sticky-col{z-index:29;background:var(--sur3)}
 tbody td.sticky-col{z-index:6;background:var(--sur)}
-tbody tr:nth-child(even) td.sticky-col{background:var(--sur2)}
-tbody tr:hover td.sticky-col{background-color:var(--sur);background-image:linear-gradient(var(--acc-t),var(--acc-t))}
-tbody tr:nth-child(even):hover td.sticky-col{background-color:var(--sur2)}
+tbody tr:nth-child(even) td.sticky-col{background:var(--row-even)}
+tbody tr:hover td.sticky-col{background:var(--row-hl)}
+
+/* ─── دستگیره تغییر عرض ستون ─── */
 .col-resizer{position:absolute;top:0;bottom:0;left:-4px;width:8px;cursor:col-resize;z-index:5}
-.col-resizer:hover,.col-resizer:active{background:var(--acc-t)}
+.col-resizer:hover,.col-resizer:active{background:linear-gradient(90deg,transparent 3px,var(--acc) 3px,var(--acc) 5px,transparent 5px)}
+
+/* ─── راهنمای سرستون ─── */
 .th-tip-wrap{position:relative;display:inline-flex;align-items:center}
-.th-tooltip{position:fixed;z-index:200;width:210px;padding:6px 10px;border:1px solid var(--acc);border-radius:6px;background:var(--sur);color:var(--txt2);box-shadow:var(--sh-md);font-size:11px;font-weight:500;line-height:1.6;text-align:right;white-space:normal;pointer-events:none}
-.collapsible-section{margin:4px 14px 10px}
-.collapsible-header{display:flex;align-items:center;gap:8px;padding:6px 14px;border:1px solid var(--bor);border-radius:var(--rs);background:var(--sur3);color:var(--txt2);font-size:13px;font-weight:600;cursor:pointer;user-select:none}
-.collapsible-header:hover{background:var(--sur2)}
-.arrow{display:inline-block;font-size:12px;margin-left:6px;transition:.2s}.arrow.open{transform:rotate(90deg)}
-.collapsible-content{display:flex;flex-direction:column;overflow:hidden;transition:max-height .3s ease}.collapsible-content.open{max-height:70vh}.collapsible-content.closed{max-height:0}
-.section-badge{margin-right:auto;padding:0 10px;border-radius:20px;background:var(--sur2);color:var(--mut);font-size:11px;font-weight:400}
+.th-tooltip{
+  position:fixed;z-index:200;width:210px;padding:8px 11px;
+  border:1px solid var(--bor2);border-radius:9px;background:var(--sur);color:var(--txt2);
+  box-shadow:var(--sh-lg);font-size:11px;font-weight:500;line-height:1.75;text-align:right;
+  white-space:normal;pointer-events:none;animation:tipIn .14s ease-out;
+}
+@keyframes tipIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+
+/* ─── بخش‌های تاشو ─── */
+.collapsible-section{margin:6px 14px 14px}
+.collapsible-header{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;
+  border:1px solid var(--bor);border-radius:var(--rs);
+  background:var(--sur);color:var(--txt);font-size:13px;font-weight:700;
+  cursor:pointer;user-select:none;box-shadow:var(--sh);
+  transition:border-color var(--tr),background var(--tr);
+}
+.collapsible-header:has(+ .collapsible-content.open){border-radius:var(--rs) var(--rs) 0 0;border-bottom-color:transparent}
+.collapsible-header:hover{border-color:var(--bor2);background:var(--sur2)}
+.collapsible-header:hover .arrow{color:var(--acc)}
+.arrow{display:inline-flex;align-items:center;color:var(--mut);margin-left:6px;transition:transform .25s cubic-bezier(.4,0,.2,1),color var(--tr)}
+.arrow.open{transform:rotate(90deg)}
+.collapsible-content{display:flex;flex-direction:column;overflow:hidden;transition:max-height .3s ease}
+.collapsible-content.open{max-height:70vh;border:1px solid var(--bor);border-top:none;border-radius:0 0 var(--rs) var(--rs);background:var(--sur)}
+.collapsible-content.closed{max-height:0}
+.section-badge{
+  margin-right:auto;padding:1px 10px;border-radius:20px;background:var(--acc-t);
+  color:var(--acc);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;
+}
+
+/* ─── حالت‌های مرکزی / خطا ─── */
 .center{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--mut);text-align:center;padding:20px}
-.error-box{max-width:420px;margin:auto;padding:20px;border:1px solid var(--bor);border-radius:var(--r);background:var(--sur);box-shadow:var(--sh-md);text-align:center}
-.error-box .title{margin-bottom:4px;color:var(--txt);font-size:16px;font-weight:700}.error-box .desc{color:var(--txt2);font-size:13px}
-.stale-banner{padding:6px 12px;border-bottom:1px solid var(--bor);background:var(--warn-t);color:var(--warn);text-align:center;font-size:12px;flex-shrink:0}
-.override-banner{padding:5px 12px;border-bottom:1px solid var(--bor);background:var(--warn-t);color:var(--warn);text-align:center;font-size:11.5px;flex-shrink:0}
-.margin-note-banner{padding:6px 12px;border-bottom:1px solid var(--bor);background:var(--warn-t);color:var(--warn);text-align:center;font-size:11.5px;flex-shrink:0}
-.busy-banner{padding:5px 12px;border-bottom:1px solid var(--bor);background:var(--acc-t);color:var(--acc);text-align:center;font-size:11.5px;flex-shrink:0}
-.ov{position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;z-index:80;background:rgba(0,0,0,.15)}
-.mpanel{position:fixed;top:0;right:0;bottom:0;z-index:90;width:320px;max-width:92vw;max-height:100vh;display:flex;flex-direction:column;border-left:1px solid var(--bor);background:var(--sur);box-shadow:var(--sh-md);transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1)}
-.mpanel.open{transform:translateX(0)}
-.mhead{height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--bor);font-size:14px;font-weight:700;flex-shrink:0}
-.msub-tabs{display:flex;border-bottom:1px solid var(--bor);flex-shrink:0}
-.msub-tab{flex:1;padding:9px 0;border:none;background:none;color:var(--mut);font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
-.msub-tab.on{color:var(--acc);border-bottom-color:var(--acc)}
-.mbody{flex:1;overflow-y:auto;padding:12px 14px}.msec{margin-bottom:18px}.msec-t{color:var(--mut);font-size:10px;font-weight:700;letter-spacing:.08em}
+.error-box{
+  max-width:420px;margin:auto;padding:22px 24px;
+  border:1px solid var(--bor);border-top:3px solid var(--loss);border-radius:var(--r);
+  background:var(--sur);box-shadow:var(--sh-md);text-align:center;
+}
+.error-box .title{margin-bottom:6px;color:var(--txt);font-size:16px;font-weight:800}
+.error-box .desc{color:var(--txt2);font-size:13px;line-height:1.9}
+
+/* ─── بنرها ─── */
+.stale-banner{padding:7px 12px;border-bottom:1px solid var(--bor);background:var(--loss-t);color:var(--loss);text-align:center;font-size:12px;font-weight:600;flex-shrink:0}
+.override-banner{padding:6px 12px;border-bottom:1px solid var(--bor);background:var(--warn-t);color:var(--warn);text-align:center;font-size:11.5px;font-weight:600;flex-shrink:0}
+.margin-note-banner{padding:6px 12px;border-bottom:1px solid var(--bor);background:var(--warn-t);color:var(--warn);text-align:center;font-size:11.5px;font-weight:500;line-height:1.8;flex-shrink:0}
+.busy-banner{padding:6px 12px;border-bottom:1px solid var(--bor);background:var(--acc-t);color:var(--acc);text-align:center;font-size:11.5px;font-weight:600;flex-shrink:0}
+.stale-banner .cbtn{border-color:currentColor;background:transparent}
+.stale-banner .cbtn:hover{background:var(--loss);color:#fff}
+
+/* ─── پنل کشویی تنظیمات ─── */
+.ov{position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;z-index:80;background:var(--scrim);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fadeIn .2s ease-out}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.mpanel{
+  position:fixed;top:0;right:0;bottom:0;z-index:90;width:320px;max-width:92vw;max-height:100vh;
+  display:flex;flex-direction:column;
+  border-left:1px solid var(--bor);border-radius:16px 0 0 16px;
+  background:var(--sur);box-shadow:-12px 0 48px rgba(16,24,40,.18);
+  transform:translateX(105%);visibility:hidden;
+  transition:transform .3s cubic-bezier(.32,.72,0,1),visibility 0s linear .3s,box-shadow .3s;
+}
+[data-theme=midnight] .mpanel,[data-theme=slate] .mpanel{box-shadow:-12px 0 48px rgba(0,0,0,.55)}
+.mpanel.open{transform:translateX(0);visibility:visible;transition:transform .3s cubic-bezier(.32,.72,0,1),visibility 0s,box-shadow .3s}
+.mhead{
+  height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+  border-bottom:1px solid var(--bor);font-size:14px;font-weight:800;flex-shrink:0;
+  background:linear-gradient(180deg,var(--sur2),var(--sur));border-radius:16px 0 0 0;
+}
+.msub-tabs{display:flex;border-bottom:1px solid var(--bor);flex-shrink:0;background:var(--sur2)}
+.msub-tab{
+  flex:1;padding:9px 0;border:none;background:none;color:var(--mut);
+  font-size:12px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent;
+  transition:color var(--tr),background var(--tr),border-color var(--tr);
+}
+.msub-tab:hover{color:var(--txt2);background:var(--sur3)}
+.msub-tab.on{color:var(--acc);border-bottom-color:var(--acc);background:var(--sur)}
+.mbody{flex:1;overflow-y:auto;padding:14px 16px 24px}
+.msec{margin-bottom:18px}
+.msec-t{color:var(--mut);font-size:10px;font-weight:800;letter-spacing:.08em}
 .msec-t-row{display:flex;align-items:center;gap:6px;margin-bottom:8px}
-.mdiv{height:1px;margin:6px 0;background:var(--bor)}
+.mdiv{height:1px;margin:14px -16px;background:linear-gradient(90deg,transparent,var(--bor) 12%,var(--bor) 88%,transparent)}
 .step-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.step-input{width:70px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:13px;text-align:center}
-.step-hint{color:var(--mut);font-size:11.5px}
+.step-input{
+  width:70px;padding:6px 8px;border:1px solid var(--bor);border-radius:7px;
+  background:var(--sur);color:var(--txt);font-family:var(--f);font-size:13px;text-align:center;
+  transition:border-color var(--tr),box-shadow var(--tr);font-variant-numeric:tabular-nums;
+}
+.step-input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--ring)}
+.step-input:disabled{opacity:.45}
+.step-hint{color:var(--mut);font-size:11.5px;line-height:1.7}
 .inline-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ─── ویرایشگر قیمت دستی (Overrides) ─── */
 .ov-add-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
-.ov-input-name{flex:1;min-width:90px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px}
-.ov-input-name:focus,.ov-input-price:focus{outline:none;border-color:var(--acc)}
-.ov-input-price{width:90px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px;text-align:center}
+.ov-input-name{
+  flex:1;min-width:90px;padding:7px 9px;border:1px solid var(--bor);border-radius:7px;
+  background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px;
+  transition:border-color var(--tr),box-shadow var(--tr);
+}
+.ov-input-name::placeholder,.ov-input-price::placeholder{color:var(--mut);opacity:.8}
+.ov-input-name:focus,.ov-input-price:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--ring)}
+.ov-input-price{
+  width:90px;padding:7px 9px;border:1px solid var(--bor);border-radius:7px;
+  background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px;text-align:center;
+  transition:border-color var(--tr),box-shadow var(--tr);font-variant-numeric:tabular-nums;
+}
 .ov-input-price.sm{width:78px;padding:5px 6px;font-size:11px}
-.ov-add-btn{padding:6px 14px;border:none;border-radius:6px;background:var(--acc);color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0}
-.ov-add-btn:hover{background:var(--acc-d)}
-.ov-add-btn:disabled{opacity:.5;cursor:default}
-.ov-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto}
-.ov-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border:1px solid var(--bor);border-radius:6px;background:var(--sur2)}
+.ov-add-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:7px 15px;border:none;border-radius:8px;
+  background:var(--grad-acc);color:#fff;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;
+  box-shadow:0 1px 3px rgba(16,24,40,.18),inset 0 1px 0 rgba(255,255,255,.16);
+  transition:filter var(--tr),transform .12s,box-shadow var(--tr);
+}
+.ov-add-btn:hover{filter:brightness(1.08);box-shadow:0 3px 10px var(--ring),inset 0 1px 0 rgba(255,255,255,.16)}
+.ov-add-btn:active{transform:scale(.97)}
+.ov-add-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.ov-list{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;padding-left:2px}
+.ov-item{
+  display:flex;align-items:center;gap:7px;padding:6px 9px;
+  border:1px solid var(--bor);border-radius:9px;background:var(--sur2);
+  transition:border-color var(--tr),background var(--tr);
+}
+.ov-item:hover{border-color:var(--bor2)}
 .ov-item.off{opacity:.5}
 .ov-toggle{display:flex;align-items:center;flex-shrink:0}
-.ov-toggle input{width:15px;height:15px;cursor:pointer}
+.ov-toggle input{width:15px;height:15px;cursor:pointer;accent-color:var(--acc)}
 .ov-name{flex:1;font-size:12px;font-weight:700;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ov-real{font-size:10px;color:var(--mut);min-width:54px;text-align:center;white-space:nowrap;flex-shrink:0}
-.ov-remove{border:none;background:none;color:var(--loss);cursor:pointer;font-size:14px;padding:2px 5px;border-radius:4px;flex-shrink:0}
-.ov-remove:hover{background:var(--loss-t)}
-.ov-indicator{position:absolute;top:2px;left:2px;width:7px;height:7px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 2px var(--sur)}
-.floating-export{position:absolute;bottom:10px;left:10px;z-index:15;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid var(--acc);border-radius:20px;background:var(--sur);color:var(--acc);font-size:11px;font-weight:700;cursor:pointer;box-shadow:var(--sh-md);opacity:.95}
-.floating-export:hover{opacity:1;background:var(--acc-t)}
-.info-icon{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--sur3);color:var(--mut);font-size:9px;cursor:help;margin-left:3px;flex-shrink:0}
+.ov-real{font-size:10px;color:var(--mut);min-width:54px;text-align:center;white-space:nowrap;flex-shrink:0;font-variant-numeric:tabular-nums}
+.ov-remove{
+  border:none;background:none;color:var(--mut);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:6px;flex-shrink:0;
+  transition:color var(--tr),background var(--tr);
+}
+.ov-remove:hover{color:var(--loss);background:var(--loss-t)}
+.ov-indicator{
+  position:absolute;top:2px;left:2px;width:7px;height:7px;border-radius:50%;
+  background:var(--warn);box-shadow:0 0 0 2px var(--sur);animation:pulse 2.4s infinite;
+}
+
+/* ─── دکمه شناور خروجی اکسل ─── */
+.floating-export{
+  position:absolute;bottom:12px;left:12px;z-index:15;
+  display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+  border:none;border-radius:20px;
+  background:var(--grad-acc);color:#fff;font-size:11px;font-weight:700;cursor:pointer;
+  box-shadow:0 2px 8px rgba(16,24,40,.2),0 8px 20px -6px var(--ring),inset 0 1px 0 rgba(255,255,255,.18);
+  transition:transform .15s,box-shadow var(--tr),filter var(--tr);
+}
+.floating-export:hover{transform:translateY(-2px);filter:brightness(1.07);box-shadow:0 4px 12px rgba(16,24,40,.24),0 12px 28px -6px var(--ring)}
+.floating-export:active{transform:translateY(0) scale(.97)}
+
+/* ─── راهنما و تلگل‌ها ─── */
+.info-icon{
+  display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;
+  background:var(--acc-t);color:var(--acc);font-size:9px;font-weight:700;cursor:help;margin-left:3px;flex-shrink:0;
+}
 .info-toggle-wrap{display:inline-flex;flex-direction:column}
-.info-toggle-btn{border:1px solid var(--bor);background:var(--sur2);color:var(--mut);border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.info-toggle-btn{
+  border:1px solid var(--bor);background:var(--sur2);color:var(--mut);border-radius:50%;
+  width:18px;height:18px;font-size:10px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:all var(--tr);
+}
 .info-toggle-btn:hover{background:var(--acc-t);color:var(--acc);border-color:var(--acc)}
-.info-toggle-text{margin-top:6px;padding:8px 10px;border:1px dashed var(--bor2);border-radius:6px;background:var(--sur2);color:var(--txt2);font-size:11.5px;line-height:1.8;max-width:280px}
+.info-toggle-text{
+  margin-top:6px;padding:9px 11px;border:1px solid var(--bor);border-right:3px solid var(--acc);
+  border-radius:8px;background:var(--sur2);color:var(--txt2);font-size:11.5px;line-height:1.9;max-width:280px;
+  box-shadow:var(--sh);animation:tipIn .15s ease-out;
+}
+.hint{
+  font-size:11.5px;color:var(--txt2);line-height:1.9;padding:8px 11px;
+  background:var(--sur2);border:1px dashed var(--bor2);border-radius:8px;
+}
+
+/* ─── تم‌ها ─── */
 .theme-dots{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.theme-dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--bor);cursor:pointer;flex-shrink:0}
-.theme-dot.on{border-color:var(--sur);box-shadow:0 0 0 2px var(--txt)}
-.best-controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:8px 14px;background:var(--sur2);border-bottom:1px solid var(--bor);flex-shrink:0}
+.theme-dot{
+  width:26px;height:26px;border-radius:50%;border:2px solid var(--bor);cursor:pointer;flex-shrink:0;
+  transition:transform .15s,box-shadow var(--tr);
+}
+.theme-dot:hover{transform:scale(1.12)}
+.theme-dot.on{border-color:var(--sur);box-shadow:0 0 0 2.5px var(--acc),0 2px 8px rgba(16,24,40,.25)}
+
+/* ─── کنترل‌های شکار موقعیت‌ها ─── */
+.best-controls{
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:8px 14px;
+  background:var(--sur2);border-bottom:1px solid var(--bor);flex-shrink:0;
+}
 .best-field{display:flex;align-items:center;gap:6px}
-.best-field label{font-size:11px;color:var(--mut);font-weight:600;white-space:nowrap}
-.toggle-switch{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:var(--txt2);white-space:nowrap}
-.mini-num{width:60px;padding:5px 7px;border:1px solid var(--bor);border-radius:6px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px;text-align:center}
-.tab-spin-dot{display:inline-block;width:6px;height:6px;border-radius:50%;border:1.5px solid var(--mut);border-top-color:transparent;margin-left:5px;animation:spin .7s linear infinite;vertical-align:middle}
-.hunt-card{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--acc);border-radius:var(--rs) var(--rs) 0 0;background:var(--acc-t);color:var(--acc);font-size:13px;font-weight:700;cursor:pointer}
-.hunt-card:hover{background:var(--acc);color:#fff}
-.hunt-settings-toggle{display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--bor);border-top:none;border-radius:0 0 var(--rs) var(--rs);background:var(--sur2);color:var(--txt2);font-size:12px;font-weight:600;cursor:pointer;user-select:none}
+.best-field label{font-size:11px;color:var(--mut);font-weight:700;white-space:nowrap}
+.toggle-switch{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11.5px;color:var(--txt2);white-space:nowrap;font-weight:500;user-select:none}
+.toggle-switch input[type=checkbox]{
+  appearance:none;-webkit-appearance:none;flex-shrink:0;
+  width:34px;height:19px;border-radius:20px;background:var(--bor2);border:none;
+  position:relative;cursor:pointer;transition:background .2s;
+}
+.toggle-switch input[type=checkbox]::after{
+  content:"";position:absolute;top:2.5px;right:2.5px;width:14px;height:14px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:right .2s cubic-bezier(.4,0,.2,1);
+}
+.toggle-switch input[type=checkbox]:checked{background:var(--acc)}
+.toggle-switch input[type=checkbox]:checked::after{right:17.5px}
+.toggle-switch input[type=checkbox]:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.mini-num{
+  width:60px;padding:5px 7px;border:1px solid var(--bor);border-radius:7px;
+  background:var(--sur);color:var(--txt);font-family:var(--f);font-size:12px;text-align:center;
+  transition:border-color var(--tr),box-shadow var(--tr);font-variant-numeric:tabular-nums;
+}
+.mini-num:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--ring)}
+.tab-spin-dot{
+  display:inline-block;width:7px;height:7px;border-radius:50%;
+  border:1.5px solid var(--acc);border-top-color:transparent;margin-left:5px;
+  animation:spin .7s linear infinite;vertical-align:middle;
+}
+
+/* ─── کارت‌های منوی شکار ─── */
+.hunt-card{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:12px 15px;border:1px solid var(--acc);border-radius:var(--rs) var(--rs) 0 0;
+  background:linear-gradient(135deg,var(--acc-t),transparent 70%);color:var(--acc);
+  font-size:13px;font-weight:800;cursor:pointer;
+  transition:all var(--tr);
+}
+.hunt-card:hover{background:var(--acc);color:#fff;box-shadow:0 4px 14px var(--ring);transform:translateY(-1px)}
+.hunt-card span{display:inline-flex;align-items:center;gap:7px}
+.hunt-settings-toggle{
+  display:flex;align-items:center;gap:6px;padding:8px 15px;
+  border:1px solid var(--bor);border-top:none;border-radius:0 0 var(--rs) var(--rs);
+  background:var(--sur2);color:var(--txt2);font-size:12px;font-weight:600;cursor:pointer;user-select:none;
+  transition:background var(--tr);
+}
 .hunt-settings-toggle:hover{background:var(--sur3)}
-.hunt-settings-body{padding:10px 2px 4px}
-.hunt-strat-head{display:grid;grid-template-columns:1fr 64px 64px 60px;gap:6px;padding:4px 4px;font-size:10px;color:var(--mut);font-weight:700}
+.hunt-settings-body{padding:12px 2px 4px}
+.hunt-strat-head{display:grid;grid-template-columns:1fr 64px 64px 60px;gap:6px;padding:4px;font-size:10px;color:var(--mut);font-weight:700}
 .hunt-strat-row{display:grid;grid-template-columns:1fr 64px 64px 60px;gap:6px;align-items:center;padding:5px 4px;border-bottom:1px solid var(--bor)}
 .hunt-strat-row:last-child{border-bottom:none}
-.hunt-strat-name{font-size:11.5px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hunt-strat-input{width:100%;padding:4px 5px;border:1px solid var(--bor);border-radius:5px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:11px;text-align:center}
+.hunt-strat-name{font-size:11.5px;font-weight:700;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hunt-strat-input{
+  width:100%;padding:4px 5px;border:1px solid var(--bor);border-radius:6px;
+  background:var(--sur);color:var(--txt);font-family:var(--f);font-size:11px;text-align:center;
+  transition:border-color var(--tr),box-shadow var(--tr);font-variant-numeric:tabular-nums;
+}
+.hunt-strat-input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 2px var(--ring)}
 .hunt-strat-dash{text-align:center;color:var(--mut);font-size:11px}
 .hunt-strat-check{display:flex;align-items:center;justify-content:center}
-.hunt-strat-check input{width:15px;height:15px;cursor:pointer}
-.hunt-strat-card{border:1px solid var(--bor);border-radius:var(--rs);padding:8px 10px;margin-bottom:8px;background:var(--sur2)}
-.hunt-strat-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.hunt-strat-tg{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--txt2);cursor:pointer;white-space:nowrap}
-.hunt-strat-tg input{width:14px;height:14px;cursor:pointer}
+.hunt-strat-check input{width:15px;height:15px;cursor:pointer;accent-color:var(--acc)}
+.hunt-strat-card{
+  border:1px solid var(--bor);border-radius:10px;padding:9px 11px;margin-bottom:9px;
+  background:var(--sur2);transition:border-color var(--tr),box-shadow var(--tr);
+}
+.hunt-strat-card:hover{border-color:var(--bor2);box-shadow:var(--sh)}
+.hunt-strat-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;gap:6px}
+.hunt-strat-tg{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--txt2);cursor:pointer;white-space:nowrap;font-weight:600}
+.hunt-strat-tg input{width:14px;height:14px;cursor:pointer;accent-color:var(--acc)}
 .hunt-metric-row{display:grid;grid-template-columns:40px 1fr 62px 62px;gap:6px;align-items:center;margin-bottom:5px}
 .hunt-metric-row:last-child{margin-bottom:0}
 .hunt-metric-lbl{font-size:10.5px;color:var(--mut);font-weight:700}
-.hunt-mode-select{width:100%;padding:4px 5px;border:1px solid var(--bor);border-radius:5px;background:var(--sur);color:var(--txt);font-family:var(--f);font-size:10.5px}
+.hunt-mode-select{
+  width:100%;padding:4px 5px;border:1px solid var(--bor);border-radius:6px;
+  background:var(--sur);color:var(--txt);font-family:var(--f);font-size:10.5px;cursor:pointer;
+  transition:border-color var(--tr);
+}
+.hunt-mode-select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 2px var(--ring)}
 .hunt-strat-input:disabled{opacity:.4}
 .hunt-straddle-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
 .hunt-straddle-field{display:flex;flex-direction:column;gap:3px}
-.hunt-dte-row{display:grid;grid-template-columns:70px 1fr 1fr;gap:6px;align-items:center;margin-top:6px;padding-top:6px;border-top:1px dashed var(--bor)}
-.fs-overlay{position:fixed;inset:0;z-index:95;background:var(--bg);display:flex;flex-direction:column}
-.fs-head{height:46px;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0}
-.fs-head b{font-size:14px}
+.hunt-dte-row{
+  display:grid;grid-template-columns:70px 1fr 1fr;gap:6px;align-items:center;
+  margin-top:7px;padding-top:7px;border-top:1px dashed var(--bor2);
+}
+
+/* ─── پوشش تمام‌صفحه ─── */
+.fs-overlay{position:fixed;inset:0;z-index:95;background:var(--bg);display:flex;flex-direction:column;animation:fsIn .22s ease-out}
+@keyframes fsIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.fs-head{
+  height:46px;display:flex;align-items:center;gap:10px;padding:0 16px;
+  border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0;
+  box-shadow:0 1px 2px rgba(16,24,40,.04);
+}
+.fs-head b{font-size:14px;font-weight:800;display:inline-flex;align-items:center;gap:8px}
+.fs-head b .ico{color:var(--acc)}
 .fs-body{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-.modal-overlay{position:fixed;inset:0;z-index:150;background:rgba(10,14,22,.45);display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-box{width:min(880px,96vw);height:min(600px,92vh);background:var(--bg);border:1px solid var(--bor);border-radius:var(--r);box-shadow:var(--sh-md);display:flex;flex-direction:column;overflow:hidden}
-.modal-head{height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0}
-.modal-head .mtitle{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+
+/* ─── مودال ─── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:150;background:var(--scrim);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;padding:16px;
+  animation:fadeIn .18s ease-out;
+}
+.modal-box{
+  width:min(880px,96vw);height:min(600px,92vh);
+  background:var(--bg);border:1px solid var(--bor);border-radius:var(--r);
+  box-shadow:var(--sh-lg);display:flex;flex-direction:column;overflow:hidden;
+  animation:modalIn .25s cubic-bezier(.16,1,.3,1);
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.modal-head{
+  height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;
+  border-bottom:1px solid var(--bor);background:var(--sur);flex-shrink:0;
+}
+.modal-head .mtitle{font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .modal-body{flex:1;overflow:auto;min-height:0}
-.payoff-body{padding:10px 14px}
+
+/* ─── نمودار سود/زیان ─── */
+.payoff-body{padding:12px 14px}
 .payoff-info-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
-.pinfo{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rs);padding:6px 12px;display:flex;flex-direction:column;gap:2px;min-width:90px}
-.pinfo span{font-size:10px;color:var(--mut)}
-.pinfo b{font-size:13px;color:var(--txt)}
-.payoff-chart-box{position:relative;background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:10px;box-shadow:var(--sh)}
-.payoff-readout{margin-top:10px;background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:20px}
-.ro-lbl{font-size:11.5px;color:var(--mut)}
-.ro-val{font-size:14px;font-weight:700;color:var(--txt)}
+.pinfo{
+  background:var(--sur);border:1px solid var(--bor);border-radius:9px;padding:7px 13px;
+  display:flex;flex-direction:column;gap:2px;min-width:90px;
+  transition:border-color var(--tr),transform var(--tr);
+}
+.pinfo:hover{border-color:var(--bor2);transform:translateY(-1px)}
+.pinfo span{font-size:10px;color:var(--mut);font-weight:600}
+.pinfo b{font-size:13.5px;color:var(--txt);font-variant-numeric:tabular-nums}
+.pinfo b.gain{color:var(--gain)}
+.pinfo b.loss{color:var(--loss)}
+.payoff-chart-box{
+  position:relative;background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);
+  padding:10px;box-shadow:var(--sh);
+}
+.payoff-readout{
+  margin-top:10px;background:var(--sur);border:1px solid var(--bor);border-radius:var(--r);
+  padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:20px;
+}
+.ro-lbl{font-size:11.5px;color:var(--mut);font-weight:500}
+.ro-val{font-size:14px;font-weight:800;color:var(--txt);font-variant-numeric:tabular-nums}
 .ro-hint{font-size:11.5px;color:var(--mut)}
-.preset-btn{padding:3px 10px;border-radius:20px;border:1px solid var(--acc);background:var(--acc-t);color:var(--acc);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--f)}
-.preset-btn.on{background:var(--acc);color:#fff}
-.range-input{width:64px;padding:4px 6px;background:var(--sur);border:1px solid var(--bor);border-radius:4px;color:var(--txt);font-size:12px;text-align:center;font-family:var(--f)}
-.chart-tooltip{position:absolute;pointer-events:none;background:var(--sur);border:1px solid var(--acc);border-radius:6px;padding:6px 10px;font-size:11.5px;box-shadow:var(--sh-md);white-space:nowrap;z-index:5}
+.preset-btn{
+  padding:3px 11px;border-radius:20px;border:1px solid var(--acc);background:var(--acc-t);
+  color:var(--acc);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f);
+  transition:all var(--tr);font-variant-numeric:tabular-nums;
+}
+.preset-btn:hover{background:var(--acc-soft)}
+.preset-btn.on{background:var(--acc);color:#fff;box-shadow:0 2px 8px var(--ring)}
+.range-input{
+  width:64px;padding:4px 6px;background:var(--sur);border:1px solid var(--bor);border-radius:6px;
+  color:var(--txt);font-size:12px;text-align:center;font-family:var(--f);
+  transition:border-color var(--tr),box-shadow var(--tr);font-variant-numeric:tabular-nums;
+}
+.range-input:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--ring)}
+.chart-tooltip{
+  position:absolute;pointer-events:none;background:var(--sur);border:1px solid var(--bor2);
+  border-radius:9px;padding:7px 11px;font-size:11.5px;box-shadow:var(--sh-lg);white-space:nowrap;z-index:5;
+  font-variant-numeric:tabular-nums;animation:tipIn .12s ease-out;
+}
 .chart-tooltip .tt-row{display:flex;justify-content:space-between;gap:10px}
 .chart-tooltip .tt-row+.tt-row{margin-top:3px}
 .chart-tooltip .tt-lbl{color:var(--mut)}
 .chart-tooltip .tt-pct{font-weight:700;color:var(--txt)}
-.chart-tooltip .tt-roi{font-weight:700}
+.chart-tooltip .tt-roi{font-weight:800}
 .cur-label{font-size:10px;font-weight:700;fill:var(--acc)}
-.gcard{background:var(--sur2);border:1px solid var(--bor);border-radius:var(--rs);padding:10px 12px;margin-bottom:10px}
-.gcard-t{display:flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;color:var(--txt);margin-bottom:5px}
-.gcard-p{font-size:11.5px;line-height:1.85;color:var(--txt2)}
-.gcard-ul{margin:4px 0 0 0;padding-right:16px}
-.gcard-ul li{font-size:11.5px;line-height:1.85;color:var(--txt2);margin-bottom:3px}
-.formula-box{background:var(--sur);border:1px dashed var(--bor2);border-radius:6px;padding:8px 10px;font-size:11.5px;line-height:2.1;color:var(--txt2);margin-top:6px}
+
+/* ─── کارت‌های عمومی ─── */
+.gcard{
+  background:var(--sur);border:1px solid var(--bor);border-radius:10px;
+  padding:11px 13px;margin-bottom:10px;box-shadow:var(--sh);
+}
+.gcard-t{
+  display:flex;align-items:center;gap:7px;font-weight:800;font-size:12.5px;color:var(--txt);margin-bottom:6px;
+}
+.gcard-t .ico{color:var(--acc)}
+.gcard-t.gain{color:var(--gain)}
+.gcard-t.gain .ico{color:var(--gain)}
+.gcard-t.warn{color:var(--warn)}
+.gcard-t.warn .ico{color:var(--warn)}
+.gcard-p{font-size:11.5px;line-height:1.9;color:var(--txt2)}
+.gcard-ul{margin:4px 0 0;padding-right:16px}
+.gcard-ul li{font-size:11.5px;line-height:1.9;color:var(--txt2);margin-bottom:3px}
+/* کارت‌ها در پوشش‌های تمام‌صفحه روی نمایشگرهای عریض وسط‌چین و خوش‌خوان بمانند */
+@media (min-width:1100px){
+  .fs-body .gcard{max-width:1000px;margin-left:auto;margin-right:auto}
+  .fs-body>div:has(>.msec){max-width:840px;margin-left:auto;margin-right:auto}
+}
+.formula-box{
+  background:var(--sur2);border:1px dashed var(--bor2);border-radius:8px;
+  padding:9px 11px;font-size:11.5px;line-height:2.2;color:var(--txt2);margin-top:6px;
+}
 .formula-box code{color:var(--acc);font-weight:700}
 
-/* ═══ Signal Card ═══ */
-.signal-card{background:var(--sur);border:1px solid var(--bor);border-left:4px solid var(--acc);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;box-shadow:var(--sh)}
+/* ─── کارت سیگنال ─── */
+.signal-card{
+  background:var(--sur);border:1px solid var(--bor);border-left:4px solid var(--acc);
+  border-radius:var(--r);padding:13px 15px;margin-bottom:10px;box-shadow:var(--sh);
+  transition:box-shadow var(--tr),transform var(--tr);
+}
+.signal-card:hover{box-shadow:var(--sh-md)}
 .signal-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .signal-card-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-.signal-badge{padding:2px 8px;border-radius:4px;background:var(--acc-t);color:var(--acc);font-size:10px;font-weight:700;white-space:nowrap}
-.signal-roi{font-size:20px;font-weight:800;white-space:nowrap}
+.signal-badge{padding:2px 9px;border-radius:6px;background:var(--acc-t);color:var(--acc);font-size:10px;font-weight:800;white-space:nowrap}
+.signal-roi{font-size:20px;font-weight:800;white-space:nowrap;font-variant-numeric:tabular-nums}
 .signal-basis{color:var(--txt2);font-size:12px}
 .signal-expiry{color:var(--mut);font-size:11px}
 
-/* ═══ Empty state ═══ */
+/* ─── حالت خالی ─── */
 .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:60px 20px;color:var(--mut);text-align:center}
-.empty-state .empty-icon{font-size:56px;opacity:.35;margin-bottom:6px;line-height:1}
-.empty-state .empty-title{font-size:16px;font-weight:700;color:var(--txt2)}
-.empty-state .empty-desc{font-size:12.5px;max-width:360px;line-height:1.9}
-.empty-state .empty-actions{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.empty-state .empty-icon{
+  width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 30% 25%,var(--sur2),var(--sur3));
+  border:1px solid var(--bor);color:var(--acc);margin-bottom:8px;
+  box-shadow:inset 0 2px 6px rgba(16,24,40,.05);
+}
+.empty-state .empty-title{font-size:16px;font-weight:800;color:var(--txt2)}
+.empty-state .empty-desc{font-size:12.5px;max-width:380px;line-height:2}
+.empty-state .empty-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.empty-state .empty-actions .cbtn{padding:8px 18px;border-radius:8px}
 
-/* ═══ Mobile tap targets (WCAG/Apple/Google recommends >=44px for primary, >=36px for secondary) ═══ */
+/* ─── اعلان‌های Toast (showAlert) ─── */
+.toast-host{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:400;
+  display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;
+}
+.toast{
+  pointer-events:auto;display:flex;align-items:center;gap:9px;
+  max-width:min(460px,92vw);padding:10px 16px;border-radius:12px;
+  background:var(--sur);border:1px solid var(--bor);box-shadow:var(--sh-lg);
+  color:var(--txt);font-size:12.5px;font-weight:600;cursor:pointer;
+  animation:toastIn .32s cubic-bezier(.16,1,.3,1);font-variant-numeric:tabular-nums;
+}
+.toast-success{border-right:3px solid var(--gain)}
+.toast-warn{border-right:3px solid var(--warn)}
+.toast-error{border-right:3px solid var(--loss)}
+.toast-info{border-right:3px solid var(--acc)}
+.toast.out{animation:toastOut .25s ease-in forwards}
+.toast-ico{
+  width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff;flex-shrink:0;
+}
+.toast-msg{line-height:1.7}
+.toast-success .toast-ico{background:var(--gain)}
+.toast-warn .toast-ico{background:var(--warn)}
+.toast-error .toast-ico{background:var(--loss)}
+.toast-info .toast-ico{background:var(--acc)}
+@keyframes toastIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(8px) scale(.97)}}
+
+/* ─── آیکون‌های SVG درون‌خطی ─── */
+.ico{display:inline-block;vertical-align:-.15em;flex-shrink:0}
+.ico-spin{animation:spin .8s linear infinite}
+
+/* ═══════════════════════════════════════════════════════════
+   موبایل: اهداف لمسی بزرگ + جدول فشرده + اصلاح چسبندگی سرستون
+   ═══════════════════════════════════════════════════════════ */
 @media (pointer:coarse),(max-width:768px){
   .ib{min-width:42px;min-height:42px;font-size:18px}
   .rbtn{min-width:42px;min-height:42px}
   .tab{min-height:44px;padding:0 16px;font-size:13px}
-  .cbtn{min-height:36px;padding:7px 12px;font-size:12px;line-height:1.3;border-radius:5px}
-  .ov-remove{min-width:32px;min-height:32px;font-size:16px;padding:4px 8px}
+  .cbtn{min-height:36px;padding:7px 12px;font-size:12px;line-height:1.3;border-radius:7px}
+  .ov-remove{min-width:32px;min-height:32px;font-size:15px;padding:4px 8px}
   .msub-tab{min-height:44px;padding:12px 0;font-size:13px}
   .ov-add-btn{min-height:42px;padding:10px 18px;font-size:13px}
-  /* ═══ Dense table mode (mobile) — row ~32px, font 11px ═══ */
+  /* جدول فشرده — ارتفاع ردیف برابر ثابت مجازی‌سازی نگه داشته می‌شود */
   table{font-size:11px;line-height:1.3}
-  th{font-size:10px;padding:4px 5px;line-height:1.2;height:auto}
-  td{padding:3px 5px;line-height:1.3;height:28px;max-height:32px}
+  th{font-size:10px;padding:4px 5px;line-height:1.2}
+  .tbl-strat th,.tbl-watch th,.tbl-best th{height:26px}
+  .tbl-strat thead tr.fr,.tbl-watch thead tr.fr{top:26px}
+  td{padding:3px 5px;line-height:1.3}
+  td .cbtn{min-height:24px}
   thead tr.fr td{padding:2px 3px}
   thead tr.fr input{padding:2px 4px;font-size:10px;min-height:22px}
   .step-input,.hunt-strat-input,.ov-input-name,.ov-input-price,.mini-num,.range-input{min-height:30px;font-size:12px;padding:3px 5px}
   .sv{min-width:44px;padding:3px 2px;font-size:10px}
   .svh{min-width:44px;padding:4px 2px;font-size:9.5px}
   .info-toggle-btn{min-width:26px;min-height:26px;font-size:13px}
-  .hunt-strat-tg input[type=checkbox],.toggle-switch input[type=checkbox],.ov-toggle input[type=checkbox]{width:20px;height:20px}
+  .hunt-strat-tg input[type=checkbox],.ov-toggle input[type=checkbox]{width:20px;height:20px}
+  .toggle-switch input[type=checkbox]{width:40px;height:23px}
+  .toggle-switch input[type=checkbox]::after{width:18px;height:18px}
+  .toggle-switch input[type=checkbox]:checked::after{right:19.5px}
   .hunt-strat-row,.hunt-metric-row{gap:8px}
-  .search-input{width:130px;padding:8px 26px 8px 10px;font-size:13px}
-  /* ═══ Column resizer: غیرفعال روی لمس تا با horizontal scroll تداخل نکند ═══ */
+  .search-input{width:130px;padding:8px 28px;font-size:13px}
+  .search-input:focus{width:150px}
+  .mpanel{border-radius:0}
+  .mhead{border-radius:0}
+  /* دستگیره تغییر عرض ستون روی لمس غیرفعال (تداخل با scroll افقی) */
   .col-resizer{display:none !important}
+  .toast-host{bottom:14px}
 }
 
-/* ═══ Sticky columns بهتر در موبایل: shadow ملایم تا معلوم شود frozen است ═══ */
-@media (pointer:coarse){
-  .sticky-col{box-shadow:2px 0 4px -2px rgba(0,0,0,.18)}
+/* ─── حرکت کاهش‌یافته (دسترس‌پذیری) ─── */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
 }
-
 </style>
 </head>
 <body>
@@ -616,6 +1156,88 @@ function formatApiError(err, fallbackMsg) {
     return "درخواست نامعتبر. لطفاً تنظیمات را بررسی کنید.";
   }
   return (fallbackMsg ? fallbackMsg + " — " : "") + msg;
+}
+
+/* =========================================================
+   سیستم آیکون‌های درون‌خطی (SVG) — فقط نمایشی
+   ========================================================= */
+var ICONS={
+  menu:[<path key="a" d="M3 6h18"/>,<path key="b" d="M3 12h18"/>,<path key="c" d="M3 18h18"/>],
+  refresh:[<path key="a" d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.8L21 8"/>,<path key="b" d="M21 3v5h-5"/>],
+  bell:[<path key="a" d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>,<path key="b" d="M13.7 21a2 2 0 0 1-3.4 0"/>],
+  search:[<circle key="a" cx="11" cy="11" r="7.5"/>,<path key="b" d="M20.5 20.5l-4.2-4.2"/>],
+  download:[<path key="a" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>,<path key="b" d="M7 10l5 5 5-5"/>,<path key="c" d="M12 15V3"/>],
+  radio:[<circle key="a" cx="12" cy="12" r="2"/>,<path key="b" d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>],
+  lock:[<rect key="a" x="3" y="11" width="18" height="11" rx="2"/>,<path key="b" d="M7 11V7a5 5 0 0 1 10 0v4"/>],
+  activity:[<path key="a" d="M22 12h-4l-3 9L9 3l-3 9H2"/>],
+  camera:[<path key="a" d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>,<circle key="b" cx="12" cy="13" r="4"/>],
+  chart:[<path key="a" d="M18 20V10"/>,<path key="b" d="M12 20V4"/>,<path key="c" d="M6 20v-6"/>],
+  clock:[<circle key="a" cx="12" cy="12" r="9"/>,<path key="b" d="M12 7v5l3.5 2"/>],
+  alert:[<path key="a" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>,<path key="b" d="M12 9v4"/>,<path key="c" d="M12 17h.01"/>],
+  check:[<path key="a" d="M20 6L9 17l-5-5"/>],
+  square:[<rect key="a" x="5" y="5" width="14" height="14" rx="2"/>],
+  trash:[<path key="a" d="M3 6h18"/>,<path key="b" d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>,<path key="c" d="M10 11v6"/>,<path key="d" d="M14 11v6"/>],
+  calculator:[<rect key="a" x="4" y="2" width="16" height="20" rx="2"/>,<rect key="b" x="8" y="6" width="8" height="4" rx="1"/>,<path key="c" d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/>],
+  play:[<path key="a" d="M6 3.5l13 8.5-13 8.5V3.5z"/>],
+  pencil:[<path key="a" d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>],
+  save:[<path key="a" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>,<path key="b" d="M17 21v-8H7v8"/>,<path key="c" d="M7 3v5h8"/>],
+  eye:[<path key="a" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>,<circle key="b" cx="12" cy="12" r="3"/>],
+  eyeoff:[<path key="a" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>,<path key="b" d="M1 1l22 22"/>],
+  target:[<circle key="a" cx="12" cy="12" r="9.5"/>,<circle key="b" cx="12" cy="12" r="5.5"/>,<circle key="c" cx="12" cy="12" r="1.5"/>],
+  octagon:[<path key="a" d="M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86L7.86 2z"/>,<path key="b" d="M12 8v4"/>,<path key="c" d="M12 16h.01"/>],
+  chevron:[<path key="a" d="M9 6l6 6-6 6"/>]
+};
+function Ico(props){
+  var paths=ICONS[props.n];
+  if(!paths)return null;
+  var size=props.size||"1.15em";
+  var fill=props.fill||"none";
+  return (
+    <svg className={"ico"+(props.cls?" "+props.cls:"")} width={size} height={size} viewBox="0 0 24 24"
+      fill={fill} stroke={fill==="none"?"currentColor":"none"} strokeWidth={props.sw||1.8}
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      {paths}
+    </svg>
+  );
+}
+
+/* =========================================================
+   سیستم اعلان Toast (showAlert) — خارج از React، فقط نمایشی
+   ========================================================= */
+function showAlert(message,type,duration){
+  try{
+    type=type||"info";
+    duration=duration||3500;
+    var host=document.getElementById("toast-host");
+    if(!host){
+      host=document.createElement("div");
+      host.id="toast-host";
+      host.className="toast-host";
+      document.body.appendChild(host);
+    }
+    var el=document.createElement("div");
+    el.className="toast toast-"+type;
+    el.setAttribute("role","status");
+    var ico=document.createElement("span");
+    ico.className="toast-ico";
+    ico.textContent=type==="success"?"✓":type==="error"?"✕":type==="warn"?"!":"i";
+    var msg=document.createElement("span");
+    msg.className="toast-msg";
+    msg.textContent=String(message);
+    el.appendChild(ico);
+    el.appendChild(msg);
+    var closed=false;
+    function remove(){
+      if(closed)return;closed=true;
+      clearTimeout(timer);
+      el.classList.add("out");
+      setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el)},260);
+    }
+    var timer=setTimeout(remove,duration);
+    el.addEventListener("click",remove);
+    host.appendChild(el);
+    while(host.children.length>4)host.removeChild(host.firstChild);
+  }catch(e){}
 }
 
 /* تبدیل کد استراتژی به نام فارسی */
@@ -985,7 +1607,7 @@ var BasisNameR=function(v,row){
   if(row&&row.basis_data_pending){
     parts.push(
       <span key="pd" className="bdg" style={{fontSize:9,padding:"0 5px",marginRight:4,background:"var(--warn-t)",color:"var(--warn)"}} title="داده‌ی درصد سهم پایه هنوز از منبع نرسیده؛ این سهم موقتاً غیرقابل خرید در نظر گرفته شده">
-        ⏳ داده در انتظار
+        <Ico n="clock" size="1.35em"/> داده در انتظار
       </span>
     );
   }
@@ -1111,7 +1733,7 @@ var StrategyRowMemo=React.memo(function StrategyRow(props){
       })}
       {onOpenRaw?(<td key="__raw_btn" className="sv" style={{width:40,padding:"4px 6px"}}>
         <button type="button" className="cbtn cbtn-acc" style={{padding:"2px 7px",fontSize:11,lineHeight:1.3}}
-          onClick={function(e){e.stopPropagation();onOpenRaw(row)}} title="مشاهده داده خام API">🔍</button>
+          onClick={function(e){e.stopPropagation();onOpenRaw(row)}} title="مشاهده داده خام API"><Ico n="search" size="1.3em"/></button>
       </td>):null}
     </tr>
   );
@@ -1126,7 +1748,7 @@ var WatchRowMemo=React.memo(function WatchRow(props){
       })}
       {onOpenRaw?(<td key="__raw_btn" className="sv" style={{width:40,padding:"4px 6px"}}>
         <button type="button" className="cbtn cbtn-acc" style={{padding:"2px 7px",fontSize:11,lineHeight:1.3}}
-          onClick={function(){onOpenRaw(row)}} title="مشاهده داده خام API">🔍</button>
+          onClick={function(){onOpenRaw(row)}} title="مشاهده داده خام API"><Ico n="search" size="1.3em"/></button>
       </td>):null}
     </tr>
   );
@@ -1944,7 +2566,7 @@ function StrategyTable(props){
           </table>
         </div>
         <button className="floating-export" onClick={function(){downloadXlsx(exportTitle||kind,buildStrategyAoa(final,cols,steps,trailingCols,isSingle))}}>
-          ⬇ {L.exportXlsxShort}
+          <Ico n="download" size="1.05em"/> {L.exportXlsxShort}
         </button>
       </div>
     </div>
@@ -1963,7 +2585,7 @@ function CollapsibleWrap(props){
       <div className="collapsible-header" role="button" tabIndex={0}
         onClick={function(){setOpen(!open)}}
         onKeyDown={function(e){if(e.key==="Enter"||e.key===" ")setOpen(!open)}}>
-        <span className={"arrow"+(open?" open":"")}>▶</span>
+        <span className={"arrow"+(open?" open":"")}><Ico n="chevron" size="13px" sw="2.4"/></span>
         <span>{props.title}</span>
         <span className="section-badge">{props.count} {props.countLabel}</span>
       </div>
@@ -2055,7 +2677,7 @@ function Watch(props){
   // ═══ Progressive sticky: هر ستون فقط وقتی sticky می‌شود که به لبه برسد ═══
   var twRefSticky=useRef(null);
   var stScrollLeft=useState(0);
-  var scrollLeft=stScrollLeft[0];
+  var scrollLeft=stScrollLeft[0],setScrollLeft=stScrollLeft[1];
   var stColOffsets=useState({});
   var colNaturalOffsets=stColOffsets[0],setColNaturalOffsets=stColOffsets[1];
   var stStickySet=useState({});
@@ -2136,11 +2758,11 @@ function Watch(props){
 
   if(!rows||rows.length===0)return (
     <div className="empty-state">
-      <div className="empty-icon" aria-hidden="true">📊</div>
+      <div className="empty-icon" aria-hidden="true"><Ico n="chart" size="34px" sw="1.6"/></div>
       <div className="empty-title">هنوز داده‌ای دریافت نشده</div>
       <div className="empty-desc">شاید سرور در حال اجرای اولین چرخه است (تا ۶۰ ثانیه) یا اتصال به منبع داده موقتاً قطع شده.</div>
       <div className="empty-actions">
-        <button className="cbtn cbtn-acc" onClick={function(){if(onRetry)onRetry();}}>↻ بارگذاری مجدد</button>
+        <button className="cbtn cbtn-acc" onClick={function(){if(onRetry)onRetry();}}><Ico n="refresh"/> بارگذاری مجدد</button>
       </div>
     </div>
   );
@@ -2156,7 +2778,7 @@ function Watch(props){
             style={{borderColor:"var(--warn)",background:"var(--warn-t)",color:"var(--warn)",cursor:"pointer"}}
             onClick={function(){setPendingOpen(true);}}
             aria-label={pendingData.count+" سهم پایه در انتظار داده — کلیک برای جزئیات"}>
-            ⏳ {pendingData.count} سهم در انتظار داده
+            <Ico n="clock"/> {pendingData.count} سهم در انتظار داده
           </button>
         ):null}
         {has?<button className="cbtn" onClick={clear}>{L.clearFilters}</button>:null}
@@ -2206,7 +2828,7 @@ function Watch(props){
           </table>
         </div>
         <button className="floating-export" onClick={function(){downloadXlsx("دیده‌بان",buildWatchAoa(final,cols))}}>
-          ⬇ {L.exportXlsxShort}
+          <Ico n="download" size="1.05em"/> {L.exportXlsxShort}
         </button>
       </div>
       {pendingOpen?(
@@ -2229,7 +2851,7 @@ function Watch(props){
             </div>
             <div style={{marginTop:12,display:"flex",gap:8,flexWrap:"wrap"}}>
               <button className="cbtn cbtn-acc" onClick={function(){setPendingOpen(false);if(onRetry)onRetry();}}>
-                ↻ تلاش مجدد
+                <Ico n="refresh"/> تلاش مجدد
               </button>
               <button className="cbtn" onClick={function(){setPendingOpen(false);}}>بستن</button>
             </div>
@@ -2598,7 +3220,7 @@ function HamMenu(props){
           <div className="hunt-card" role="button" tabIndex={0} style={{marginTop:6, borderColor:"var(--gain)", background:"var(--gain-t)", color:"var(--gain)"}}
             onClick={function(){onClose();onOpenSignals()}}
             onKeyDown={function(e){if(e.key==="Enter"){onClose();onOpenSignals()}}}>
-            <span>📡 پیگیری سیگنال‌ها</span><span>›</span>
+            <span><Ico n="radio" size="1.2em"/> پیگیری سیگنال‌ها</span><span>›</span>
           </div>
           <div className="hunt-settings-toggle" role="button" tabIndex={0}
             onClick={function(){setHuntSettingsOpen(!huntSettingsOpen)}}
@@ -2780,7 +3402,7 @@ function HamMenu(props){
           <div className="msec">
             <button type="button" className="cbtn" style={{width:"100%",padding:"10px",fontSize:12.5}}
               onClick={function(){onClose();onOpenAdmin&&onOpenAdmin();}}>
-              🔐 پنل ادمین
+              <Ico n="lock"/> پنل ادمین
             </button>
           </div>
 
@@ -2850,7 +3472,7 @@ function BestPositionsOverlay(props){
         <b>{L.huntPositions}</b>
         {huntData&&huntData.at?<span className="tb">آخرین اجرا: {new Date(huntData.at).toLocaleTimeString("fa-IR")}</span>:null}
         <div className="sp1" />
-        <button className="ib" onClick={onRetry} aria-label="بروزرسانی" title="بروزرسانی">↻</button>
+        <button className="ib" onClick={onRetry} aria-label="بروزرسانی" title="بروزرسانی"><Ico n="refresh"/></button>
         <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
       </div>
       <div className="fs-body">
@@ -2961,7 +3583,7 @@ function BestPositionsOverlay(props){
               </table>
             </div>
             <button className="floating-export" onClick={function(){downloadXlsx(L.huntPositions,buildBestAoa(limited,steps))}}>
-              ⬇ {L.exportXlsxShort}
+              <Ico n="download" size="1.05em"/> {L.exportXlsxShort}
             </button>
           </div>
         )}
@@ -3038,10 +3660,10 @@ function DebugOverlay(props){
   return (
     <div className="fs-overlay" role="dialog" aria-label="دیباگ API">
       <div className="fs-head">
-        <b>🔍 دیباگ API و سرخطی</b>
+        <b><Ico n="activity" size="1.15em"/> دیباگ API و سرخطی</b>
         <div className="sp1" />
         <button className="cbtn cbtn-acc" onClick={doCapture} disabled={capturing}>
-          {capturing?"در حال Capture...":"📸 Capture Now"}
+          {capturing?"در حال Capture...":<React.Fragment><Ico n="camera"/> Capture Now</React.Fragment>}
         </button>
         <button className="ib" onClick={onClose} aria-label="بستن">✕</button>
       </div>
@@ -3085,7 +3707,7 @@ function CaptureTab(props){
       <div className="center" style={{padding:30}}>
         <div>هیچ capture هنوز گرفته نشده</div>
         <button className="cbtn cbtn-acc" onClick={onCapture} disabled={capturing} style={{marginTop:10}}>
-          {capturing?"...":"📸 گرفتن Capture جدید"}
+          {capturing?"...":<React.Fragment><Ico n="camera"/> گرفتن Capture جدید</React.Fragment>}
         </button>
         <div className="step-hint" style={{marginTop:14,maxWidth:520,lineHeight:1.8}}>
           با زدن این دکمه، برنامه یک درخواست تازه به API می‌فرستد، پاسخ را کاملاً پارس می‌کند و با آنچه در کش سرور است مقایسه می‌کند.
@@ -3098,7 +3720,7 @@ function CaptureTab(props){
   return (
     <div>
       <div className="gcard">
-        <div className="gcard-t">📊 نتیجه Capture</div>
+        <div className="gcard-t"><Ico n="chart"/> نتیجه Capture</div>
         <div className="gcard-p">
           <div>API rows: <b>{capture.apiRowCount}</b></div>
           <div>Hash API: <code style={{fontSize:11}}>{capture.apiHash}</code></div>
@@ -3111,7 +3733,7 @@ function CaptureTab(props){
 
       {d.mismatchCount>0?(
         <div className="gcard">
-          <div className="gcard-t">⚠️ نمونه اختلاف‌ها (cache vs fresh)</div>
+          <div className="gcard-t warn"><Ico n="alert"/> نمونه اختلاف‌ها (cache vs fresh)</div>
           <div style={{overflowX:"auto"}}>
             <table style={{fontSize:11,width:"100%",borderCollapse:"collapse"}}>
               <thead>
@@ -3139,7 +3761,7 @@ function CaptureTab(props){
         </div>
       ):(
         <div className="gcard">
-          <div className="gcard-t gain">✓ هیچ اختلافی یافت نشد</div>
+          <div className="gcard-t gain"><Ico n="check"/> هیچ اختلافی یافت نشد</div>
           <div className="gcard-p">سرخطی‌های کش سرور با پاسخ تازه‌ی API یکسان هستند.</div>
         </div>
       )}
@@ -3152,7 +3774,7 @@ function TicksTab(props){
   return (
     <div>
       <div style={{display:"flex",gap:8,marginBottom:8}}>
-        <button className="cbtn cbtn-acc" onClick={onRefresh} disabled={loading}>↻ بروزرسانی</button>
+        <button className="cbtn cbtn-acc" onClick={onRefresh} disabled={loading}><Ico n="refresh"/> بروزرسانی</button>
         <span className="step-hint">{ticks.length} تیک</span>
       </div>
       {loading?<div className="spinner"/>:(
@@ -3196,7 +3818,7 @@ function FreshnessTab(props){
   return (
     <div>
       <div style={{display:"flex",gap:8,marginBottom:12}}>
-        <button className="cbtn cbtn-acc" onClick={onRefresh}>↻ بروزرسانی</button>
+        <button className="cbtn cbtn-acc" onClick={onRefresh}><Ico n="refresh"/> بروزرسانی</button>
       </div>
       <div className="gcard">
         <div className="gcard-t">تحلیل ۳۰ دقیقه اخیر</div>
@@ -3205,10 +3827,10 @@ function FreshnessTab(props){
           <div>هش‌های یکتا: <b className={fresh.uniqueHashCount===1?"loss":"gain"}>{fresh.uniqueHashCount}</b></div>
           {fresh.uniqueHashCount===1&&fresh.tickCount>1?(
             <div className="loss" style={{marginTop:6,fontWeight:700}}>
-              ⚠️ API پاسخ یکسان داده — یعنی داده‌ی stale سرو می‌کند!
+              <Ico n="alert"/> API پاسخ یکسان داده — یعنی داده‌ی stale سرو می‌کند!
             </div>
           ):fresh.tickCount>1?(
-            <div className="gain" style={{marginTop:6}}>✓ API در حال به‌روزرسانی است</div>
+            <div className="gain" style={{marginTop:6}}><Ico n="check"/> API در حال به‌روزرسانی است</div>
           ):null}
         </div>
       </div>
@@ -3310,7 +3932,7 @@ function WatcherTab(props){
 
       <div className="gcard">
         <div className="gcard-t" style={{justifyContent:"space-between",display:"flex",alignItems:"center"}}>
-          <span>🛰 وضعیت Watcher</span>
+          <span><Ico n="radio"/> وضعیت Watcher</span>
           <span className={"bdg "+(running?"bdg-itm":"bdg-otm")}>{running?"در حال اجرا":"متوقف"}</span>
         </div>
         <div className="gcard-p" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
@@ -3330,11 +3952,11 @@ function WatcherTab(props){
             onChange={function(e){setIntervalSec(parseInt(e.target.value,10)||30)}} />
           {!running?(
             <button className="cbtn cbtn-acc" onClick={handleStart} disabled={loading}>
-              {loading?"...":"▶ شروع"}
+              {loading?"...":<React.Fragment><Ico n="play"/> شروع</React.Fragment>}
             </button>
           ):(
             <button className="cbtn" onClick={handleStop} disabled={loading}>
-              {loading?"...":"⏹ توقف"}
+              {loading?"...":<React.Fragment><Ico n="square" fill="currentColor"/> توقف</React.Fragment>}
             </button>
           )}
           <label className="toggle-switch" style={{marginRight:"auto"}}>
@@ -3342,13 +3964,13 @@ function WatcherTab(props){
             بروزرسانی خودکار UI (۵ ثانیه)
           </label>
           <button className="cbtn" onClick={handleClear} disabled={loading} title="همهٔ نمونه‌ها را حذف کن">
-            🗑 پاک‌سازی داده
+            <Ico n="trash"/> پاک‌سازی داده
           </button>
         </div>
       </div>
 
       <div className="gcard">
-        <div className="gcard-t">📊 خلاصه آماری (فقط ساعات بازار)</div>
+        <div className="gcard-t"><Ico n="chart"/> خلاصه آماری (فقط ساعات بازار)</div>
         <div className="gcard-p" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
           <div>کل نمونه‌ها: <b>{n(summary.totalSamples||0)}</b></div>
           <div>خطاها: <b className={(summary.totalErrors||0)>0?"loss":"mut"}>{n(summary.totalErrors||0)}</b></div>
@@ -3374,7 +3996,7 @@ function WatcherTab(props){
       </div>
 
       <div className="gcard">
-        <div className="gcard-t">🕒 آخرین نمونه‌ها</div>
+        <div className="gcard-t"><Ico n="clock"/> آخرین نمونه‌ها</div>
         {samples.length===0?(<div className="step-hint">هنوز نمونه‌ای ثبت نشده.</div>):(
           <div style={{maxHeight:"45vh",overflow:"auto"}}>
             <table style={{fontSize:11,width:"100%",borderCollapse:"collapse"}}>
@@ -4727,7 +5349,7 @@ function handleTabClick(id){
 
       <div className="top">
         <button className="ib" onClick={function(){setMenuOpen(true)}} aria-label={L.menu}>
-          ☰
+          <Ico n="menu" sw="2"/>
           {activeOverrideCount>0?<span className="ov-indicator" title={activeOverrideCount+" سهم پایه با قیمت دستی فعال است"} />:null}
         </button>
         <span className="brand-top">استراتژیست آپشن</span>
@@ -4748,7 +5370,7 @@ function handleTabClick(id){
             <span>{holidayStatus.isMarketOpenNow?L.marketOpenNowLbl:L.marketClosedNowLbl}</span>
           </div>
         ):null}
-        <button className="rbtn" onClick={handleManualRefresh} disabled={refreshing} aria-label={L.refresh} title={L.refresh}>↻</button>
+        <button className="rbtn" onClick={handleManualRefresh} disabled={refreshing} aria-label={L.refresh} title={L.refresh}><Ico n="refresh" cls={refreshing?"ico-spin":""} sw="2.1"/></button>
       </div>
 
       {globalError?(
@@ -4889,7 +5511,7 @@ function AdminPanel(props){
               <button type="button" onClick={function(){setShowPwd(!showPwd);}}
                 style={{position:"absolute",left:"8px",top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:"16px",color:"var(--mut)",padding:"2px"}}
                 title={showPwd?"مخفی کردن رمز":"نمایش رمز"}>
-                {showPwd?"🙈":"👁"}
+                <Ico n={showPwd?"eyeoff":"eye"} size="1.1em"/>
               </button>
             </div>
             <button className="ov-add-btn" onClick={doLogin} disabled={saving||!loginPwd}>
@@ -4962,7 +5584,7 @@ function NotificationBell(props){
   return (
     <div ref={ref} style={{position:"relative"}}>
       <button className="ib" onClick={function(){setOpen(!open);if(!open)setTimeout(markAllSeen,800);}} aria-label="اعلان‌ها" title="اعلان‌های سیگنال" style={{position:"relative"}}>
-        🔔
+        <Ico n="bell" size="1.15em"/>
         {unreadCount>0?<span style={{position:"absolute",top:"2px",left:"2px",minWidth:"16px",height:"16px",padding:"0 4px",borderRadius:"8px",background:"var(--loss)",color:"#fff",fontSize:"10px",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>{unreadCount>9?"9+":unreadCount}</span>:null}
       </button>
       {open?(
@@ -4980,7 +5602,7 @@ function NotificationBell(props){
           {hits.map(function(h){
             var isProfit=h.kind==="profit";
             var color=isProfit?"var(--gain)":"var(--loss)";
-            var emoji=isProfit?"🎯":"🛑";
+            var emoji=isProfit?<Ico n="target" size="1.1em"/>:<Ico n="octagon" size="1.1em"/>;
             var title=isProfit?"هدف سود":"حد ضرر";
             var isNew=!seenSet[h.id];
             return (
@@ -5399,9 +6021,9 @@ function CreateTabV2(props) {
       </div>
 
       <div style={{display:'flex',gap:8,marginTop:14,flexWrap:'wrap'}}>
-        <button className="ov-add-btn" onClick={doCalc} disabled={saving}>{saving ? '...' : '🧮 محاسبه فوری'}</button>
+        <button className="ov-add-btn" onClick={doCalc} disabled={saving}>{saving ? '...' : <React.Fragment><Ico n="calculator"/> محاسبه فوری</React.Fragment>}</button>
         <button className="cbtn cbtn-acc" style={{padding:'8px 18px',fontSize:13}} onClick={doCreate} disabled={saving}>
-          {saving ? '...' : '▶ شروع پیگیری'}
+          {saving ? '...' : <React.Fragment><Ico n="play"/> شروع پیگیری</React.Fragment>}
         </button>
       </div>
     </div>
@@ -5493,10 +6115,10 @@ function TrackerCardV2(props) {
         </div>
       ) : null}
       <div style={{marginTop:10,display:'flex',gap:6,flexWrap:'wrap'}}>
-        <button className="cbtn cbtn-acc" onClick={function(){onEdit(item, type);}}>✎ ویرایش</button>
-        <button className="cbtn" onClick={function(){ if (!confirm('پیگیری بسته شود؟')) return; onClose(item, type); }}>⏹ بستن</button>
+        <button className="cbtn cbtn-acc" onClick={function(){onEdit(item, type);}}><Ico n="pencil" size="1.05em"/> ویرایش</button>
+        <button className="cbtn" onClick={function(){ if (!confirm('پیگیری بسته شود؟')) return; onClose(item, type); }}><Ico n="square" size="0.95em" fill="currentColor"/> بستن</button>
         <button className="cbtn" style={{borderColor:'var(--loss)',color:'var(--loss)',background:'var(--loss-t)'}}
-          onClick={function(){ if (!confirm('حذف شود؟')) return; onDelete(item, type); }}>🗑 حذف</button>
+          onClick={function(){ if (!confirm('حذف شود؟')) return; onDelete(item, type); }}><Ico n="trash" size="1.05em"/> حذف</button>
       </div>
     </div>
   );
@@ -5550,8 +6172,8 @@ function SentTabV2(props) {
               <span className="mut" style={{fontSize:11}}>{new Date(s.sentAt).toLocaleString('fa-IR')}</span>
             </div>
             <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center',flexWrap:'wrap'}}>
-              {already ? <span className="badge bdg-itm">✓ در حال پیگیری</span>
-                : <button className="ov-add-btn" onClick={function(){props.onFollow(s);}}>▶ شروع پیگیری</button>}
+              {already ? <span className="badge bdg-itm"><Ico n="check" size="1em"/> در حال پیگیری</span>
+                : <button className="ov-add-btn" onClick={function(){props.onFollow(s);}}><Ico n="play"/> شروع پیگیری</button>}
             </div>
           </div>
         );
@@ -5704,7 +6326,7 @@ function EditTrackerModal(props) {
           <button className="cbtn cbtn-acc" style={{marginTop:6,marginBottom:14}} onClick={addTarget}>+ افزودن هدف</button>
 
           <div style={{display:'flex',gap:8}}>
-            <button className="ov-add-btn" onClick={save} disabled={saving}>{saving ? '...' : '💾 ذخیره'}</button>
+            <button className="ov-add-btn" onClick={save} disabled={saving}>{saving ? '...' : <React.Fragment><Ico n="save"/> ذخیره</React.Fragment>}</button>
             <button className="cbtn" onClick={onClose}>انصراف</button>
           </div>
         </div>
@@ -5816,7 +6438,7 @@ function FollowSignalModalV2(props) {
           })}
           <button className="cbtn cbtn-acc" style={{marginTop:6,marginBottom:14}} onClick={addTarget}>+ افزودن هدف</button>
           <div style={{display:'flex',gap:8}}>
-            <button className="ov-add-btn" onClick={submit} disabled={saving}>{saving ? '...' : '▶ شروع پیگیری'}</button>
+            <button className="ov-add-btn" onClick={submit} disabled={saving}>{saving ? '...' : <React.Fragment><Ico n="play"/> شروع پیگیری</React.Fragment>}</button>
             <button className="cbtn" onClick={onClose}>انصراف</button>
           </div>
         </div>
@@ -5899,7 +6521,7 @@ function SignalsOverlayV2(props) {
         <b>پیگیری سیگنال‌ها</b>
         {loading ? <span className="tab-spin-dot" /> : null}
         <div style={{flex:1}} />
-        <button className="ib" onClick={reload} title="بروزرسانی">↻</button>
+        <button className="ib" onClick={reload} title="بروزرسانی"><Ico n="refresh"/></button>
         <button className="ib" onClick={onClose}>✕</button>
       </div>
       <div className="msub-tabs">
